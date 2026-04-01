@@ -1,18 +1,52 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import Vapi from '@vapi-ai/web';
 import { saveTrainingSession, updateSessionAssessment, updateSessionRecording } from '@/lib/training-sessions';
 import { generateAssessment } from '@/lib/assessment';
+import {
+  SCENARIOS,
+  type ScenarioType,
+  type ScenarioGroup,
+  type ScenarioConfig,
+  type Persona,
+} from '@/lib/personas';
 
-// Assistant ID from Vapi dashboard
+// DB persona shape (snake_case from API) mapped to Persona (camelCase)
+interface DBPersona {
+  id: string;
+  scenario_type: ScenarioType;
+  name: string;
+  personality_type: string;
+  brief_description: string;
+  speaker_label: string;
+  first_message: string;
+  system_prompt: string;
+  is_default: boolean;
+  gender: 'male' | 'female';
+}
+
+function mapDBPersona(db: DBPersona): Persona {
+  return {
+    id: db.id,
+    name: db.name,
+    scenarioType: db.scenario_type,
+    personalityType: db.personality_type,
+    briefDescription: db.brief_description,
+    speakerLabel: db.speaker_label,
+    firstMessage: db.first_message,
+    systemPrompt: db.system_prompt,
+    gender: db.gender ?? 'female',
+  };
+}
+
 const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
-
-// Placeholder IDs - replace with actual IDs when auth is implemented
 const PLACEHOLDER_USER_ID = '00000000-0000-0000-0000-000000000001';
 const PLACEHOLDER_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 type CallStatus = 'idle' | 'connecting' | 'connected';
+type Phase = 'scenario-select' | 'persona-preview' | 'calling' | 'post-call';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -20,54 +54,105 @@ interface Message {
   timestamp: Date;
 }
 
+const GROUP_LABELS: Record<ScenarioGroup, string> = {
+  technician: 'Technician Scenarios',
+  bizdev: 'Business Development',
+};
+
+// ─── Scenario card ────────────────────────────────────────────────────────────
+
+function ScenarioCard({
+  scenario,
+  onSelect,
+  disabled,
+  labelOverride,
+}: {
+  scenario: ScenarioConfig;
+  onSelect: (type: ScenarioType) => void;
+  disabled: boolean;
+  labelOverride?: string;
+}) {
+  const isDiscovery = scenario.callType === 'discovery';
+  return (
+    <button
+      onClick={() => onSelect(scenario.type)}
+      disabled={disabled}
+      className="group relative text-left bg-gray-900 border border-white/10 hover:border-white/30 rounded-2xl p-6 transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-wait"
+    >
+      {/* Hover accent bar */}
+      <div className={`absolute top-0 left-6 right-6 h-0.5 rounded-full bg-gradient-to-r ${isDiscovery ? 'from-indigo-500 to-violet-500' : 'from-blue-500 to-indigo-500'} opacity-0 group-hover:opacity-100 transition-opacity`} />
+      {/* Call type badge */}
+      <div className="absolute top-4 right-4">
+        <span className={`text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full border ${isDiscovery ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
+          {isDiscovery ? 'Discovery' : 'Cold Call'}
+        </span>
+      </div>
+      <div className="text-3xl mb-3">{scenario.icon}</div>
+      <h3 className={`font-semibold text-white mb-1 transition-colors pr-16 ${isDiscovery ? 'group-hover:text-indigo-400' : 'group-hover:text-blue-400'}`}>
+        {labelOverride ?? scenario.label}
+      </h3>
+      <p className="text-sm text-gray-500 leading-relaxed pr-2">{scenario.description}</p>
+      <p className={`text-xs mt-3 font-medium opacity-0 group-hover:opacity-100 transition-opacity ${isDiscovery ? 'text-indigo-400' : 'text-blue-400'}`}>
+        Select →
+      </p>
+    </button>
+  );
+}
+
+// ─── Shared nav header ────────────────────────────────────────────────────────
+
+function PageHeader({ onBack, title }: { onBack: () => void; title: string }) {
+  return (
+    <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
+      <div className="max-w-5xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
+        <button onClick={onBack} className="text-sm text-gray-400 hover:text-white transition-colors">
+          ← TechRP
+        </button>
+        <h1 className="text-sm font-semibold text-white">{title}</h1>
+        <div className="w-20" />
+      </div>
+    </header>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function TrainingPage() {
+  const router = useRouter();
+  const [phase, setPhase] = useState<Phase>('scenario-select');
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
   const [messages, setMessages] = useState<Message[]>([]);
   const [vapi, setVapi] = useState<Vapi | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'assessing' | 'saved' | 'error'>('idle');
+  const [lastSessionId, setLastSessionId] = useState<string | null>(null);
+  const [scenarioPersonas, setScenarioPersonas] = useState<DBPersona[]>([]);
+  const [personasLoading, setPersonasLoading] = useState(false);
+
   const vapiRef = useRef<Vapi | null>(null);
   const callStartTimeRef = useRef<Date | null>(null);
-  const messagesRef = useRef<Message[]>([]); // Ref to store messages for saving
-  const sessionIdRef = useRef<string | null>(null); // Store session ID for assessment update
-  const vapiCallIdRef = useRef<string | null>(null); // Store Vapi call ID
+  const messagesRef = useRef<Message[]>([]);
+  const sessionIdRef = useRef<string | null>(null);
+  const vapiCallIdRef = useRef<string | null>(null);
+  const selectedPersonaRef = useRef<Persona | null>(null);
+  const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
+    if (!publicKey) { console.error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set'); return; }
 
-    if (!publicKey) {
-      console.error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set in environment variables');
-      return;
-    }
-
-    // Initialize Vapi with public key
     const vapiInstance = new Vapi(publicKey);
     vapiRef.current = vapiInstance;
     setVapi(vapiInstance);
 
-    // Set up event listeners
-    vapiInstance.on('call-start', (data: any) => {
-      console.log('Call started');
-      console.log('Call start data:', data);
+    vapiInstance.on('call-start', () => {
       callStartTimeRef.current = new Date();
       setCallStatus('connected');
       setSaveStatus('idle');
-      
-      // Capture call ID from the event data
-      // Vapi may provide this in different formats
-      const callId = data?.call?.id || data?.id || data?.callId || null;
-      if (callId) {
-        console.log('Captured Vapi call ID:', callId);
-        vapiCallIdRef.current = callId;
-      } else {
-        console.warn('No call ID found in call-start event:', data);
-      }
     });
 
     vapiInstance.on('call-end', async () => {
-      console.log('Call ended');
       setCallStatus('idle');
-      
-      // Save the training session
       if (callStartTimeRef.current) {
         await handleSaveSession(callStartTimeRef.current, new Date());
         callStartTimeRef.current = null;
@@ -75,254 +160,98 @@ export default function TrainingPage() {
     });
 
     vapiInstance.on('message', (message: any) => {
-      console.log('=== Message event received ===');
-      console.log('Full message object:', JSON.stringify(message, null, 2));
-      console.log('Message type:', message.type);
-      console.log('Message transcriptType:', message.transcriptType);
-      
-      // Vapi sends transcript messages with type === 'transcript'
-      // Only capture final transcripts (transcriptType === 'final')
       if (message.type === 'transcript' && message.transcriptType === 'final') {
-        console.log('Processing FINAL transcript message');
-        console.log('Message role:', message.role);
-        console.log('Message content:', message.content);
-        console.log('Message text:', message.text);
-        console.log('Message transcript:', message.transcript);
-        console.log('Message from:', message.from);
-        
-        // Extract the message content
         const role = message.role || (message.from === 'user' ? 'user' : 'assistant');
         const content = message.transcript || message.content || message.text || '';
-        
-        console.log('Extracted role:', role);
-        console.log('Extracted content:', content);
-        
         if (content) {
-          // Handle timestamp - could be Date, string, or number
-          let timestamp: Date;
-          if (message.timestamp) {
-            timestamp = message.timestamp instanceof Date 
-              ? message.timestamp 
-              : new Date(message.timestamp);
-          } else {
-            timestamp = new Date();
-          }
-          
-          const newMessage: Message = {
-            role: role as 'user' | 'assistant',
-            content: content,
-            timestamp: timestamp,
-          };
-          
-          console.log('Adding FINAL message to state:', newMessage);
-          
-          setMessages((prev) => {
+          const timestamp = message.timestamp
+            ? (message.timestamp instanceof Date ? message.timestamp : new Date(message.timestamp))
+            : new Date();
+          const newMessage: Message = { role: role as 'user' | 'assistant', content, timestamp };
+          setMessages(prev => {
             const updated = [...prev, newMessage];
-            messagesRef.current = updated; // Keep ref in sync
-            console.log('Messages state updated. Total messages:', updated.length);
+            messagesRef.current = updated;
             return updated;
           });
-        } else {
-          console.warn('Final transcript message has no content, skipping');
         }
-      } else if (message.type === 'transcript' && message.transcriptType === 'partial') {
-        console.log('Skipping partial transcript');
-      } else {
-        console.log('Message is not a final transcript, skipping. Type:', message.type, 'transcriptType:', message.transcriptType);
       }
     });
 
-    // Cleanup on unmount
-    return () => {
-      if (vapiInstance) {
-        try {
-          vapiInstance.stop();
-        } catch (error) {
-          console.error('Error stopping Vapi on cleanup:', error);
-        }
-      }
-    };
+    return () => { try { vapiInstance.stop(); } catch {} };
   }, []);
 
-  const handleSaveSession = async (startedAt: Date, endedAt: Date) => {
+  // Auto-scroll transcript
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Keep persona ref in sync
+  useEffect(() => { selectedPersonaRef.current = selectedPersona; }, [selectedPersona]);
+
+  const handleSelectScenario = async (type: ScenarioType) => {
+    setPersonasLoading(true);
     try {
-      setSaveStatus('saving');
-      
-      // Use ref to get the latest messages (state might be stale)
-      const messagesToSave = messagesRef.current.length > 0 ? messagesRef.current : messages;
-      
-      console.log('=== Saving training session ===');
-      console.log('Messages array length:', messagesToSave.length);
-      console.log('Messages array:', messagesToSave);
-      console.log('Messages from state:', messages);
-      console.log('Messages from ref:', messagesRef.current);
-      
-      // Convert messages to JSON string for transcript
-      const transcriptJson = JSON.stringify(messagesToSave);
-      console.log('Transcript JSON:', transcriptJson);
-      console.log('Transcript JSON length:', transcriptJson.length);
-      
-      console.log('=== Starting session save ===');
-      const session = await saveTrainingSession({
-        userId: PLACEHOLDER_USER_ID,
-        organizationId: PLACEHOLDER_ORGANIZATION_ID,
-        transcript: transcriptJson,
-        startedAt,
-        endedAt,
-      });
-
-      console.log('✅ Session saved successfully');
-      console.log('Session ID:', session.id);
-      console.log('Session object:', session);
-      sessionIdRef.current = session.id;
-      console.log('sessionIdRef.current set to:', sessionIdRef.current);
-
-      // Generate assessment
-      console.log('=== Checking if assessment should be generated ===');
-      console.log('messagesToSave.length:', messagesToSave.length);
-      console.log('messagesToSave:', messagesToSave);
-      
-      if (messagesToSave.length > 0) {
-        console.log('✅ Messages exist, starting assessment generation');
-        setSaveStatus('assessing');
-        
-        try {
-          console.log('Calling generateAssessment with messages:', messagesToSave);
-          const assessment = await generateAssessment(messagesToSave);
-          console.log('✅ Assessment generated successfully:', assessment);
-          console.log('Assessment type:', typeof assessment);
-          console.log('Assessment keys:', Object.keys(assessment));
-          
-          console.log('Updating session with assessment...');
-          console.log('Using session ID:', session.id);
-          console.log('sessionIdRef.current:', sessionIdRef.current);
-          
-          const assessmentJson = JSON.stringify(assessment);
-          console.log('Assessment JSON:', assessmentJson);
-          
-          await updateSessionAssessment(session.id, assessmentJson);
-          console.log('✅ Assessment saved to session successfully');
-        } catch (assessmentError) {
-          console.error('❌ Error generating assessment:', assessmentError);
-          console.error('Error type:', typeof assessmentError);
-          console.error('Error message:', assessmentError instanceof Error ? assessmentError.message : assessmentError);
-          console.error('Error stack:', assessmentError instanceof Error ? assessmentError.stack : 'No stack trace');
-          // Don't fail the whole save if assessment fails
-        }
-      } else {
-        console.log('⚠️ No messages to assess, skipping assessment generation');
-      }
-
-      // Fetch recording URL if call ID is available
-      if (vapiCallIdRef.current) {
-        console.log('=== Fetching recording URL ===');
-        console.log('Vapi call ID:', vapiCallIdRef.current);
-        
-        try {
-          const recordingResponse = await fetch('/api/recording', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ callId: vapiCallIdRef.current }),
-          });
-
-          if (recordingResponse.ok) {
-            const recordingData = await recordingResponse.json();
-            console.log('Recording data:', recordingData);
-            const recordingUrl = recordingData.recordingUrl;
-            
-            if (recordingUrl) {
-              console.log('Recording URL fetched:', recordingUrl);
-              await updateSessionRecording(session.id, recordingUrl, vapiCallIdRef.current);
-              console.log('✅ Recording URL saved to session');
-            } else {
-              console.log('⚠️ No recording URL in response, may not be available yet');
-              // Still save the call ID even if recording isn't ready
-              await updateSessionRecording(session.id, null, vapiCallIdRef.current);
-            }
-          } else {
-            console.error('Failed to fetch recording:', recordingResponse.status);
-            // Still save the call ID even if we can't get the recording
-            await updateSessionRecording(session.id, null, vapiCallIdRef.current);
-          }
-        } catch (recordingError) {
-          console.error('❌ Error fetching recording:', recordingError);
-          // Don't fail the whole save if recording fetch fails
-          // Still save the call ID
-          try {
-            await updateSessionRecording(session.id, null, vapiCallIdRef.current);
-          } catch (updateError) {
-            console.error('Error saving call ID:', updateError);
-          }
-        }
-      } else {
-        console.log('⚠️ No Vapi call ID available, skipping recording fetch');
-      }
-
-      console.log('=== Setting status to saved ===');
-      setSaveStatus('saved');
-      
-      // Clear the success message after 5 seconds
-      setTimeout(() => {
-        setSaveStatus('idle');
-      }, 5000);
-    } catch (error) {
-      console.error('Error saving training session:', error);
-      setSaveStatus('error');
-      alert('Failed to save training session. Please check the console for details.');
+      const res = await fetch(`/api/personas?scenario_type=${type}`);
+      const data = await res.json();
+      const personas: DBPersona[] = data.personas || [];
+      setScenarioPersonas(personas);
+      if (personas.length === 0) return;
+      const random = personas[Math.floor(Math.random() * personas.length)];
+      setSelectedPersona(mapDBPersona(random));
+      setPhase('persona-preview');
+    } catch (err) {
+      console.error('Failed to load personas:', err);
+    } finally {
+      setPersonasLoading(false);
     }
   };
 
+  const handlePickDifferent = () => {
+    if (!selectedPersona || scenarioPersonas.length === 0) return;
+    const others = scenarioPersonas.filter(p => p.id !== selectedPersona.id);
+    const pool = others.length > 0 ? others : scenarioPersonas;
+    setSelectedPersona(mapDBPersona(pool[Math.floor(Math.random() * pool.length)]));
+  };
+
   const handleStartCall = async () => {
-    if (!vapiRef.current) {
-      alert('Vapi SDK is not initialized');
-      return;
-    }
-
-    if (!VAPI_ASSISTANT_ID) {
-      alert('VAPI_ASSISTANT_ID is not set');
-      return;
-    }
-
+    if (!vapiRef.current || !selectedPersona) return;
     try {
+      setPhase('calling');
       setCallStatus('connecting');
-      setMessages([]); // Clear previous messages
-      messagesRef.current = []; // Clear ref as well
-      vapiCallIdRef.current = null; // Clear call ID
+      setMessages([]);
+      messagesRef.current = [];
+      vapiCallIdRef.current = null;
       setSaveStatus('idle');
-      console.log('Starting call - cleared messages');
-      
-      // Start the call - the start method may return call info
-      const callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID);
-      console.log('Call start result:', callInfo);
-      
-      // Try to get call ID from the return value if available
-      if (callInfo?.id || callInfo?.callId) {
-        const callId = callInfo.id || callInfo.callId;
-        console.log('Call ID from start() return:', callId);
-        vapiCallIdRef.current = callId;
+
+      const voiceId = selectedPersona.gender === 'male' ? 'Cole' : 'Mia';
+
+      const callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
+        model: {
+          provider: 'anthropic',
+          model: 'claude-sonnet-4-20250514',
+          messages: [{ role: 'system', content: selectedPersona.systemPrompt }],
+        },
+        voice: { provider: 'vapi', voiceId },
+        firstMessage: selectedPersona.firstMessage,
+      } as any);
+
+      if (callInfo?.id) {
+        vapiCallIdRef.current = callInfo.id;
       }
     } catch (error) {
       console.error('Error starting call:', error);
-      alert('Failed to start call. Please check the console for details.');
+      alert('Failed to start call. Please check the console.');
       setCallStatus('idle');
+      setPhase('persona-preview');
     }
   };
 
   const handleEndCall = async () => {
-    if (!vapiRef.current) {
-      return;
-    }
-
+    if (!vapiRef.current) return;
     try {
       await vapiRef.current.stop();
-      // The call-end event will trigger and save the session
     } catch (error) {
       console.error('Error ending call:', error);
-      alert('Failed to end call. Please check the console for details.');
-      
-      // If stop() fails but we have a start time, still try to save
       if (callStartTimeRef.current) {
         await handleSaveSession(callStartTimeRef.current, new Date());
         callStartTimeRef.current = null;
@@ -330,118 +259,357 @@ export default function TrainingPage() {
     }
   };
 
-  const getStatusColor = () => {
-    switch (callStatus) {
-      case 'connecting':
-        return 'text-yellow-600';
-      case 'connected':
-        return 'text-green-600';
-      default:
-        return 'text-gray-600';
+  const handleSaveSession = async (startedAt: Date, endedAt: Date) => {
+    const persona = selectedPersonaRef.current;
+    try {
+      setSaveStatus('saving');
+      const messagesToSave = messagesRef.current.length > 0 ? messagesRef.current : messages;
+
+      const session = await saveTrainingSession({
+        userId: PLACEHOLDER_USER_ID,
+        organizationId: PLACEHOLDER_ORGANIZATION_ID,
+        transcript: JSON.stringify(messagesToSave),
+        startedAt,
+        endedAt,
+        personaId: persona?.id ?? null,
+        personaName: persona?.name ?? null,
+        personaScenarioType: persona?.scenarioType ?? null,
+      });
+
+      sessionIdRef.current = session.id;
+      setLastSessionId(session.id);
+
+      if (messagesToSave.length > 0) {
+        setSaveStatus('assessing');
+        try {
+          const assessment = await generateAssessment(messagesToSave, persona ?? undefined);
+          await updateSessionAssessment(session.id, JSON.stringify(assessment));
+        } catch (err) { console.error('Assessment error:', err); }
+      }
+
+      if (vapiCallIdRef.current) {
+        try {
+          const rec = await fetch('/api/recording', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ callId: vapiCallIdRef.current }),
+          });
+          const recData = rec.ok ? await rec.json() : null;
+          await updateSessionRecording(session.id, recData?.recordingUrl || null, vapiCallIdRef.current);
+        } catch {
+          try { await updateSessionRecording(session.id, null, vapiCallIdRef.current!); } catch {}
+        }
+      }
+
+      setSaveStatus('saved');
+      setPhase('post-call');
+    } catch (error) {
+      console.error('Error saving session:', error);
+      setSaveStatus('error');
     }
   };
 
-  const getStatusText = () => {
-    switch (callStatus) {
-      case 'connecting':
-        return 'Connecting...';
-      case 'connected':
-        return 'Connected';
-      default:
-        return 'Idle';
-    }
-  };
+  const techScenarios = SCENARIOS.filter(s => s.group === 'technician');
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h1 className="text-3xl font-bold mb-2">Training Call</h1>
-          <p className="text-gray-600 mb-6">Voice AI Roleplay Training</p>
+  // BD grouped by company type — each group has a cold call + discovery variant
+  const BD_COMPANY_GROUPS = [
+    { label: 'Residential Property Manager', icon: '🏠', coldType: 'property_manager' as ScenarioType, discoveryType: 'property_manager_discovery' as ScenarioType },
+    { label: 'Commercial Property Manager',  icon: '🏢', coldType: 'commercial_property_manager' as ScenarioType, discoveryType: 'commercial_pm_discovery' as ScenarioType },
+    { label: 'Insurance Broker',             icon: '📋', coldType: 'insurance_broker' as ScenarioType, discoveryType: 'insurance_broker_discovery' as ScenarioType },
+    { label: 'Plumber',                      icon: '🪠', coldType: 'plumber_bd' as ScenarioType, discoveryType: 'plumber_bd_discovery' as ScenarioType },
+  ].map(g => ({
+    ...g,
+    cold:      SCENARIOS.find(s => s.type === g.coldType)!,
+    discovery: SCENARIOS.find(s => s.type === g.discoveryType)!,
+  }));
 
-          {/* Status and Controls */}
-          <div className="mb-8 flex items-center justify-between">
-            <div className="flex flex-col gap-2">
-              <div>
-                <span className="text-sm text-gray-500">Call Status: </span>
-                <span className={`font-semibold ${getStatusColor()}`}>
-                  {getStatusText()}
-                </span>
-              </div>
-              {saveStatus === 'saving' && (
-                <span className="text-sm text-yellow-600">Saving session...</span>
-              )}
-              {saveStatus === 'assessing' && (
-                <span className="text-sm text-blue-600">Generating assessment...</span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="text-sm text-green-600">✓ Session saved and assessed!</span>
-              )}
-              {saveStatus === 'error' && (
-                <span className="text-sm text-red-600">✗ Failed to save session</span>
-              )}
-            </div>
-            
-            <div className="flex gap-4">
-              {callStatus === 'idle' ? (
-                <button
-                  onClick={handleStartCall}
-                  disabled={!vapi}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
-                >
-                  Start Training Call
-                </button>
-              ) : (
-                <button
-                  onClick={handleEndCall}
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-                >
-                  End Call
-                </button>
-              )}
+  // ── Phase: Scenario Selection ──────────────────────────────────────────────
+
+  if (phase === 'scenario-select') {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <PageHeader onBack={() => router.push('/')} title="Start Training" />
+
+        <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-10">
+
+          {/* Technician Scenarios */}
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-4">
+              Technician Scenarios
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {techScenarios.map((scenario) => (
+                <ScenarioCard
+                  key={scenario.type}
+                  scenario={scenario}
+                  onSelect={handleSelectScenario}
+                  disabled={personasLoading}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Transcript */}
-          <div className="border rounded-lg p-4 bg-gray-50 min-h-[400px] max-h-[600px] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4">Transcript</h2>
-            
-            {messages.length === 0 ? (
-              <div className="text-gray-400 text-center py-8">
-                {callStatus === 'idle' 
-                  ? 'Start a call to see the transcript here...'
-                  : callStatus === 'connecting'
-                  ? 'Connecting...'
-                  : 'Waiting for messages...'}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[80%] p-4 rounded-lg ${
-                        message.role === 'user'
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-200 text-gray-800'
-                      }`}
-                    >
-                      <div className="font-semibold text-sm mb-1">
-                        {message.role === 'user' ? 'Technician' : 'Homeowner'}
-                      </div>
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                    </div>
+          {/* Business Development — grouped by company type */}
+          <div>
+            <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-5">
+              Business Development
+            </p>
+            <div className="space-y-6">
+              {BD_COMPANY_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
+                      {group.icon} {group.label}
+                    </span>
+                    <div className="h-px flex-1 bg-white/10" />
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ScenarioCard
+                      key={group.cold.type}
+                      scenario={group.cold}
+                      labelOverride="Cold Call"
+                      onSelect={handleSelectScenario}
+                      disabled={personasLoading}
+                    />
+                    <ScenarioCard
+                      key={group.discovery.type}
+                      scenario={group.discovery}
+                      labelOverride="Discovery Meeting"
+                      onSelect={handleSelectScenario}
+                      disabled={personasLoading}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
+          {personasLoading && (
+            <div className="text-center py-4 text-sm text-gray-500 animate-pulse">
+              Loading personas…
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
+  // ── Phase: Persona Preview ─────────────────────────────────────────────────
+
+  if (phase === 'persona-preview' && selectedPersona) {
+    const scenario = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
+
+    return (
+      <div className="min-h-screen bg-gray-950 text-white">
+        <PageHeader onBack={() => setPhase('scenario-select')} title={scenario.label} />
+
+        <div className="max-w-xl mx-auto px-8 py-12">
+          {/* Scenario badge */}
+          <div className="flex items-center gap-2 mb-8">
+            <span className="text-2xl">{scenario.icon}</span>
+            <span className="text-sm font-medium text-gray-400">{scenario.label}</span>
+          </div>
+
+          <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-2">
+            You&apos;ll be speaking with
+          </p>
+          <h2 className="text-3xl font-bold text-white mb-6">
+            {selectedPersona.name}
+          </h2>
+
+          {/* Persona card */}
+          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden mb-6">
+            <div className="px-5 py-3 border-b border-white/10">
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
+                {selectedPersona.speakerLabel}
+              </p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">They say:</p>
+              <p className="text-gray-200 text-sm italic leading-relaxed">
+                &ldquo;{selectedPersona.firstMessage}&rdquo;
+              </p>
+            </div>
+          </div>
+
+          {/* Your role */}
+          <div className="flex items-start gap-3 bg-blue-600/10 border border-blue-500/20 rounded-xl px-4 py-3 mb-8">
+            <span className="text-blue-400 text-lg mt-0.5">👤</span>
+            <div>
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-0.5">Your Role</p>
+              <p className="text-sm text-white font-medium">{scenario.techRole}</p>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-3">
+            <button
+              onClick={handleStartCall}
+              disabled={!vapi}
+              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Start Training Call
+            </button>
+            {scenarioPersonas.length > 1 && (
+              <button
+                onClick={handlePickDifferent}
+                className="w-full py-2.5 text-sm text-gray-400 hover:text-white border border-white/10 hover:border-white/25 rounded-xl transition-colors"
+              >
+                Try a Different Person →
+              </button>
+            )}
+            <button
+              onClick={() => setPhase('scenario-select')}
+              className="w-full py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors"
+            >
+              ← Change Scenario
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase: Calling ─────────────────────────────────────────────────────────
+
+  if (phase === 'calling' && selectedPersona) {
+    const scenario = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
+    const isConnecting = callStatus === 'connecting';
+    const isConnected = callStatus === 'connected';
+
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+        {/* Call header */}
+        <header className="border-b border-white/10 bg-gray-950/90 backdrop-blur shrink-0">
+          <div className="max-w-3xl mx-auto px-8 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{scenario.icon}</span>
+              <div>
+                <p className="text-sm font-semibold text-white">{selectedPersona.name}</p>
+                <p className="text-xs text-gray-500">{scenario.label}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Status indicator */}
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${
+                  isConnected ? 'bg-emerald-400 animate-pulse' :
+                  isConnecting ? 'bg-yellow-400 animate-pulse' : 'bg-gray-500'
+                }`} />
+                <span className={`text-xs font-medium ${
+                  isConnected ? 'text-emerald-400' :
+                  isConnecting ? 'text-yellow-400' : 'text-gray-500'
+                }`}>
+                  {isConnected ? 'Live' : isConnecting ? 'Connecting…' : 'Ended'}
+                </span>
+              </div>
+              {/* Save status */}
+              {saveStatus === 'saving' && <span className="text-xs text-yellow-400">Saving…</span>}
+              {saveStatus === 'assessing' && <span className="text-xs text-blue-400">Analyzing…</span>}
+              {saveStatus === 'error' && <span className="text-xs text-red-400">Save failed</span>}
+            </div>
+          </div>
+        </header>
+
+        {/* Transcript */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-8 py-6 space-y-4">
+            {messages.length === 0 ? (
+              <div className="text-center py-20 text-gray-600">
+                {isConnecting ? (
+                  <p className="animate-pulse text-sm">Connecting to {selectedPersona.name}…</p>
+                ) : (
+                  <p className="text-sm">Waiting for the conversation to begin…</p>
+                )}
+              </div>
+            ) : (
+              messages.map((msg, i) => (
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[78%] rounded-2xl px-4 py-3 ${
+                    msg.role === 'user'
+                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      : 'bg-gray-800 text-gray-100 rounded-bl-sm'
+                  }`}>
+                    <p className="text-xs font-semibold mb-1 opacity-60">
+                      {msg.role === 'user' ? scenario.techRole : selectedPersona.speakerLabel}
+                    </p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
+            <div ref={transcriptEndRef} />
+          </div>
+        </div>
+
+        {/* End call footer */}
+        <div className="shrink-0 border-t border-white/10 bg-gray-950/90 backdrop-blur">
+          <div className="max-w-3xl mx-auto px-8 py-4 flex items-center justify-center gap-4">
+            {callStatus !== 'idle' ? (
+              <button
+                onClick={handleEndCall}
+                className="flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors text-sm"
+              >
+                <span className="w-2 h-2 bg-white rounded-full" />
+                End Call
+              </button>
+            ) : (
+              <p className="text-sm text-gray-500">Call ended — saving your session…</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase: Post-call ───────────────────────────────────────────────────────
+
+  if (phase === 'post-call') {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-8">
+        <div className="max-w-sm w-full text-center space-y-6">
+          <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
+            <span className="text-3xl">✓</span>
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
+            <p className="text-gray-400 text-sm">Your session has been saved and assessed by AI.</p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            {lastSessionId && (
+              <button
+                onClick={() => router.push(`/sessions/${lastSessionId}`)}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+              >
+                View Assessment →
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setPhase('scenario-select');
+                setSelectedPersona(null);
+                setMessages([]);
+                messagesRef.current = [];
+                setSaveStatus('idle');
+                setLastSessionId(null);
+              }}
+              className="w-full py-3 bg-gray-900 hover:bg-gray-800 border border-white/10 text-white font-medium rounded-xl transition-colors"
+            >
+              Train Again
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}

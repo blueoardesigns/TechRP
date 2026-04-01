@@ -12,6 +12,9 @@ interface SaveTrainingSessionParams {
   endedAt: Date;
   vapiCallId?: string | null;
   recordingUrl?: string | null;
+  personaId?: string | null;
+  personaName?: string | null;
+  personaScenarioType?: string | null;
 }
 
 /**
@@ -25,9 +28,16 @@ export async function saveTrainingSession({
   endedAt,
   vapiCallId = null,
   recordingUrl = null,
+  personaId = null,
+  personaName = null,
+  personaScenarioType = null,
 }: SaveTrainingSessionParams) {
   try {
-    const sessionData: TrainingSessionInsert = {
+    const sessionData: TrainingSessionInsert & {
+      persona_id?: string | null;
+      persona_name?: string | null;
+      persona_scenario_type?: string | null;
+    } = {
       user_id: userId,
       organization_id: organizationId,
       vapi_call_id: vapiCallId,
@@ -36,6 +46,9 @@ export async function saveTrainingSession({
       assessment: null,
       started_at: startedAt.toISOString(),
       ended_at: endedAt.toISOString(),
+      persona_id: personaId,
+      persona_name: personaName,
+      persona_scenario_type: personaScenarioType,
     };
 
     const { data, error } = await supabase
