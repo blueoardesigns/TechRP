@@ -1,82 +1,111 @@
-# TechRP - Voice AI Training Platform
+# CLAUDE.md
 
-## Project Overview
-Voice AI roleplay training app for restoration technicians. Techs practice sales conversations with AI homeowner, get AI assessments, and follow playbooks.
+## What This Project Is
+
+TechRP is a voice AI roleplay training platform for field technicians selling drying/restoration services. Technicians practice sales calls against AI personas; managers review scores and create playbooks.
+
+- **`web/`** — Next.js 14 dashboard (managers view sessions, create playbooks, manage personas)
+- **`mobile/`** — React Native/Expo SDK 52 app (technicians conduct training calls via Vapi.ai)
+- **`shared/`** — TypeScript types and Supabase configuration shared across apps
 
 ## Tech Stack
-- **Mobile:** React Native / Expo SDK 52
-- **Web:** Next.js 14 (App Router)
-- **Database:** Supabase (PostgreSQL)
-- **Voice AI:** Vapi.ai (Assistant ID: a2a54457-a2b0-4046-82b5-c7506ab9a401)
-- **LLM:** Claude API (claude-sonnet-4-20250514)
+- **Voice AI:** Vapi.ai (Assistant ID: `a2a54457-a2b0-4046-82b5-c7506ab9a401`)
+- **LLM:** Claude API (`claude-sonnet-4-20250514`)
+- **Database:** Supabase (PostgreSQL, multi-tenant)
 
-## Project Structure
-```
-/Users/TinierTim/TBDev/techrp/
-├── mobile/          # React Native Expo app
-├── web/             # Next.js dashboard
-└── shared/          # Shared types
-```
-
-## Key Directories
-- `web/app/training/` - Voice training interface
-- `web/app/sessions/` - Session history & details
-- `web/app/playbooks/` - Playbook management
-- `web/app/api/` - API routes (assessment, recording, playbook generation)
-
-## Environment Variables
-Web needs: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_VAPI_PUBLIC_KEY, VAPI_API_KEY, ANTHROPIC_API_KEY
-
-## Database Schema
-- `organizations` - Company/team data
-- `users` - Technicians and managers
-- `training_sessions` - Completed training calls (transcript, assessment, recording_url)
-- `playbooks` - Sales playbooks (RLS currently disabled)
-
-## Current Status (Jan 2026)
-### ✅ Working Features
-1. Voice training with Vapi (homeowner AI roleplay)
-2. Transcript capture and storage
-3. AI assessment (Claude API generates score, strengths, improvements)
-4. Recording playback (7-day Vapi expiration)
-5. Session history dashboard
-6. Playbook creation wizard (multi-step form)
-7. Playbook generation (Claude API)
-8. Playbook viewing (markdown rendered via react-markdown)
-
-### 🔴 Known Issues
-- RLS disabled on `playbooks` and `training_sessions` tables (temporary until auth built)
-- No authentication system yet (using placeholder user IDs)
-
-### ⚪ Not Yet Built
-- Authentication (login for techs/managers)
-- Mobile app Vapi integration (needs Expo dev build)
-- Field recording upload
-- Playbook integration with assessments
-- UI polish
-
-## Important Notes
-- Use `npm install --legacy-peer-deps` for mobile app (React Native dependency conflicts)
-- Expo SDK 52 (not 54) due to dependency issues
-- Vapi recordings expire after 7 days
-- Transcript filtering: `transcriptType === 'final'` (avoid partial transcripts)
-
-## Test Data
-- Organization ID: `00000000-0000-0000-0000-000000000001`
-- User ID: `00000000-0000-0000-0000-000000000001`
-
-## Development Commands
+## Commands
 ```bash
 # Web
-cd /Users/TinierTim/TBDev/techrp/web && npm run dev
+cd web && npm run dev        # localhost:3000
+cd web && npm run build
+cd web && npm run lint
 
 # Mobile
-cd /Users/TinierTim/TBDev/techrp/mobile && npx expo start --clear
+cd mobile && npx expo start --clear
+cd mobile && npx expo start --ios
+cd mobile && npx expo start --android
 ```
 
-## Next Priorities
-1. Add authentication system
-2. Connect playbooks to assessments
-3. Polish playbook UI (edit/delete)
-4. Field recording upload
-5. Mobile dev build for Vapi
+## Environment Variables
+
+**`web/.env.local`:**
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=        # server-only
+NEXT_PUBLIC_VAPI_PUBLIC_KEY=
+VAPI_API_KEY=                     # server-only
+ANTHROPIC_API_KEY=                # server-only
+```
+
+**`mobile/.env`:**
+```
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+EXPO_PUBLIC_VAPI_API_KEY=
+```
+
+## Architecture
+
+### Data Flow
+1. Technician starts call in mobile → Vapi.ai handles voice using persona's `system_prompt` and `first_message`
+2. On call end, transcript sent to `/api/assess` → Claude grades against active playbook for that scenario type
+3. Session (transcript + assessment) saved to Supabase `training_sessions`
+4. Manager reviews scores in web dashboard at `/sessions`
+
+### Database (Supabase)
+Multi-tenant: `organizations` → `users`, `playbooks`, `personas`, `training_sessions`. RLS enabled on most tables (see Known Issues).
+
+Key relationships:
+- `training_sessions` links to `persona_id`, stores `transcript`, `assessment` (JSON), `vapi_call_id`
+- `personas` drive Vapi via `system_prompt`, `first_message`, `speaker_label`, `scenario_type`
+- `playbooks` serve as scoring rubrics; `/api/assess` fetches active playbook by `scenario_type`
+
+### Supabase Client Pattern
+```ts
+import { createClient, createServiceRoleClient } from '@/lib/supabase'
+// createClient()            → anon key, browser or public routes
+// createServiceRoleClient() → service role key, admin operations only
+```
+
+### Persona & Playbook System
+- `web/lib/all-personas.ts` — 150+ persona seeds. Seeded via `POST /api/seed`
+- `web/lib/default-playbooks.ts` — Default playbook content per scenario type, also seeded via `POST /api/seed`
+- `ScenarioType` enum in `web/lib/personas.ts` defines all valid scenario categories
+- Personas passed to Vapi as `assistantOverrides` so each call uses the selected persona's voice config
+
+### AI Assessment (`/api/assess`)
+Uses `@anthropic-ai/sdk`. Receives transcript (`messages[]`) and `PersonaContext`, fetches matching playbook, returns: `score` (1–10), `strengths[]`, `improvements[]`, `summary`.
+
+### Web API Routes
+| Route | Purpose |
+|---|---|
+| `POST /api/assess` | Grade a transcript with Claude |
+| `GET /api/playbook?scenario_type=` | Fetch active playbook |
+| `GET/POST /api/personas` | List or create personas |
+| `DELETE /api/personas/[id]` | Remove a persona |
+| `POST /api/seed` | Seed default playbooks and personas (idempotent) |
+| `POST /api/recordings/upload` | Upload field recordings |
+| `GET /api/insights` | Analytics/insights |
+
+### Notes
+- Transcript filtering: use `transcriptType === 'final'` to avoid partials
+- Vapi recordings expire after 7 days
+- `@/*` maps to `web/` root in path aliases
+
+## Known Issues
+- RLS disabled on `playbooks` and `training_sessions` (temporary until auth built)
+- No authentication system (using placeholder user/org IDs)
+- Mobile Vapi integration not yet working (needs Expo dev build)
+- Field recording upload not yet built
+
+## Codebase Index
+Pre-built index files are in `.ai-codex/`. Read these FIRST before exploring the codebase:
+- `.ai-codex/routes.md` -- all API routes
+- `.ai-codex/pages.md` -- page tree
+- `.ai-codex/lib.md` -- library exports
+- `.ai-codex/schema.md` -- database schema
+- `.ai-codex/components.md` -- component tree
+
+## Future Revisions
+Future Revisions/Plans are found and should be stored when suggested by me in TODO.md

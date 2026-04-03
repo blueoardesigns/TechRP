@@ -10,14 +10,23 @@ interface Message {
   content: string;
 }
 
+interface PersonaContext {
+  name: string;
+  personalityType: string;
+  scenarioType: string;
+  speakerLabel: string;
+}
+
 interface AssessmentRequest {
   messages: Message[];
+  persona?: PersonaContext;
+  playbookContent?: string | null;  // Active scenario playbook, if available
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: AssessmentRequest = await request.json();
-    const { messages } = body;
+    const { messages, persona, playbookContent } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
@@ -33,35 +42,59 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Format transcript for analysis
+    // Determine speaker labels from persona or use defaults
+    const techLabel = 'Rep';
+    const contactLabel = persona?.speakerLabel || 'Contact';
+
+    // Format transcript
     const transcriptText = messages
-      .map((msg) => `${msg.role === 'user' ? 'Technician' : 'Homeowner'}: ${msg.content}`)
+      .map((msg) => `${msg.role === 'user' ? techLabel : contactLabel}: ${msg.content}`)
       .join('\n\n');
 
+    // Build scenario-aware context
+    const scenarioContext = persona
+      ? `The rep is practicing a "${persona.personalityType}" scenario — talking to ${persona.name}, a ${persona.speakerLabel}. Scenario type: ${persona.scenarioType}.`
+      : 'The rep is practicing a water damage restoration sales/service scenario.';
+
+    const scenarioEvalCriteria = persona?.scenarioType.startsWith('homeowner')
+      ? `1. Objection handling — How well did they address cost, urgency, insurance, and skepticism concerns?
+2. Rapport and empathy — Did they connect with the homeowner and make them feel at ease?
+3. Explanation quality — Did they clearly explain the restoration process and why it's needed?
+4. Insurance/billing clarity — How well did they address financial concerns?
+5. Closing — Did they move toward scheduling or commitment appropriately?`
+      : `1. Opening and hook — Did they earn the contact's attention quickly?
+2. Objection handling — How well did they address pushback (existing vendor, no time, not interested)?
+3. Value proposition — Did they articulate a clear, differentiated reason to consider them?
+4. Active listening — Did they ask questions and respond to what was actually said?
+5. Next step — Did they successfully move toward a meeting, lunch, or continued conversation?`;
+
+    // If a playbook is provided, use it as the rubric
+    const playbookSection = playbookContent
+      ? `\n\nACTIVE PLAYBOOK FOR THIS SCENARIO (evaluate the rep against this):\n${playbookContent}\n`
+      : '';
+
     // Create the assessment prompt
-    const assessmentPrompt = `You are evaluating a training session where a field technician is practicing selling drying equipment drop-off services to a homeowner. The homeowner roleplays as skeptical and raises objections.
+    const assessmentPrompt = `You are a sales manager evaluating a training call. ${scenarioContext}${playbookSection}
 
 Here is the conversation transcript:
 
 ${transcriptText}
 
-Please provide a detailed assessment of the technician's performance. Evaluate them on:
+Please provide a detailed assessment of the rep's performance. Evaluate them on:
 
-1. Objection handling - How well did they address concerns (cost, need to think, other quotes, etc.)?
-2. Rapport building - Did they build trust and connection with the homeowner?
-3. Tone and approach - Were they pushy/aggressive or patient/consultative?
-4. Value communication - Did they clearly explain the benefits and value of the service?
-5. Cost/insurance handling - How did they address financial concerns?
+${scenarioEvalCriteria}
+
+Be encouraging but direct — like a good sales manager. Give specific, actionable feedback including example lines they could have used.
 
 Respond in the following JSON format (valid JSON only, no markdown):
 {
   "score": <number 1-10>,
   "strengths": [<array of strings, 2-4 items>],
   "improvements": [<array of strings, 2-4 items>],
-  "summary": "<2-3 sentence overall feedback>"
+  "summary": "<2-3 sentence overall feedback in a sales manager voice>"
 }
 
-Be specific and constructive. Focus on actionable feedback.`;
+Be specific and constructive. Reference actual moments from the conversation where possible.`;
 
     // Call Claude API
     const message = await anthropic.messages.create({

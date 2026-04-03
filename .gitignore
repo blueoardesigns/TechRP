@@ -28,6 +28,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.mcp.json
 
 # Expo
 .expo/
@@ -51,6 +52,9 @@ web-build/
 .DS_Store
 Thumbs.db
 
+claude/settings.local.json
 
+# Local planning files — not for GitHub
+TODO.md
 
 
