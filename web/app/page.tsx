@@ -1,12 +1,5 @@
 import Link from 'next/link';
-
-const NAV_ITEMS = [
-  { href: '/training', label: 'Train' },
-  { href: '/sessions', label: 'Sessions' },
-  { href: '/recordings', label: 'Upload' },
-  { href: '/playbooks', label: 'Playbooks' },
-  { href: '/personas', label: 'Personas' },
-];
+import { AppNav } from '@/components/nav';
 
 const CARDS = [
   {
@@ -134,26 +127,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
-      {/* ── Top nav ──────────────────────────────────────────────────────────── */}
-      <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <LogoMark size={28} />
-            <span className="font-bold text-base tracking-tight">TechRP</span>
-          </div>
-          <nav className="flex items-center gap-1">
-            {NAV_ITEMS.map(item => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="px-3 py-1.5 rounded-md text-sm text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </header>
+      <AppNav />
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <section className="max-w-5xl mx-auto px-6 sm:px-10 pt-16 pb-14">

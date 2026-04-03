@@ -1,0 +1,108 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { createBrowserSupabase } from '@/lib/supabase-browser';
+
+export type UserRole = 'individual' | 'company_admin';
+export type UserStatus = 'pending' | 'approved' | 'rejected';
+
+export interface AppUser {
+  id: string;
+  authUserId: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  status: UserStatus;
+  scenarioAccess: string[];
+}
+
+interface AuthContextValue {
+  user: AppUser | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  loading: true,
+  signOut: async () => {},
+});
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+const PUBLIC_PATHS = ['/', '/login', '/signup', '/pending'];
+
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<AppUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const pathname = usePathname();
+  const supabase = createBrowserSupabase();
+
+  const loadUser = useCallback(async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access')
+      .eq('auth_user_id', authUser.id)
+      .single();
+
+    if (!profile) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    const appUser: AppUser = {
+      id: profile.id,
+      authUserId: authUser.id,
+      email: (profile as any).email ?? authUser.email ?? '',
+      fullName: (profile as any).full_name ?? (profile as any).name ?? '',
+      role: ((profile as any).app_role ?? 'individual') as UserRole,
+      status: ((profile as any).status ?? 'pending') as UserStatus,
+      scenarioAccess: (profile as any).scenario_access ?? [],
+    };
+
+    setUser(appUser);
+    setLoading(false);
+
+    // Redirect pending users away from protected pages
+    if (appUser.status === 'pending' && !PUBLIC_PATHS.includes(pathname)) {
+      router.replace('/pending');
+    }
+  }, [pathname, router]);
+
+  useEffect(() => {
+    loadUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') loadUser();
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        router.replace('/login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [loadUser]);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, loading, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}

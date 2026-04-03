@@ -375,64 +375,119 @@ A win is a face-to-face meeting — a lunch, an office visit, or an agency prese
     scenarioType: 'plumber_bd',
     name: 'Plumber Partnership BD Outbound Playbook',
     content: `## Overview
-You're calling the owner or manager of a plumbing company to pitch a referral partnership. Plumbers are on the front lines of water damage every day — they fix the burst pipe, the failed water heater, the overflowing toilet. But most leave the scene with a customer who still has a soaking wet home and no one to help with the damage. You're the missing piece. The pitch is simple: you fix the source, we fix the damage — one call covers both.
+You're calling a plumbing company to start a referral partnership. Plumbers fix the source of water damage every day — burst pipes, failed water heaters, supply line failures — and then leave the customer with a soaking wet home and no one to call. You're the missing piece. Done right, this partnership builds a million-dollar book of water jobs over time.
 
-## Key Objectives
-- Get the plumber to understand that referring restoration work makes them look better to their customers
-- Address any concern about referrals or compensation models head-on
-- Establish a clear, simple referral process that takes 30 seconds to execute
-- Get a commitment to send the next eligible job your way
-- Leave behind materials and make the follow-up cadence clear
+But not every plumber is the right fit. The goal of this call is to **qualify first, pitch second.** Lead with curiosity. Never lead with money.
 
-## Opening
-> "Hi, is this [Owner Name]? My name is [Your Name] with [Company Name] — we're a local water damage restoration company. The reason I'm calling is that we work with a number of plumbers in the area, and the feedback we hear most is that they hate leaving a customer's house knowing there's still standing water and wet walls and no one's coming to help. We built a referral system specifically to fix that. Do you have a couple of minutes?"
+## Who to Target — Qualifying Before You Call
+The best plumber partners are **residential service plumbers** — the ones responding to emergency calls, not building new construction. Look for:
+- Plumbers who advertise (Google Ads, Yelp, Home Advisor) — they're volume-oriented and care about customer experience
+- "Shadow plumbers" — they're not on page 1 of Google but have strong word-of-mouth in specific neighborhoods; they're often more relationship-oriented
+- Residential repair/service focus: supply lines, water heaters, toilet overflows, slab leaks, drain backups
+- Multi-tech operations with a dispatcher (the referral process needs infrastructure)
 
-Alternate opener: *"I'll keep this quick — we're a restoration company and we're looking for one or two plumbing partners in [Area]. When you fix the pipe, you text us one number and we're on-site within the hour. Your customer is taken care of, and you look like a hero. Worth a few minutes to talk about?"*
+**Wrong targets:** Primarily commercial new construction plumbers — they rarely encounter residential water damage. If a plumber tells you 80%+ of their work is new construction, wrap up quickly and move on.
 
-## Discovery Questions
-1. "How many calls a month would you say you respond to where there's obvious water damage beyond just the source of the leak?"
-2. "What do you typically tell customers when you leave — do you recommend anyone for the water damage, or leave it up to them?"
-3. "Have you worked with a restoration company before, either formally or informally?"
-4. "If you refer a customer to someone and they have a bad experience, how does that reflect on you?"
-5. "What's the thing you'd most want in a restoration partner — speed, communication, something else?"
-6. "Do you have techs who are willing to make a quick call when they leave a water job, or would it be better to have a simple text-based system?"
-7. "Are there types of jobs where you see water damage most often — slab leaks, water heaters, supply lines?"
+## Two Types of Plumbers You'll Meet
+Understanding which type you're talking to changes your approach entirely:
 
-## Key Value Points
-- **One call completes the job:** You fix the source; we fix the damage. Together, you've fully solved the problem.
-- **Your reputation follows the referral:** When you refer us, you control the experience your customer has.
-- **Speed:** We respond within the hour, 24/7. Your customer won't be waiting days.
-- **Simple process:** One text to our dispatcher with the address and your tech's name. No paperwork, no coordination — just one text.
-- **We close the loop with you:** After every job, we text your tech a quick update.
-- **We refer back:** When we're on a job and see a plumbing issue, we call you — not a random plumber.
+**Relationship-type:** Values reputation, long-term trust, and customer experience above all. Money matters but isn't the hook. Lead with: how you protect their customers, how fast you respond, how you communicate back to their team. Build the relationship first — the referrals will follow.
 
-## Handling Common Objections
+**Transaction-type:** Immediately wants to know what's in it for them financially. Will ask about payout before anything else. They'll work with you for money, but don't expect loyalty. These partnerships can produce volume but require consistent incentivization and monitoring.
+
+Most plumbers fall somewhere between these two. Your job is to figure out which side they lean toward in the first 3 minutes of the call — and adjust.
+
+## Opening — Qualify Before You Pitch
+**Step 1: Confirm they do service/repair work (not just new construction)**
+> "Hey, is this [Name]? I'm [Your Name] with [Company]. Quick question before anything else — do you guys do emergency service work? Like supply line breaks, water heater failures, that type of thing?"
+
+If yes → continue. If they say it's mostly new construction → "Got it — we're looking for partners in the service/repair space specifically. Probably not the right fit, but I appreciate your time." Hang up. Move on.
+
+**Step 2: Soft pitch and ask to meet**
+> "The reason I'm calling is we're a local water damage restoration company and we're building partnerships with service plumbers in [Area]. Your guys are already on-site when water damage happens — and most of the time, the customer is left with wet walls and no idea who to call next. We fix that. Would you be open to grabbing coffee and talking through how it might work?"
+
+If they ask "what's in it for me?" — don't answer with money yet. Say:
+> "That's exactly what I want to talk through — but it's going to depend on your situation and what's most valuable to you. Some guys want leads back, some want help with warranty jobs, some want something else. I'd rather hear what you actually need before I start talking about what we offer."
+
+## Triangulating Questions — Read the Relationship
+Use these to uncover whether they already have a restoration partner, why that relationship started or stopped, and what they really want:
+
+1. "Who do you refer customers to right now when there's water damage?"
+2. "How did you end up working with them?" *(Was it organic, or did someone pitch them?)*
+3. "If you had to give them a score — 1 to 5 — how would you rate how that's going?"
+4. "Has there ever been a time you stopped referring someone? What happened?"
+5. "Do you get anything from them in return — leads back, warranty help, anything?"
+6. "What's the one thing that would make a restoration partner actually useful to your business?"
+7. "Are there types of calls where water damage is almost guaranteed — slab leaks, water heater failures, drain backups?"
+
+## Key Value Points — Fit to Their Type
+For **relationship-type plumbers:**
+- "You fix the source — we fix the damage. Together, your customer walks away with the whole problem solved. That's a referral they'll remember."
+- "When you recommend us, you're attaching your name to us. We're going to make you look good — speed, communication, and no surprises."
+- "We send plumbing referrals back. When we're on a job and see a plumbing issue, you're the first call."
+
+For **transaction-type plumbers:**
+- Lead with the referral payout structure — they'll shut down if you don't
+- Be specific: amount, timing, tracking method
+- Add: "And for your techs specifically, we have a way to recognize them too — separately from you." (Techs and owners should be incentivized differently — see below)
+
+## Incentivizing Techs vs. Owners
+Never assume the owner's incentive reaches the technician who actually makes the referral call on-site. They are separate relationships:
+
+- **Owners** respond to: leads back (plumbing referrals from your jobs), warranty job assistance, marketing support, exclusivity in your referral network, relationship/trust
+- **Technicians** respond to: fast, small, tangible rewards — gift cards, recognition, simple cash per referral signed. The faster the reward cycle, the better the behavior reinforcement.
+
+Ask: *"Do your guys in the field make the call on referrals, or does it go through you?"* — then calibrate your pitch accordingly.
+
+## Handling Common Objections — LACE Framework
 
 **"I already have a restoration company I use."**
-> "That's great — and I respect a loyal relationship. Can I ask what you like most about working with them? What would it take for another company to earn your business?"
+Listen & Acknowledge: "That's great — sounds like you've already got something in place."
+Clarify: "How long have you been with them? And on that 1–5 scale, how's that relationship going?"
+Educate: "We're not asking you to leave them. We'd love to be your backup — so if they're ever at capacity or a customer has a bad experience, you've already got someone else you trust. Just let us earn one job."
 
-**"I don't want to be seen as pushing extra services on my customers."**
-> "Handing them our number and saying 'these guys are reliable, give them a call' is a service. You're not selling anything. You're connecting them to someone who can help."
+**"What do I get out of it?" / "What do you pay?"**
+Listen & Acknowledge: "Fair question — I want to answer it."
+Clarify: "Before I do, can I ask what matters more to you — getting leads back, straight payout per job, or something else?"
+Educate: "The reason I ask is that different plumbers want different things. Some guys want leads back from our jobs. Some want warranty job assists. Some want straight payout. We try to structure it around what's actually valuable to you, not just hand you a one-size-fits-all number."
 
-**"How does the referral work financially?"**
-> "We keep it simple and clean — there's no financial arrangement between us. The value for you is in your customer's experience and your reputation."
+**"My guys don't have time to make calls."**
+Listen & Acknowledge: "I hear you — they're already running job to job."
+Clarify: "Is the issue the time, or is it that they don't know what to say when they're standing there?"
+Educate: "Here's how it works: one text. Address and your company name. That's it. No phone calls, no scheduling, no follow-up from your side. We take it from there and your tech gets a confirmation back in 15 minutes."
 
-**"My guys are busy — they don't have time to make calls."**
-> "That's why we built the text system. One text. Address and your company name. That's it. Your techs don't talk to anyone, don't schedule anything, don't follow up."
+**"I've had bad experiences with restoration companies before."**
+Listen & Acknowledge: "That doesn't surprise me — and I'm sorry that happened."
+Clarify: "What went wrong? Was it the customer experience, the payout, something else?"
+Educate: "Everything you just described is exactly what we built our process to prevent. The only way I can prove that is with one job. Let us take one call and show you — if you don't see it, we're done."
 
-**"I'm worried you'll poach our customers for plumbing work."**
-> "We are not plumbers and we don't do plumbing work. When we're on a job and see a plumbing issue, we call you. That's the partnership — you refer restoration work to us; we refer plumbing work to you."
+**"I'm not sure this is worth my time."**
+Listen & Acknowledge: "That's fair — you've probably heard pitches like this before."
+Clarify: "What would make it worth your time? What would the ideal version of this look like for your business?"
+Educate: "I'm not asking for a commitment — I'm asking for a coffee and 20 minutes. If it's not a fit, you walk away with nothing lost. If it is a fit, you've got a restoration partner your customers will thank you for."
 
-## Closing
-A win is getting their dispatcher's number and a verbal commitment to send the next eligible job.
+## Closing — Get the Meeting, Not the Deal
+On a cold call, the win is a meeting — not a signed agreement. Never try to close the partnership on the first call.
 
-> "Here's what I'd like to do — let's exchange numbers right now and I'll set you up in our system as a preferred partner. Next time one of your techs leaves a job with standing water, they shoot us a text and we're on it. First job is the proof of concept — you'll see how we work, your customer will have a great experience, and we'll go from there. Does that work for you?"
+> "Here's what I'd suggest — let's grab coffee and I'll show you exactly how it works. If it makes sense for your business, great. If not, no hard feelings. Can we find 20 minutes next week?"
+
+If they want to know more before committing to a meeting:
+> "Let me text you a one-pager right now. Take a look and I'll follow up in a couple days. What's the best number to reach you?"
+
+## Execution Milestones — What Success Looks Like Over Time
+1. **Qualify the fit** — service plumber, residential, some volume of water damage calls
+2. **Get the meeting** — coffee, their office, anywhere they're comfortable
+3. **Get the first job** — this is the proof of concept; over-deliver on it
+4. **Debrief why they gave it** — call after the first job and ask: "What made you decide to send that one to us?" The answer tells you exactly how to lock in the relationship
+5. **Lock in and expand** — incentivize the tech who made the call; ask for the next three
 
 ## What Great Looks Like
-- Top BD reps open with empathy — they validate the plumber's pain of leaving customers in bad situations
-- They make the referral process so simple there's no reason not to do it — one text, one number, done
-- They treat the first referral like a tryout — they over-communicate on that job and personally follow up with the plumber after
-- They build the relationship beyond referrals — they send business back, show up to the plumber's office occasionally`,
+- Great BD reps qualify before pitching — they end wrong-fit calls early and don't waste anyone's time
+- They figure out which type of plumber they're talking to in the first 3 minutes and adjust accordingly
+- They never lead with money — they ask what the plumber wants first
+- They make the referral process invisible for the tech — one text, no friction
+- They treat the first referral like an audition — they personally debrief with the plumber after every first job
+- They build separate relationships with the owner and the techs — same company, different motivations`,
   },
 
   // ── DISCOVERY MEETING PLAYBOOKS ───────────────────────────────────────────
@@ -756,85 +811,129 @@ The following 8 criteria are used to evaluate the BD rep's performance in a disc
     scenarioType: 'plumber_bd_discovery',
     name: 'Plumber — Discovery Meeting Playbook',
     content: `## Overview
-A discovery meeting with a plumbing company owner is a scheduled sit-down to understand their business, how they handle water damage referrals, their current restoration partner (if any), and what a referral arrangement would look like. Plumbers are the most natural referral source in restoration — they find water damage every day and leave homeowners with a problem they can't solve.
+A discovery meeting with a plumbing company owner is a scheduled sit-down to deeply understand their business, figure out what type of plumber they are, and build the foundation for a long-term referral partnership. You earned this meeting from a prior cold call or warm introduction. Come in as a learner, not a pitcher.
 
-The goal is to understand their volume, current vendor satisfaction, and decision process — and to earn a trial referral. Expect them to ask about payout quickly. Be ready with a specific, honest answer.
+The goal is to: identify their plumber type (relationship vs. transactional), understand their current vendor situation, map their referral volume and process, uncover what they actually want from a partner, and close for a trial referral. This meeting is the beginning of a relationship that can generate hundreds of thousands of dollars in water jobs over years — treat it accordingly.
 
-## Pre-Meeting Preparation
-- Know your referral payout structure and be ready to state it clearly
-- Understand your referral tracking method (portal, text confirmation, app, spreadsheet)
-- Know your average response time for residential and commercial calls
-- Bring a simple one-pager with your referral process and contact information
+## Pre-Meeting Preparation — Know Who You're Walking Into
+Before the meeting, do your homework to identify which type of plumber you're meeting:
+- **Relationship-type:** Small to mid-size, word-of-mouth driven, not heavy on advertising, values customer experience above all. They want trust first, everything else second.
+- **Transaction-type:** Often larger, advertising-driven (Google, Yelp), focused on volume. They'll ask about payout immediately. They'll work with you for money but won't give you loyalty for free.
+
+Look them up: Are they on Google Ads? Yelp? Do they have 200+ reviews or 18? Are they in a niche neighborhood network or a broad service area? This tells you how to open.
+
+Also prepare:
+- Know your referral payout structure and be ready to state it specifically
+- Know your response time commitment (residential and commercial, day and night)
+- Know your tech incentive program — how individual plumbing techs can be recognized separately from the owner
+- Bring a simple one-pager and your direct cell number — no hard-sell materials
 
 ## Opening — Set the Agenda
-> "Thanks for making the time — I know you're busy. Here's what I want to cover: I want to understand your business, how water damage situations come up for your guys, what your current setup looks like for referrals, and whether there's a fit between how we work and what you'd want in a partner. I'll answer any questions you have too. Sound good?"
+Start by framing the meeting as a conversation, not a pitch:
+
+> "Thanks for making the time — I know you're busy and I want to make this worth it. Here's what I'd like to do: I want to understand your business — how water damage situations come up for your guys, who you're working with now, and what you'd actually want from a restoration partner. I'm not here to pitch you on anything today. I just want to ask good questions and see if there's a natural fit. Does that work?"
+
+Build brief rapport (2–3 minutes max) — ask about the business, the building, how long they've been at this location. Then move into probe questions.
 
 ## Probe Questions — Organized by Category
 
-### Contact Background
+### Contact and Business Background
 - How long have you been in business?
-- Did you start this company yourself, or did you buy into it?
+- Did you start this yourself, or did you buy into it?
+- What was your background before owning the company — did you come up as a technician?
 
 ### Business Structure
-- How many plumbers do you have on staff?
-- How many service vehicles are you running?
-- What's your split between residential and commercial work?
-- What's your split between service/repair work and new construction?
-- What's your service territory — how far do your guys go?
+- How many plumbers do you have running service calls?
+- How many vehicles in the fleet?
+- What's your split between residential and commercial?
+- What percentage of your work is service/repair vs. new construction?
+  *(If majority is new construction → note this; may not be the right fit for high-volume referrals)*
+- What's your service territory?
+- Do you run an after-hours line? How does that work?
 
-### Decision Process When a Job Occurs
-- Walk me through what happens when one of your plumbers shows up on a job and finds water damage. What's the process?
-- Does the plumber call you directly, or do they go through dispatch?
-- Do your plumbers ever make the restoration referral themselves, or does it always go through you or your office?
-- Do you offer after-hours service? Who handles emergency calls at night?
+### Referral Process and Decision Chain
+- When one of your guys gets on-site and finds water damage beyond the source — what happens? Walk me through it.
+- Does the technician handle the referral in the field, or does it go back through your office?
+- Is there a dispatcher or office manager who fields those calls?
+- Do you have a protocol for after-hours water damage situations?
 
 ### Current Vendor Relationship
-- Do you currently have a restoration company you refer jobs to?
-- If yes: who is it, and how did you end up working with them?
-- How would you rate them on a scale of 1 to 5?
+- Do you currently have a restoration company you're working with?
+- If yes: Who is it, and how did you end up with them?
+- How would you rate that relationship on a scale of 1 to 5?
 - What do they do well?
 - What would you want them to do differently?
-- What does the referral process look like — how does your team contact them when there's a job?
-- What does the referral arrangement look like financially?
-- How do they track referrals and pay you?
-- Could you add another vendor, or is the current arrangement exclusive?
+- How does the referral process work practically — what does your tech do when there's a job?
+- What does the financial arrangement look like — do they pay per referral? How is it tracked?
+- Could you work with an additional vendor, or is it exclusive?
 
-### Referral Volume and History
-- About how many jobs per month result in a restoration situation?
-- What's the typical job — supply line failure, drain backup, water heater, toilet overflow?
-- When was the last referral you made?
-- Have you ever had a situation where your restoration company made your customer unhappy — and it came back to you?
+### What They Actually Want
+*(This is the most important section — don't skip it)*
+- "If a restoration company were the perfect fit for your business, what would that look like?"
+- "Some plumbers want leads back — plumbing referrals from our jobs. Some want help with warranty or callback situations. Some just want fast response and good communication. What would actually be valuable to you?"
+- "What about for your technicians specifically? What kind of recognition or incentive would make them want to make that referral call every time?"
+
+### Referral Volume Assessment
+- About how many jobs per month does your team see where water damage is clearly present beyond the repair?
+- What are the most common types — supply line failures, water heaters, slab leaks, toilet overflows, drain backups?
+- When was the last time one of your guys was on a water damage job? What happened?
+- Has there ever been a situation where a restoration company let your customer down — and it came back to you?
+
+## Understanding Value Exchange — The 4:1 Principle
+For relationship-type plumbers especially, the partnership needs to feel balanced over time, not transactional. A useful mental model is the **4:1 ratio**: for every 4 paid jobs we receive through them, we look for a way to give something back — a plumbing referral from a job we're on, a free dryout assist on a warranty callback, a marketing mention, something. The goal is that they feel like they have a genuine partner, not just someone who's taking their referrals.
+
+When appropriate, bring this up:
+> "The way we think about this — we want it to feel like a two-way street over time. We keep track of what you send us, and we actively look for ways to send things back. Plumbing referrals from our jobs, helping on warranty situations where it makes sense — we want you to feel like working with us is worth it beyond the payout."
+
+## Incentivizing Owners vs. Techs — Different Conversations
+The owner and the technicians have completely different motivations. If you only build the relationship with the owner but the tech in the field doesn't know or care about the partnership, the referrals won't happen.
+
+**For the owner:** Leads back, warranty job support, exclusivity, relationship, trust, marketing value
+**For the technicians:** Fast, tangible, small rewards — gift cards, recognition texts, cash per signed referral. The faster the reward after the referral, the more reliably the behavior repeats.
+
+Ask directly:
+> "Do your guys in the field make the referral call themselves, or does it go through you? Because I want to make sure we're thinking about what makes sense for them, too."
+
+Then describe your tech incentive program specifically and concretely.
 
 ## Objection Handling — LACE Framework
 
 **"What's the payout?"**
-This is not an objection — answer it directly and confidently.
-> "We pay $[X] per signed job, paid on [net-30 / 15th of the following month / etc.]. You'll get a text confirmation within 24 hours of every job that comes from you, and a payout summary on [date]. No spreadsheets — we track it on our end and you can verify through [portal/text/app]."
+This is not an objection — answer it directly and confidently. Vague answers here destroy credibility.
+> "We pay $[X] per signed job, paid on [specific date/schedule]. You'll get a text confirmation within 24 hours of every job that comes from you, and a summary on [date]. No spreadsheets on your end — we track everything and you can verify through [portal/text]. Your techs also get [specific tech incentive] separately."
 
 **"We already have a company we use."**
-Acknowledge: "That's great — sounds like you've got something in place."
-Clarify: "How long have you been with them? On that 1–5 scale, how are they doing?"
-Educate: "We're not asking you to end that relationship. We'd love to be your backup — if they're ever at capacity, or if a customer has a bad experience, you want someone else you already trust. We'd just like to earn one job and let our work speak."
+Acknowledge: "That's great — sounds like you've got something in place already."
+Clarify: "How long have you been with them? On a 1–5 scale, how is that going?"
+Educate: "We're not asking you to end anything. The best situation for you is probably to have two companies you trust — so if your primary is ever at capacity or a customer has a bad experience, you've already got a backup you've already vetted. Let us earn one job first."
 
-**"We had a bad experience with the last restoration company — they were slow payers."**
-Acknowledge: "That's a real problem and I understand why it would make you cautious."
-Clarify: "What happened exactly? Was it the timing, the amount, or something else?"
-Educate: "Here's how our payment process works: [specific timeline]. Here's how referrals are tracked: [specific method]. You can verify every referral independently. We understand trust has to be earned — we'd rather show you with one job than ask you to take our word for it."
+**"We had a bad experience — slow payer / unreliable / let our customer down."**
+Acknowledge: "That's a real problem and I understand why it would make you cautious about anyone new."
+Clarify: "What happened exactly? Was it response time, the payout, the customer experience?"
+Educate: "Everything you just described is exactly what we designed our process to prevent. The only way I can prove that is one job — not a conversation, not a brochure. If we don't deliver on that first one, we don't deserve the next."
 
 **"What happens if my customer complains about your crew?"**
-Acknowledge: "That's a completely fair concern — your customers are your reputation."
-Clarify: "Has that happened before with your current company? What was the complaint about?"
-Educate: "If a customer has a complaint about our crew, I want to be the first call — before it gets to you. Here's my direct number. Our project manager on every job knows to communicate with you if anything comes up. We'd rather over-communicate than let a problem sit."
+Acknowledge: "That's a completely fair concern — when you refer us, your name is on it too."
+Clarify: "Has that happened with a restoration company before? What was the issue?"
+Educate: "If a customer ever has a complaint, I want to be the first call — before it gets to you. Here's my direct number. Our PM on every job knows to copy you on any communication. We'd rather over-communicate than let something sit."
 
-**"I don't have time for another relationship to manage."**
-Acknowledge: "I hear you — I know you're running a business."
-Clarify: "What would make this low-maintenance for you? Is it the referral process, the follow-up, or something else?"
-Educate: "Here's how simple we make it: your plumber sends one text with the address and your company name. That's it. No phone calls, no scheduling — we take it from there and you'll get a confirmation back within 15 minutes. Your guys spend zero extra time."
+**"I don't have time to manage another relationship."**
+Acknowledge: "I hear you — I know you're running a business and your time is worth something."
+Clarify: "What specifically feels like work? Is it the referral process itself, or the follow-up?"
+Educate: "Here's what we make your guys do: one text. Address and your company name. We take it from there. You get a confirmation back in 15 minutes. I follow up with you after every first job personally. After that it runs itself."
 
-## Closing for a Next Step
-> "Here's what I'd suggest: let's not make this a big commitment. The next time one of your guys leaves a job with standing water, text me the address. I'll get a crew out fast, your customer will have a great experience, and I'll follow up with you personally to let you know how it went. First job is the tryout — no strings attached. Does that work?"
+## Closing for the Trial Referral
+The win is a cell number exchange and a verbal commitment on the next eligible job:
 
-Then exchange direct cell phone numbers before you leave — not a main office number.
+> "Here's what I want to leave you with — no commitments, no contracts. The next time one of your guys leaves a job with standing water, text me directly. I'll get a crew out fast, your customer will have a great experience, and I'll call you personally to debrief how it went. First job is the tryout. If you like what you see, we build from there. If not, no hard feelings. Does that work?"
+
+Then exchange **direct cell numbers** before you leave — not main office numbers. This is non-negotiable. The relationship is between people, not phone trees.
+
+## Post-Meeting: The Debrief Call
+After the first referral, call the owner and ask:
+> "What made you decide to send that job to us?"
+
+The answer tells you exactly what's working and how to lock in the relationship long-term. Build on whatever they say.
 
 ## Assessment Rubric — How Claude Scores This Session
 The following 8 criteria are used to evaluate the BD rep's performance in a discovery meeting:
@@ -844,7 +943,7 @@ The following 8 criteria are used to evaluate the BD rep's performance in a disc
 3. **Asked what the current vendor could improve** (0–1 pt): Did the rep follow up the vendor rating with "what could they improve?" or similar?
 4. **Determined referral volume and frequency** (0–1 pt): Did the rep find out how many jobs per month result in a restoration referral?
 5. **Understood the decision-making process and chain of events** (0–1 pt): Did the rep ask how referrals are made, who calls who, what the after-hours process is?
-6. **Asked about the current referral tracking and payout structure** (0–1 pt): Did the rep ask what the existing financial arrangement looks like? How referrals are tracked and paid?
+6. **Asked what the plumber actually wants from a partner** (0–1 pt): Did the rep ask what would be valuable to them specifically — leads back, tech incentives, warranty help — rather than just pitching their own program?
 7. **Handled objections using LACE** (0–1 pt): If an objection was raised, did the rep acknowledge it, clarify, and reframe — without being defensive or knocking the competition?
 8. **Set a clear, specific next step before ending** (0–1 pt): Did the meeting end with a concrete, agreed-upon next action (trial referral, cell number exchange, etc.)?
 

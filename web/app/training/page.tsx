@@ -65,10 +65,12 @@ function ScenarioCard({
   scenario,
   onSelect,
   disabled,
+  labelOverride,
 }: {
   scenario: ScenarioConfig;
   onSelect: (type: ScenarioType) => void;
   disabled: boolean;
+  labelOverride?: string;
 }) {
   const isDiscovery = scenario.callType === 'discovery';
   return (
@@ -79,17 +81,15 @@ function ScenarioCard({
     >
       {/* Hover accent bar */}
       <div className={`absolute top-0 left-6 right-6 h-0.5 rounded-full bg-gradient-to-r ${isDiscovery ? 'from-indigo-500 to-violet-500' : 'from-blue-500 to-indigo-500'} opacity-0 group-hover:opacity-100 transition-opacity`} />
-      {/* Discovery badge */}
-      {isDiscovery && (
-        <div className="absolute top-4 right-4">
-          <span className="text-[10px] font-semibold tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-2 py-0.5 rounded-full">
-            Discovery
-          </span>
-        </div>
-      )}
+      {/* Call type badge */}
+      <div className="absolute top-4 right-4">
+        <span className={`text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full border ${isDiscovery ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
+          {isDiscovery ? 'Discovery' : 'Cold Call'}
+        </span>
+      </div>
       <div className="text-3xl mb-3">{scenario.icon}</div>
-      <h3 className={`font-semibold text-white mb-1 transition-colors ${isDiscovery ? 'group-hover:text-indigo-400' : 'group-hover:text-blue-400'}`}>
-        {scenario.label}
+      <h3 className={`font-semibold text-white mb-1 transition-colors pr-16 ${isDiscovery ? 'group-hover:text-indigo-400' : 'group-hover:text-blue-400'}`}>
+        {labelOverride ?? scenario.label}
       </h3>
       <p className="text-sm text-gray-500 leading-relaxed pr-2">{scenario.description}</p>
       <p className={`text-xs mt-3 font-medium opacity-0 group-hover:opacity-100 transition-opacity ${isDiscovery ? 'text-indigo-400' : 'text-blue-400'}`}>
@@ -309,11 +309,19 @@ export default function TrainingPage() {
     }
   };
 
-  const scenariosByGroup = {
-    technician: SCENARIOS.filter(s => s.group === 'technician'),
-    bizdev_cold: SCENARIOS.filter(s => s.group === 'bizdev' && s.callType === 'cold_call'),
-    bizdev_discovery: SCENARIOS.filter(s => s.group === 'bizdev' && s.callType === 'discovery'),
-  };
+  const techScenarios = SCENARIOS.filter(s => s.group === 'technician');
+
+  // BD grouped by company type — each group has a cold call + discovery variant
+  const BD_COMPANY_GROUPS = [
+    { label: 'Residential Property Manager', icon: '🏠', coldType: 'property_manager' as ScenarioType, discoveryType: 'property_manager_discovery' as ScenarioType },
+    { label: 'Commercial Property Manager',  icon: '🏢', coldType: 'commercial_property_manager' as ScenarioType, discoveryType: 'commercial_pm_discovery' as ScenarioType },
+    { label: 'Insurance Broker',             icon: '📋', coldType: 'insurance_broker' as ScenarioType, discoveryType: 'insurance_broker_discovery' as ScenarioType },
+    { label: 'Plumber',                      icon: '🪠', coldType: 'plumber_bd' as ScenarioType, discoveryType: 'plumber_bd_discovery' as ScenarioType },
+  ].map(g => ({
+    ...g,
+    cold:      SCENARIOS.find(s => s.type === g.coldType)!,
+    discovery: SCENARIOS.find(s => s.type === g.discoveryType)!,
+  }));
 
   // ── Phase: Scenario Selection ──────────────────────────────────────────────
 
@@ -330,7 +338,7 @@ export default function TrainingPage() {
               Technician Scenarios
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {scenariosByGroup.technician.map((scenario) => (
+              {techScenarios.map((scenario) => (
                 <ScenarioCard
                   key={scenario.type}
                   scenario={scenario}
@@ -341,48 +349,39 @@ export default function TrainingPage() {
             </div>
           </div>
 
-          {/* Business Development */}
+          {/* Business Development — grouped by company type */}
           <div>
             <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-5">
               Business Development
             </p>
-
-            {/* Cold Call sub-section */}
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-xs font-medium text-gray-600 uppercase tracking-widest">Cold Call</span>
-                <div className="h-px flex-1 bg-white/10" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {scenariosByGroup.bizdev_cold.map((scenario) => (
-                  <ScenarioCard
-                    key={scenario.type}
-                    scenario={scenario}
-                    onSelect={handleSelectScenario}
-                    disabled={personasLoading}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Discovery Meeting sub-section */}
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-xs font-medium text-indigo-500 uppercase tracking-widest">Discovery Meeting</span>
-                <div className="h-px flex-1 bg-white/10" />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {scenariosByGroup.bizdev_discovery.map((scenario) => (
-                  <ScenarioCard
-                    key={scenario.type}
-                    scenario={scenario}
-                    onSelect={handleSelectScenario}
-                    disabled={personasLoading}
-                  />
-                ))}
-              </div>
+            <div className="space-y-6">
+              {BD_COMPANY_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-px flex-1 bg-white/10" />
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
+                      {group.icon} {group.label}
+                    </span>
+                    <div className="h-px flex-1 bg-white/10" />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ScenarioCard
+                      key={group.cold.type}
+                      scenario={group.cold}
+                      labelOverride="Cold Call"
+                      onSelect={handleSelectScenario}
+                      disabled={personasLoading}
+                    />
+                    <ScenarioCard
+                      key={group.discovery.type}
+                      scenario={group.discovery}
+                      labelOverride="Discovery Meeting"
+                      onSelect={handleSelectScenario}
+                      disabled={personasLoading}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

@@ -111,7 +111,7 @@ export default function PlaybookDetailPage() {
 
       {/* ── Sticky header ──────────────────────────────────────────────────────── */}
       <header className="border-b border-white/10 bg-gray-950/90 backdrop-blur sticky top-0 z-10 shrink-0">
-        <div className="max-w-6xl mx-auto px-6 sm:px-10 h-14 flex items-center gap-4">
+        <div className="max-w-6xl mx-auto px-8 h-14 flex items-center gap-4">
           <button
             onClick={() => isEditing ? handleCancel() : router.push('/playbooks')}
             className="text-sm text-gray-400 hover:text-white transition-colors shrink-0"
@@ -181,7 +181,7 @@ export default function PlaybookDetailPage() {
 
       {/* Error */}
       {error && (
-        <div className="max-w-6xl mx-auto px-6 sm:px-10 pt-4 w-full">
+        <div className="max-w-6xl mx-auto px-8 pt-4 w-full">
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl px-4 py-3">
             {error}
           </div>

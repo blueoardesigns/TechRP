@@ -37,14 +37,14 @@ function stripMarkdown(md: string): string {
 }
 
 // Ordered scenario types per group (matches training page order)
-const TECHNICIAN_TYPES = SCENARIOS.filter(s => s.group === 'technician').map(s => s.type);
-const BIZDEV_TYPES     = SCENARIOS.filter(s => s.group === 'bizdev').map(s => s.type);
+const TECHNICIAN_TYPES      = SCENARIOS.filter(s => s.group === 'technician').map(s => s.type);
+const BIZDEV_COLD_TYPES     = SCENARIOS.filter(s => s.group === 'bizdev' && s.callType === 'cold_call').map(s => s.type);
+const BIZDEV_DISCOVERY_TYPES = SCENARIOS.filter(s => s.group === 'bizdev' && s.callType === 'discovery').map(s => s.type);
 
 export default function PlaybooksPage() {
   const router = useRouter();
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase
@@ -57,25 +57,16 @@ export default function PlaybooksPage() {
       });
   }, []);
 
-  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
-    e.stopPropagation();
-    if (!window.confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    setDeletingId(id);
-    const { error } = await supabase.from('playbooks').delete().eq('id', id);
-    if (error) alert('Failed to delete: ' + error.message);
-    else setPlaybooks(prev => prev.filter(p => p.id !== id));
-    setDeletingId(null);
-  };
-
   // Group and order playbooks by scenario group, then scenario order
   const byScenario = (types: ScenarioType[]) =>
     types.flatMap(type => playbooks.filter(pb => (pb as any).scenario_type === type));
 
-  const techPlaybooks   = byScenario(TECHNICIAN_TYPES);
-  const bizdevPlaybooks = byScenario(BIZDEV_TYPES);
+  const techPlaybooks      = byScenario(TECHNICIAN_TYPES);
+  const bizdevColdPlaybooks = byScenario(BIZDEV_COLD_TYPES);
+  const bizdevDiscPlaybooks = byScenario(BIZDEV_DISCOVERY_TYPES);
   // Ungrouped (custom playbooks with no scenario_type or unknown types)
-  const grouped = new Set([...TECHNICIAN_TYPES, ...BIZDEV_TYPES]);
-  const otherPlaybooks  = playbooks.filter(pb => !grouped.has((pb as any).scenario_type));
+  const grouped = new Set([...TECHNICIAN_TYPES, ...BIZDEV_COLD_TYPES, ...BIZDEV_DISCOVERY_TYPES]);
+  const otherPlaybooks = playbooks.filter(pb => !grouped.has((pb as any).scenario_type));
 
   const PlaybookCard = ({ pb }: { pb: Playbook }) => {
     const scenarioType = (pb as any).scenario_type as string | undefined;
@@ -108,16 +99,7 @@ export default function PlaybooksPage() {
 
         <div className="mt-4 flex items-center justify-between pt-3 border-t border-white/5">
           <span className="text-xs text-gray-600">Updated {formatDate(pb.updated_at)}</span>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={e => handleDelete(e, pb.id, pb.name)}
-              disabled={deletingId === pb.id}
-              className="text-xs text-gray-600 hover:text-red-400 transition-colors disabled:opacity-40"
-            >
-              {deletingId === pb.id ? 'Deleting…' : 'Delete'}
-            </button>
-            <span className="text-xs text-blue-400 font-medium">Edit →</span>
-          </div>
+          <span className="text-xs text-blue-400 font-medium">View →</span>
         </div>
       </div>
     );
@@ -145,12 +127,12 @@ export default function PlaybooksPage() {
             ← TechRP
           </button>
           <h1 className="text-sm font-semibold text-white">Playbooks</h1>
-          <button
-            onClick={() => router.push('/playbooks/create')}
-            className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
+          <a
+            href={`mailto:tim@blueoardesigns.com?subject=New%20Playbook%20Suggestion&body=Hi%20Tim%2C%0A%0AI%20would%20like%20to%20request%20a%20new%20playbook%20for%20the%20following%20scenario%3A%0A%0A[Describe%20the%20type%20of%20playbook%20you%20need]%0A%0AThanks!`}
+            className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white font-medium px-3 py-1.5 rounded-lg transition-colors border border-white/10"
           >
-            + New Playbook
-          </button>
+            Request Playbook
+          </a>
         </div>
       </header>
 
@@ -166,19 +148,14 @@ export default function PlaybooksPage() {
           <div className="text-center py-20 text-gray-500 text-sm">Loading…</div>
         ) : playbooks.length === 0 ? (
           <div className="text-center py-20">
-            <p className="text-gray-500 text-sm mb-4">No playbooks yet.</p>
-            <button
-              onClick={() => router.push('/playbooks/create')}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-xl transition-colors"
-            >
-              Create Your First Playbook
-            </button>
+            <p className="text-gray-500 text-sm">No playbooks available yet.</p>
           </div>
         ) : (
           <>
-            <Section label="Technician Scenarios" items={techPlaybooks} />
-            <Section label="Business Development" items={bizdevPlaybooks} />
-            <Section label="Custom Playbooks"     items={otherPlaybooks} />
+            <Section label="Technician Scenarios"                   items={techPlaybooks} />
+            <Section label="Business Development — Cold Call"        items={bizdevColdPlaybooks} />
+            <Section label="Business Development — Discovery Meeting" items={bizdevDiscPlaybooks} />
+            <Section label="Other"                                   items={otherPlaybooks} />
           </>
         )}
       </div>
