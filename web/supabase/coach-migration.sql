@@ -9,6 +9,8 @@ ALTER TABLE users ADD CONSTRAINT users_app_role_check
   CHECK (app_role IN ('individual', 'company_admin', 'coach'));
 
 -- 2. Add coach_instance_id and organization_id to users
+-- organization_id already exists from schema.sql; ADD COLUMN IF NOT EXISTS is a no-op.
+-- coach_instance_id is the new column being added here.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS coach_instance_id UUID,
   ADD COLUMN IF NOT EXISTS organization_id   UUID;
@@ -25,9 +27,13 @@ CREATE TABLE IF NOT EXISTS coach_instances (
   created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Disable RLS temporarily until coach API routes are complete (Task 7+)
+-- Service role (used by all API routes) bypasses RLS regardless.
+ALTER TABLE coach_instances DISABLE ROW LEVEL SECURITY;
+
 -- 4. Add FK from users.coach_instance_id → coach_instances
 ALTER TABLE users
-  ADD CONSTRAINT users_coach_instance_id_fkey
+  ADD CONSTRAINT IF NOT EXISTS users_coach_instance_id_fkey
   FOREIGN KEY (coach_instance_id) REFERENCES coach_instances(id)
   ON DELETE SET NULL;
 
@@ -45,5 +51,6 @@ ALTER TABLE personas
 
 -- 7. Index for fast token lookups
 CREATE INDEX IF NOT EXISTS coach_instances_invite_token_idx ON coach_instances(invite_token);
+CREATE INDEX IF NOT EXISTS coach_instances_coach_user_id_idx ON coach_instances(coach_user_id);
 CREATE INDEX IF NOT EXISTS organizations_invite_token_idx   ON organizations(invite_token);
 CREATE INDEX IF NOT EXISTS users_coach_instance_id_idx      ON users(coach_instance_id);
