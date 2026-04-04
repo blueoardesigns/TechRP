@@ -58,10 +58,15 @@ export async function POST(request: NextRequest) {
       personaResults.skipped = ALL_PERSONAS.length;
     } else {
       // Get existing personas by name+scenario_type to avoid duplicates
-      const { data: existingPersonas } = await (supabase as any)
+      let existingQuery = (supabase as any)
         .from('personas')
-        .select('name, scenario_type')
-        .eq('is_default', true);
+        .select('name, scenario_type');
+      if (coachInstanceId) {
+        existingQuery = existingQuery.eq('coach_instance_id', coachInstanceId);
+      } else {
+        existingQuery = existingQuery.eq('is_default', true);
+      }
+      const { data: existingPersonas } = await existingQuery;
 
       const existingKeys = new Set(
         (existingPersonas || []).map((p: any) => `${p.scenario_type}::${p.name}`)

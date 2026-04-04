@@ -21,7 +21,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { playbookName, playbookContent } = await req.json();
+  const body = await req.json();
+  const playbookName = body.playbookName;
+  const playbookContent = body.playbookContent;
+  if (!playbookName || !playbookContent || typeof playbookName !== 'string' || typeof playbookContent !== 'string') {
+    return NextResponse.json({ error: 'playbookName and playbookContent are required strings' }, { status: 400 });
+  }
   const validTypes = SCENARIOS.map(s => s.type);
 
   const message = await anthropic.messages.create({

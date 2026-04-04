@@ -157,7 +157,7 @@ export default function CreatePlaybookPage() {
         }
       }
 
-      router.push(`/playbooks/${data.id}`);
+      router.push('/playbooks');
     } catch (err) {
       console.error('Error generating playbook:', err);
       setError(err instanceof Error ? err.message : 'Something went wrong');
