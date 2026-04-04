@@ -309,7 +309,12 @@ export default function TrainingPage() {
     }
   };
 
-  const techScenarios = SCENARIOS.filter(s => s.group === 'technician');
+  // Filter scenarios to those the user has access to
+  const accessibleScenarios = user?.scenarioAccess?.length
+    ? SCENARIOS.filter(s => user.scenarioAccess.includes(s.type))
+    : SCENARIOS;
+
+  const techScenarios = accessibleScenarios.filter(s => s.group === 'technician');
 
   // BD grouped by company type — each group has a cold call + discovery variant
   const BD_COMPANY_GROUPS = [
@@ -319,13 +324,25 @@ export default function TrainingPage() {
     { label: 'Plumber',                      icon: '🪠', coldType: 'plumber_bd' as ScenarioType, discoveryType: 'plumber_bd_discovery' as ScenarioType },
   ].map(g => ({
     ...g,
-    cold:      SCENARIOS.find(s => s.type === g.coldType)!,
-    discovery: SCENARIOS.find(s => s.type === g.discoveryType)!,
-  }));
+    cold:      accessibleScenarios.find(s => s.type === g.coldType) ?? null,
+    discovery: accessibleScenarios.find(s => s.type === g.discoveryType) ?? null,
+  })).filter(g => g.cold || g.discovery);
 
   // ── Phase: Scenario Selection ──────────────────────────────────────────────
 
   if (phase === 'scenario-select') {
+    if (user?.scenarioAccess?.length && !accessibleScenarios.length) {
+      return (
+        <div className="min-h-screen bg-gray-950 text-white">
+          <PageHeader onBack={() => router.push('/')} title="Start Training" />
+          <div className="py-20 text-center text-gray-500">
+            <p>No training scenarios are available for your account.</p>
+            <p className="text-sm mt-2">Contact your admin to get access.</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-gray-950 text-white">
         <PageHeader onBack={() => router.push('/')} title="Start Training" />
@@ -333,57 +350,65 @@ export default function TrainingPage() {
         <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-10">
 
           {/* Technician Scenarios */}
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-4">
-              Technician Scenarios
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {techScenarios.map((scenario) => (
-                <ScenarioCard
-                  key={scenario.type}
-                  scenario={scenario}
-                  onSelect={handleSelectScenario}
-                  disabled={personasLoading}
-                />
-              ))}
+          {techScenarios.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-4">
+                Technician Scenarios
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {techScenarios.map((scenario) => (
+                  <ScenarioCard
+                    key={scenario.type}
+                    scenario={scenario}
+                    onSelect={handleSelectScenario}
+                    disabled={personasLoading}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Business Development — grouped by company type */}
-          <div>
-            <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-5">
-              Business Development
-            </p>
-            <div className="space-y-6">
-              {BD_COMPANY_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="h-px flex-1 bg-white/10" />
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
-                      {group.icon} {group.label}
-                    </span>
-                    <div className="h-px flex-1 bg-white/10" />
+          {BD_COMPANY_GROUPS.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-5">
+                Business Development
+              </p>
+              <div className="space-y-6">
+                {BD_COMPANY_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-px flex-1 bg-white/10" />
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
+                        {group.icon} {group.label}
+                      </span>
+                      <div className="h-px flex-1 bg-white/10" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {group.cold && (
+                        <ScenarioCard
+                          key={group.cold.type}
+                          scenario={group.cold}
+                          labelOverride="Cold Call"
+                          onSelect={handleSelectScenario}
+                          disabled={personasLoading}
+                        />
+                      )}
+                      {group.discovery && (
+                        <ScenarioCard
+                          key={group.discovery.type}
+                          scenario={group.discovery}
+                          labelOverride="Discovery Meeting"
+                          onSelect={handleSelectScenario}
+                          disabled={personasLoading}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ScenarioCard
-                      key={group.cold.type}
-                      scenario={group.cold}
-                      labelOverride="Cold Call"
-                      onSelect={handleSelectScenario}
-                      disabled={personasLoading}
-                    />
-                    <ScenarioCard
-                      key={group.discovery.type}
-                      scenario={group.discovery}
-                      labelOverride="Discovery Meeting"
-                      onSelect={handleSelectScenario}
-                      disabled={personasLoading}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {personasLoading && (
             <div className="text-center py-4 text-sm text-gray-500 animate-pulse">
