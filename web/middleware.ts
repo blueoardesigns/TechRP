@@ -9,12 +9,33 @@ export async function middleware(request: NextRequest) {
 
   // /admin is gated by ADMIN_SECRET, not Supabase auth
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin/')) {
+    // Allow /admin/login without authentication
+    if (pathname === '/admin/login') {
+      return NextResponse.next();
+    }
+
+    // Guard against empty ADMIN_SECRET
+    const secret = process.env.ADMIN_SECRET;
+    if (!secret) {
+      if (pathname.startsWith('/api/admin/')) {
+        return new NextResponse('Admin not configured', { status: 503 });
+      }
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/admin/login';
+      return NextResponse.redirect(loginUrl);
+    }
+
     const key = request.nextUrl.searchParams.get('key')
       ?? request.cookies.get('admin_key')?.value;
-    if (key === process.env.ADMIN_SECRET) {
+    if (key === secret) {
       const res = NextResponse.next({ request });
       // Set cookie so subsequent /admin navigations don't need the param
-      res.cookies.set('admin_key', key!, { httpOnly: true, sameSite: 'lax', path: '/' });
+      res.cookies.set('admin_key', key!, {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+      });
       return res;
     }
     // No valid key — redirect to /admin/login (or 401 for API routes)
