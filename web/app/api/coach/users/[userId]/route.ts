@@ -29,6 +29,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { userId: st
   }
 
   const { status } = await req.json();
+  if (status !== 'rejected') {
+    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+  }
   await (supabase as any).from('users').update({ status }).eq('id', params.userId);
   return NextResponse.json({ success: true });
 }

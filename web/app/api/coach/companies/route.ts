@@ -58,5 +58,5 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ company: data });
+  return NextResponse.json({ company: { ...(data as any), userCount: 0 } });
 }
