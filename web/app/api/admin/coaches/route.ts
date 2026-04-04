@@ -86,10 +86,13 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Link user to their instance
-  await (supabase as any)
+  const { error: linkError } = await (supabase as any)
     .from('users')
     .update({ coach_instance_id: (instance as any).id })
     .eq('id', (userRow as any).id);
+  if (linkError) {
+    console.error('Failed to link user to coach instance:', linkError);
+  }
 
   // 5. Send welcome email with magic link
   try {
@@ -125,7 +128,9 @@ export async function POST(req: NextRequest) {
 // PATCH /api/admin/coaches — deactivate a coach
 export async function PATCH(req: NextRequest) {
   const { coachId } = await req.json();
+  if (!coachId) return NextResponse.json({ error: 'coachId required' }, { status: 400 });
   const supabase = adminSupabase();
-  await (supabase as any).from('users').update({ status: 'rejected' }).eq('id', coachId);
+  const { error } = await (supabase as any).from('users').update({ status: 'rejected' }).eq('id', coachId);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -44,6 +44,7 @@ export default function AdminPage() {
     if (data.inviteUrl) {
       setNewInviteUrl(data.inviteUrl);
       setForm({ fullName: '', email: '', instanceName: '' });
+      setShowModal(false);
       fetchCoaches();
     } else {
       alert(data.error ?? 'Failed to create coach');
