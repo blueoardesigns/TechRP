@@ -2,15 +2,42 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/auth-provider';
+import { useAuth, type AppUser } from '@/components/auth-provider';
 
-const NAV_ITEMS = [
-  { href: '/training',  label: 'Train' },
-  { href: '/sessions',  label: 'Sessions' },
-  { href: '/recordings', label: 'Upload' },
-  { href: '/playbooks', label: 'Playbooks' },
-  { href: '/personas',  label: 'Personas' },
-];
+function getNavItems(user: AppUser | null) {
+  if (!user || user.status !== 'approved') return [];
+
+  if (user.role === 'coach') {
+    return [
+      { href: '/coach',     label: 'Dashboard' },
+      { href: '/playbooks', label: 'Playbooks' },
+      { href: '/personas',  label: 'Personas'  },
+    ];
+  }
+
+  if (user.role === 'company_admin') {
+    const items = [
+      { href: '/training',   label: 'Train'     },
+      { href: '/sessions',   label: 'Sessions'  },
+      { href: '/recordings', label: 'Upload'    },
+      { href: '/playbooks',  label: 'Playbooks' },
+    ];
+    // Under a coach: show Team panel; direct TechRP admin: show Personas
+    if (user.coachInstanceId) {
+      items.push({ href: '/team', label: 'Team' });
+    } else {
+      items.push({ href: '/personas', label: 'Personas' });
+    }
+    return items;
+  }
+
+  // individual
+  return [
+    { href: '/training',   label: 'Train'    },
+    { href: '/sessions',   label: 'Sessions' },
+    { href: '/recordings', label: 'Upload'   },
+  ];
+}
 
 function LogoMark({ size = 28 }: { size?: number }) {
   return (
@@ -30,6 +57,7 @@ function LogoMark({ size = 28 }: { size?: number }) {
 export function AppNav() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const navItems = getNavItems(user);
 
   const handleSignOut = async () => {
     await signOut();
@@ -45,7 +73,7 @@ export function AppNav() {
         </Link>
 
         <nav className="flex items-center gap-1">
-          {NAV_ITEMS.map(item => (
+          {navItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
@@ -62,10 +90,7 @@ export function AppNav() {
               {user.fullName || user.email}
             </span>
           )}
-          <button
-            onClick={handleSignOut}
-            className="text-xs text-gray-500 hover:text-white transition-colors"
-          >
+          <button onClick={handleSignOut} className="text-xs text-gray-500 hover:text-white transition-colors">
             Sign out
           </button>
         </div>
