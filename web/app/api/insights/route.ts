@@ -19,13 +19,16 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceSupabase();
     const { data: profile } = await (supabase as any)
       .from('users')
-      .select('id')
+      .select('id, app_role, organization_id, coach_instance_id')
       .eq('auth_user_id', authUser.id)
       .single();
     if (!profile) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const userId = (profile as any).id as string;
+    const appRole = (profile as any).app_role as string;
+    const organizationId = (profile as any).organization_id as string | null;
+    const coachInstanceId = (profile as any).coach_instance_id as string | null;
 
     let query = (supabase as any)
       .from('training_sessions')
@@ -56,6 +59,7 @@ export async function GET(request: NextRequest) {
         topImprovements: [],
         summary: null,
         period: daysParam ? `${daysParam} days` : 'all time',
+        metrics: { totalSessions: 0, avgScore: null, activeUsers: 0, byScenario: {} },
       });
     }
 
@@ -86,6 +90,7 @@ export async function GET(request: NextRequest) {
         topImprovements: [],
         summary: 'No completed assessments found in this period.',
         period: daysParam ? `${daysParam} days` : 'all time',
+        metrics: { totalSessions: sessions.length, avgScore: null, activeUsers: 0, byScenario: {} },
       });
     }
 
@@ -132,6 +137,48 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
     const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const insights = JSON.parse(cleaned);
 
+    // Aggregate org/coach metrics
+    let orgSessionsQuery = (supabase as any)
+      .from('training_sessions')
+      .select('id, started_at, user_id, persona_scenario_type')
+      .order('started_at', { ascending: false })
+      .limit(500);
+
+    if (appRole === 'company_admin' && organizationId) {
+      // Get user IDs in this org
+      const { data: orgUsers } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .eq('organization_id', organizationId);
+      const orgUserIds = (orgUsers ?? []).map((u: any) => u.id);
+      if (orgUserIds.length > 0) {
+        orgSessionsQuery = orgSessionsQuery.in('user_id', orgUserIds);
+      }
+    } else if (appRole === 'coach' && coachInstanceId) {
+      const { data: coachUsers } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .eq('coach_instance_id', coachInstanceId);
+      const coachUserIds = (coachUsers ?? []).map((u: any) => u.id);
+      if (coachUserIds.length > 0) {
+        orgSessionsQuery = orgSessionsQuery.in('user_id', coachUserIds);
+      }
+    } else {
+      orgSessionsQuery = orgSessionsQuery.eq('user_id', userId);
+    }
+
+    const { data: orgSessions } = await orgSessionsQuery;
+    const totalSessions = (orgSessions ?? []).length;
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const activeUserIds = new Set(
+      (orgSessions ?? []).filter((s: any) => s.started_at > cutoff).map((s: any) => s.user_id)
+    );
+    const byScenario: Record<string, number> = {};
+    (orgSessions ?? []).forEach((s: any) => {
+      const t = s.persona_scenario_type || 'unknown';
+      byScenario[t] = (byScenario[t] ?? 0) + 1;
+    });
+
     return NextResponse.json({
       sessionCount: assessments.length,
       avgScore,
@@ -139,6 +186,12 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
       topImprovements: insights.topImprovements || [],
       summary: insights.summary || '',
       period: daysParam ? `Last ${daysParam} days` : 'All time',
+      metrics: {
+        totalSessions,
+        avgScore: avgScore !== null ? String(avgScore) : null,
+        activeUsers: activeUserIds.size,
+        byScenario,
+      },
     });
   } catch (error) {
     console.error('Error generating insights:', error);

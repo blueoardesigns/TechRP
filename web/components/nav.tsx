@@ -12,6 +12,7 @@ function getNavItems(user: AppUser | null) {
       { href: '/coach',     label: 'Dashboard' },
       { href: '/playbooks', label: 'Playbooks' },
       { href: '/personas',  label: 'Personas'  },
+      { href: '/insights',  label: 'Analytics' },
     ];
   }
 
@@ -28,6 +29,7 @@ function getNavItems(user: AppUser | null) {
     } else {
       items.push({ href: '/personas', label: 'Personas' });
     }
+    items.push({ href: '/insights', label: 'Analytics' });
     return items;
   }
 
