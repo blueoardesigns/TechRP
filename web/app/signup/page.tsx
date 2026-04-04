@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 const MODULES = [
@@ -33,8 +33,35 @@ const MODULES = [
 
 type Step = 'account' | 'modules' | 'tos';
 
-export default function SignupPage() {
+function SignupPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const coachToken = searchParams.get('coach');
+  const orgToken   = searchParams.get('org');
+  const typeParam  = searchParams.get('type');
+
+  // Determine locked role from invite context
+  const lockedRole: 'individual' | 'company_admin' | null =
+    orgToken ? 'individual' :
+    coachToken && typeParam !== 'individual' ? 'company_admin' :
+    coachToken && typeParam === 'individual' ? 'individual' :
+    null;
+
+  const [coachInfo, setCoachInfo] = useState<{ name: string } | null>(null);
+  const [orgInfo, setOrgInfo]     = useState<{ name: string } | null>(null);
+
+  useEffect(() => {
+    if (coachToken) {
+      fetch(`/api/auth/invite-info?coach=${coachToken}`)
+        .then(r => r.json())
+        .then(d => { if (d.name) setCoachInfo(d); });
+    }
+    if (orgToken) {
+      fetch(`/api/auth/invite-info?org=${orgToken}`)
+        .then(r => r.json())
+        .then(d => { if (d.name) setOrgInfo(d); });
+    }
+  }, [coachToken, orgToken]);
 
   // Form state
   const [step, setStep] = useState<Step>('account');
@@ -42,7 +69,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [role, setRole] = useState<'individual' | 'company_admin'>('individual');
+  const [role, setRole] = useState<'individual' | 'company_admin'>(lockedRole ?? 'individual');
   const [selectedModules, setSelectedModules] = useState<string[]>(['technician']);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -62,7 +89,12 @@ export default function SignupPage() {
     setError('');
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    setStep(role === 'individual' ? 'modules' : 'tos');
+    // Skip module selection for org invites (modules inherited from company admin) or company_admin signups
+    if (role === 'individual' && !orgToken) {
+      setStep('modules');
+    } else {
+      setStep('tos');
+    }
   };
 
   const handleSubmit = async () => {
@@ -80,13 +112,19 @@ export default function SignupPage() {
           password,
           role,
           companyName: role === 'company_admin' ? companyName : undefined,
-          scenarioAccess: role === 'individual' ? selectedModules : ['technician', 'property_manager', 'insurance', 'plumber_bd'],
+          scenarioAccess: orgToken ? [] : role === 'individual' ? selectedModules : ['technician', 'property_manager', 'insurance', 'plumber_bd'],
+          coachToken: coachToken ?? undefined,
+          orgToken:   orgToken   ?? undefined,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Something went wrong.'); setLoading(false); return; }
 
+      if (data.autoApproved) {
+        router.push('/training');
+        return;
+      }
       setSubmitted(true);
     } catch {
       setError('Network error. Please try again.');
@@ -145,7 +183,15 @@ export default function SignupPage() {
             <p className="text-sm text-gray-500 mb-6">Create your TechRP account</p>
 
             <form onSubmit={handleAccountNext} className="space-y-4">
-              {/* Account type */}
+              {/* Invite banner */}
+              {(coachInfo || orgInfo) && (
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 text-sm text-blue-300">
+                  You&apos;re joining <strong>{coachInfo?.name ?? orgInfo?.name}</strong>&apos;s training program.
+                </div>
+              )}
+
+              {/* Account type — hidden when role is locked by invite */}
+              {!lockedRole && (
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-2">Account Type</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -170,6 +216,7 @@ export default function SignupPage() {
                   ))}
                 </div>
               </div>
+              )}
 
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Full Name</label>
@@ -322,6 +369,8 @@ export default function SignupPage() {
 
   // ── Step 3: Terms of Service ─────────────────────────────────────────────────
 
+  const effectiveRole = lockedRole ?? role;
+
   return (
     <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm">
@@ -358,7 +407,7 @@ export default function SignupPage() {
 
           <div className="flex gap-3">
             <button
-              onClick={() => setStep(role === 'individual' ? 'modules' : 'account')}
+              onClick={() => setStep(effectiveRole === 'individual' && !orgToken ? 'modules' : 'account')}
               className="flex-1 py-2.5 text-sm text-gray-400 hover:text-white border border-white/10 hover:border-white/25 rounded-xl transition-colors"
             >
               ← Back
@@ -374,5 +423,13 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupPageInner />
+    </Suspense>
   );
 }
