@@ -175,11 +175,11 @@ export default function SessionsPage() {
   const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | '90d'>('all');
 
   useEffect(() => {
-    supabase
+    (supabase as any)
       .from('training_sessions')
       .select('*')
       .order('started_at', { ascending: false })
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: TrainingSession[] | null; error: unknown }) => {
         if (!error) setSessions(data || []);
         setLoading(false);
       });
@@ -310,7 +310,7 @@ export default function SessionsPage() {
                     {insights.summary && (
                       <div className="border border-white/10 rounded-xl p-4 bg-white/5">
                         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Coaching Note</p>
-                        <p className="text-sm text-gray-300 leading-relaxed italic">"{insights.summary}"</p>
+                        <p className="text-sm text-gray-300 leading-relaxed italic">&quot;{insights.summary}&quot;</p>
                       </div>
                     )}
                   </div>

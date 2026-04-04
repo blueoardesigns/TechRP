@@ -47,11 +47,11 @@ export default function PlaybooksPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
+    (supabase as any)
       .from('playbooks')
       .select('*')
       .order('updated_at', { ascending: false })
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: Playbook[] | null; error: unknown }) => {
         if (!error) setPlaybooks(data || []);
         setLoading(false);
       });

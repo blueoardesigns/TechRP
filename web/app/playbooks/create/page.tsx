@@ -122,7 +122,7 @@ export default function CreatePlaybookPage() {
 
       const { content } = await response.json();
 
-      const { data, error: saveError } = await supabase
+      const { data, error: saveError } = await (supabase as any)
         .from('playbooks')
         .insert({
           organization_id: PLACEHOLDER_ORGANIZATION_ID,

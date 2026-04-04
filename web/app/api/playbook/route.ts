@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceRoleClient();
 
-    const { data, error } = await (supabase
-      .from('playbooks' as any)
+    const { data, error } = await (supabase as any)
+      .from('playbooks')
       .select('id, name, content, scenario_type')
       .eq('scenario_type', scenarioType)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single() as any);
+      .single();
 
     if (error || !data) {
       return NextResponse.json({ playbook: null });

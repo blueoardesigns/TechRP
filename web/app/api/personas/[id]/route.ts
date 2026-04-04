@@ -20,8 +20,8 @@ export async function PUT(
       system_prompt,
     } = body;
 
-    const { data, error } = await supabase
-      .from('personas' as any)
+    const { data, error } = await (supabase as any)
+      .from('personas')
       .update({
         name,
         personality_type,
@@ -56,8 +56,8 @@ export async function DELETE(
     const supabase = createServiceRoleClient();
     const { id } = params;
 
-    const { error } = await supabase
-      .from('personas' as any)
+    const { error } = await (supabase as any)
+      .from('personas')
       .update({ is_active: false, updated_at: new Date().toISOString() })
       .eq('id', id);
 

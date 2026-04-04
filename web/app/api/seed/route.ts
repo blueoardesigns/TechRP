@@ -14,19 +14,19 @@ export async function POST(request: NextRequest) {
     // ── Seed scenario playbooks ────────────────────────────────────────────────
     const playbookResults = [];
     for (const pb of DEFAULT_PLAYBOOKS) {
-      const { data: existing } = await (supabase
-        .from('playbooks' as any)
+      const { data: existing } = await (supabase as any)
+        .from('playbooks')
         .select('id')
         .eq('scenario_type', pb.scenarioType)
-        .limit(1) as any);
+        .limit(1);
 
       if (existing && existing.length > 0) {
         playbookResults.push({ name: pb.name, status: 'skipped (already exists)' });
         continue;
       }
 
-      const { error } = await (supabase
-        .from('playbooks' as any)
+      const { error } = await (supabase as any)
+        .from('playbooks')
         .insert({
           organization_id: '00000000-0000-0000-0000-000000000001',
           name: pb.name,
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
           scenario_type: pb.scenarioType,
           file_url: null,
           uploaded_by: '00000000-0000-0000-0000-000000000001',
-        }) as any);
+        });
 
       playbookResults.push({ name: pb.name, status: error ? `error: ${error.message}` : 'created' });
     }
@@ -45,19 +45,19 @@ export async function POST(request: NextRequest) {
     const personaResults = { created: 0, skipped: 0, errors: 0 };
 
     // Check how many personas already exist
-    const { count } = await (supabase
-      .from('personas' as any)
+    const { count } = await (supabase as any)
+      .from('personas')
       .select('*', { count: 'exact', head: true })
-      .eq('is_default', true) as any);
+      .eq('is_default', true);
 
     if (count && count >= ALL_PERSONAS.length) {
       personaResults.skipped = ALL_PERSONAS.length;
     } else {
       // Get existing personas by name+scenario_type to avoid duplicates
-      const { data: existingPersonas } = await (supabase
-        .from('personas' as any)
+      const { data: existingPersonas } = await (supabase as any)
+        .from('personas')
         .select('name, scenario_type')
-        .eq('is_default', true) as any);
+        .eq('is_default', true);
 
       const existingKeys = new Set(
         (existingPersonas || []).map((p: any) => `${p.scenario_type}::${p.name}`)
@@ -84,9 +84,9 @@ export async function POST(request: NextRequest) {
       const BATCH = 25;
       for (let i = 0; i < toInsert.length; i += BATCH) {
         const batch = toInsert.slice(i, i + BATCH);
-        const { error } = await (supabase
-          .from('personas' as any)
-          .insert(batch) as any);
+        const { error } = await (supabase as any)
+          .from('personas')
+          .insert(batch);
 
         if (error) {
           personaResults.errors += batch.length;

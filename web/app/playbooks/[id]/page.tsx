@@ -32,12 +32,12 @@ export default function PlaybookDetailPage() {
 
   useEffect(() => {
     if (!playbookId) return;
-    supabase
+    (supabase as any)
       .from('playbooks')
       .select('*')
       .eq('id', playbookId)
       .single()
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: Playbook | null; error: unknown }) => {
         if (error || !data) { setError('Playbook not found'); }
         else {
           setPlaybook(data);
@@ -60,7 +60,7 @@ export default function PlaybookDetailPage() {
     if (!playbook) return;
     setSaving(true);
     setError(null);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('playbooks')
       .update({ name, content })
       .eq('id', playbook.id)
@@ -80,7 +80,7 @@ export default function PlaybookDetailPage() {
     if (!playbook) return;
     if (!window.confirm(`Delete "${playbook.name}"? This cannot be undone.`)) return;
     setDeleting(true);
-    const { error } = await supabase.from('playbooks').delete().eq('id', playbook.id);
+    const { error } = await (supabase as any).from('playbooks').delete().eq('id', playbook.id);
     if (error) { setError('Failed to delete: ' + error.message); setDeleting(false); }
     else router.push('/playbooks');
   };

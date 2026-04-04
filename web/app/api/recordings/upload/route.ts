@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Step 4: Save to DB
     const supabase = createServiceRoleClient();
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('training_sessions')
       .insert({
         user_id: USER_ID,
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       console.error('DB insert error:', error);
       // If source column doesn't exist yet, retry without it
       if (error.code === '42703') {
-        const { data: data2, error: error2 } = await supabase
+        const { data: data2, error: error2 } = await (supabase as any)
           .from('training_sessions')
           .insert({
             user_id: USER_ID,

@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 
 async function getSession(id: string) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('training_sessions')
       .select('*')
       .eq('id', id)

@@ -1,12 +1,30 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Routes that don't require a session
 const PUBLIC_ROUTES = ['/', '/login', '/signup', '/pending'];
 const PUBLIC_PREFIXES = ['/api/auth/', '/_next/', '/favicon'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // /admin is gated by ADMIN_SECRET, not Supabase auth
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin/')) {
+    const key = request.nextUrl.searchParams.get('key')
+      ?? request.cookies.get('admin_key')?.value;
+    if (key === process.env.ADMIN_SECRET) {
+      const res = NextResponse.next({ request });
+      // Set cookie so subsequent /admin navigations don't need the param
+      res.cookies.set('admin_key', key!, { httpOnly: true, sameSite: 'lax', path: '/' });
+      return res;
+    }
+    // No valid key — redirect to /admin/login (or 401 for API routes)
+    if (pathname.startsWith('/api/admin/')) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = '/admin/login';
+    return NextResponse.redirect(loginUrl);
+  }
 
   // Always allow public routes and static assets
   if (
@@ -25,9 +43,7 @@ export async function middleware(request: NextRequest) {
       cookies: {
         getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)

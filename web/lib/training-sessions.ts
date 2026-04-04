@@ -51,7 +51,7 @@ export async function saveTrainingSession({
       persona_scenario_type: personaScenarioType,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('training_sessions')
       .insert(sessionData)
       .select()
@@ -77,7 +77,7 @@ export async function updateSessionAssessment(
   assessment: string
 ) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('training_sessions')
       .update({ assessment })
       .eq('id', sessionId)
@@ -105,7 +105,7 @@ export async function updateSessionRecording(
   vapiCallId: string
 ) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('training_sessions')
       .update({ recording_url: recordingUrl, vapi_call_id: vapiCallId })
       .eq('id', sessionId)

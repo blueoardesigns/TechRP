@@ -9,8 +9,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const scenarioType = searchParams.get('scenario_type');
 
-    let query = supabase
-      .from('personas' as any)
+    let query = (supabase as any)
+      .from('personas')
       .select('*')
       .eq('is_active', true)
       .order('is_default', { ascending: false })
@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
-      .from('personas' as any)
+    const { data, error } = await (supabase as any)
+      .from('personas')
       .insert({
         organization_id: '00000000-0000-0000-0000-000000000001',
         scenario_type,
