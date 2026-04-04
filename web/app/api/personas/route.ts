@@ -1,32 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase';
+import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 
 // GET /api/personas?scenario_type=homeowner_inbound
 // GET /api/personas  (all)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServiceRoleClient();
+    const supabaseAuth = createServerSupabase();
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+
+    const supabase = createServiceSupabase();
+    let coachInstanceId: string | null = null;
+
+    if (authUser) {
+      const { data: profile } = await (supabase as any)
+        .from('users').select('coach_instance_id').eq('auth_user_id', authUser.id).single();
+      coachInstanceId = (profile as any)?.coach_instance_id ?? null;
+    }
+
     const { searchParams } = new URL(request.url);
     const scenarioType = searchParams.get('scenario_type');
 
-    let query = (supabase as any)
-      .from('personas')
-      .select('*')
-      .eq('is_active', true)
-      .order('is_default', { ascending: false })
-      .order('name');
+    let query;
+    if (coachInstanceId) {
+      const { data: inst } = await (supabase as any)
+        .from('coach_instances').select('global_personas_enabled').eq('id', coachInstanceId).single();
+      const globalEnabled = (inst as any)?.global_personas_enabled ?? false;
+
+      if (globalEnabled) {
+        query = (supabase as any).from('personas').select('*')
+          .or(`coach_instance_id.eq.${coachInstanceId},coach_instance_id.is.null`)
+          .eq('is_active', true)
+          .order('name');
+      } else {
+        query = (supabase as any).from('personas').select('*')
+          .eq('coach_instance_id', coachInstanceId)
+          .eq('is_active', true)
+          .order('name');
+      }
+    } else {
+      query = (supabase as any).from('personas').select('*')
+        .is('coach_instance_id', null)
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .order('name');
+    }
 
     if (scenarioType) {
       query = query.eq('scenario_type', scenarioType);
     }
 
     const { data, error } = await query;
-
     if (error) {
       console.error('Error fetching personas:', error);
       return NextResponse.json({ error: 'Failed to fetch personas' }, { status: 500 });
     }
-
     return NextResponse.json({ personas: data || [] });
   } catch (error) {
     console.error('Error in GET /api/personas:', error);
@@ -37,7 +64,7 @@ export async function GET(request: NextRequest) {
 // POST /api/personas — create a new persona
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServiceRoleClient();
+    const supabase = createServiceSupabase();
     const body = await request.json();
 
     const {

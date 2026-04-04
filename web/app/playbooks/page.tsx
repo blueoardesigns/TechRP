@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { SCENARIOS, type ScenarioType } from '@/lib/personas';
 import type { Database } from '../../../shared/types/database';
 
@@ -47,12 +46,10 @@ export default function PlaybooksPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (supabase as any)
-      .from('playbooks')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .then(({ data, error }: { data: Playbook[] | null; error: unknown }) => {
-        if (!error) setPlaybooks(data || []);
+    fetch('/api/playbooks')
+      .then(r => r.json())
+      .then(d => {
+        setPlaybooks(d.playbooks ?? []);
         setLoading(false);
       });
   }, []);

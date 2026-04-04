@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -42,6 +43,68 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve playbook with coach isolation if not provided by client
+    let resolvedPlaybookContent = playbookContent ?? null;
+    if (!resolvedPlaybookContent && persona?.scenarioType) {
+      try {
+        const supabaseAuth = createServerSupabase();
+        const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+
+        let coachInstanceId: string | null = null;
+        if (authUser) {
+          const sb = createServiceSupabase();
+          const { data: profile } = await (sb as any)
+            .from('users').select('coach_instance_id').eq('auth_user_id', authUser.id).single();
+          coachInstanceId = (profile as any)?.coach_instance_id ?? null;
+        }
+
+        const sb = createServiceSupabase();
+        let playbook: any = null;
+        if (coachInstanceId) {
+          // Try coach's own playbook first
+          const { data: coachPb } = await (sb as any)
+            .from('playbooks')
+            .select('content')
+            .eq('scenario_type', persona.scenarioType)
+            .eq('coach_instance_id', coachInstanceId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (coachPb) {
+            playbook = coachPb;
+          } else {
+            // Fall back to global if enabled
+            const { data: inst } = await (sb as any)
+              .from('coach_instances').select('global_playbooks_enabled').eq('id', coachInstanceId).single();
+            if ((inst as any)?.global_playbooks_enabled) {
+              const { data: globalPb } = await (sb as any)
+                .from('playbooks')
+                .select('content')
+                .eq('scenario_type', persona.scenarioType)
+                .is('coach_instance_id', null)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              playbook = globalPb;
+            }
+          }
+        } else {
+          const { data: globalPb } = await (sb as any)
+            .from('playbooks')
+            .select('content')
+            .eq('scenario_type', persona.scenarioType)
+            .is('coach_instance_id', null)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          playbook = globalPb;
+        }
+        if (playbook?.content) resolvedPlaybookContent = playbook.content;
+      } catch (e) {
+        console.error('Failed to resolve playbook for assessment:', e);
+      }
+    }
+
     // Determine speaker labels from persona or use defaults
     const techLabel = 'Rep';
     const contactLabel = persona?.speakerLabel || 'Contact';
@@ -69,8 +132,8 @@ export async function POST(request: NextRequest) {
 5. Next step — Did they successfully move toward a meeting, lunch, or continued conversation?`;
 
     // If a playbook is provided, use it as the rubric
-    const playbookSection = playbookContent
-      ? `\n\nACTIVE PLAYBOOK FOR THIS SCENARIO (evaluate the rep against this):\n${playbookContent}\n`
+    const playbookSection = resolvedPlaybookContent
+      ? `\n\nACTIVE PLAYBOOK FOR THIS SCENARIO (evaluate the rep against this):\n${resolvedPlaybookContent}\n`
       : '';
 
     // Create the assessment prompt
