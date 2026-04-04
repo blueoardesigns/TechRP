@@ -51,7 +51,8 @@ export default function PlaybooksPage() {
       .then(d => {
         setPlaybooks(d.playbooks ?? []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   // Group and order playbooks by scenario group, then scenario order

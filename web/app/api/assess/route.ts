@@ -51,14 +51,12 @@ export async function POST(request: NextRequest) {
         const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
 
         let coachInstanceId: string | null = null;
+        const sb = createServiceSupabase();
         if (authUser) {
-          const sb = createServiceSupabase();
           const { data: profile } = await (sb as any)
             .from('users').select('coach_instance_id').eq('auth_user_id', authUser.id).single();
           coachInstanceId = (profile as any)?.coach_instance_id ?? null;
         }
-
-        const sb = createServiceSupabase();
         let playbook: any = null;
         if (coachInstanceId) {
           // Try coach's own playbook first
