@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/components/auth-provider';
 
 type ObjectionItem = {
   objection: string;
@@ -30,15 +31,16 @@ const STEPS = [
   'Review & Generate',
 ];
 
-// Placeholder IDs - replace with actual IDs when auth is implemented
-const PLACEHOLDER_USER_ID = '00000000-0000-0000-0000-000000000001';
-const PLACEHOLDER_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
-
 export default function CreatePlaybookPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPersonaConfirm, setShowPersonaConfirm] = useState(false);
+  const [suggestedScenarios, setSuggestedScenarios] = useState<string[]>([]);
+  const [savedPlaybookName, setSavedPlaybookName] = useState('');
+  const [savedPlaybookContent, setSavedPlaybookContent] = useState('');
 
   const [formData, setFormData] = useState<WizardData>({
     name: '',
@@ -125,17 +127,34 @@ export default function CreatePlaybookPage() {
       const { data, error: saveError } = await (supabase as any)
         .from('playbooks')
         .insert({
-          organization_id: PLACEHOLDER_ORGANIZATION_ID,
+          organization_id: user?.organizationId ?? null,
           name: formData.name,
           content: content,
           file_url: null,
-          uploaded_by: PLACEHOLDER_USER_ID,
+          uploaded_by: user?.id ?? null,
         })
         .select()
         .single();
 
       if (saveError || !data) {
         throw new Error(saveError?.message || 'Failed to save playbook');
+      }
+
+      // If coach, offer to seed personas based on AI analysis
+      if (user?.role === 'coach') {
+        setSavedPlaybookName(formData.name);
+        setSavedPlaybookContent(content);
+        const res = await fetch('/api/coach/generate-personas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playbookName: formData.name, playbookContent: content }),
+        });
+        const genData = await res.json();
+        if (genData.suggestedTypes?.length) {
+          setSuggestedScenarios(genData.suggestedTypes);
+          setShowPersonaConfirm(true);
+          return; // don't navigate yet
+        }
       }
 
       router.push(`/playbooks/${data.id}`);
@@ -466,6 +485,40 @@ export default function CreatePlaybookPage() {
           </div>
         </div>
       </div>
+
+      {showPersonaConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 w-full max-w-md space-y-4">
+            <h2 className="text-lg font-bold text-white">Seed Personas?</h2>
+            <p className="text-sm text-gray-400">
+              This playbook maps to: <strong className="text-white">{suggestedScenarios.join(', ')}</strong>.
+              Would you like to seed AI personas for these scenarios in your instance?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowPersonaConfirm(false); router.push('/playbooks'); }}
+                className="flex-1 border border-white/10 text-gray-400 hover:text-white rounded-lg py-2.5 text-sm transition-colors"
+              >
+                Skip
+              </button>
+              <button
+                onClick={async () => {
+                  await fetch('/api/seed', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scenarioTypes: suggestedScenarios, coachInstanceId: user?.coachInstanceId }),
+                  });
+                  setShowPersonaConfirm(false);
+                  router.push('/playbooks');
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg py-2.5 text-sm font-medium transition-colors"
+              >
+                Seed Personas
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

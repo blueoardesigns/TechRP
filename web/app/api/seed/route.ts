@@ -8,6 +8,10 @@ import { ALL_PERSONAS_EXTENDED as ALL_PERSONAS } from '@/lib/all-personas';
 // Safe to call multiple times — skips records that already exist.
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json().catch(() => ({}));
+    const coachInstanceId: string | null = body.coachInstanceId ?? null;
+    const scenarioTypesFilter: string[] | null = body.scenarioTypes ?? null;
+
     const supabase = createServiceRoleClient();
     const results: Record<string, any> = {};
 
@@ -50,7 +54,7 @@ export async function POST(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('is_default', true);
 
-    if (count && count >= ALL_PERSONAS.length) {
+    if (!coachInstanceId && count && count >= ALL_PERSONAS.length) {
       personaResults.skipped = ALL_PERSONAS.length;
     } else {
       // Get existing personas by name+scenario_type to avoid duplicates
@@ -65,6 +69,7 @@ export async function POST(request: NextRequest) {
 
       const toInsert = ALL_PERSONAS
         .filter(p => !existingKeys.has(`${p.scenarioType}::${p.name}`))
+        .filter(p => !scenarioTypesFilter || scenarioTypesFilter.includes(p.scenarioType))
         .map(p => ({
           // omit id — let Supabase generate a UUID
           organization_id: '00000000-0000-0000-0000-000000000001',
@@ -76,8 +81,9 @@ export async function POST(request: NextRequest) {
           first_message: p.firstMessage,
           system_prompt: p.systemPrompt,
           gender: p.gender ?? 'female',
-          is_default: true,
+          is_default: !coachInstanceId,
           is_active: true,
+          coach_instance_id: coachInstanceId ?? null,
         }));
 
       // Insert in batches of 25

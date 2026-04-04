@@ -1,0 +1,53 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { SCENARIOS } from '@/lib/personas';
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+export async function POST(req: NextRequest) {
+  const supabaseAuth = createServerSupabase();
+  const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = createServiceSupabase();
+  const { data: coach } = await (supabase as any)
+    .from('users')
+    .select('coach_instance_id, app_role')
+    .eq('auth_user_id', authUser.id)
+    .single();
+
+  if (!coach || (coach as any).app_role !== 'coach') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { playbookName, playbookContent } = await req.json();
+  const validTypes = SCENARIOS.map(s => s.type);
+
+  const message = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 256,
+    messages: [{
+      role: 'user',
+      content: `Given this sales training playbook, which scenario types does it apply to?
+
+Playbook name: ${playbookName}
+Content summary: ${String(playbookContent).slice(0, 800)}
+
+Valid scenario types: ${validTypes.join(', ')}
+
+Reply with a JSON array of matching scenario type strings only. Example: ["homeowner_inbound","property_manager"]`,
+    }],
+  });
+
+  let suggestedTypes: string[] = [];
+  try {
+    const text = (message.content[0] as any).text ?? '';
+    const match = text.match(/\[.*\]/s);
+    if (match) suggestedTypes = JSON.parse(match[0]).filter((t: string) => (validTypes as string[]).includes(t));
+  } catch {
+    suggestedTypes = [];
+  }
+
+  return NextResponse.json({ suggestedTypes });
+}
