@@ -52,6 +52,10 @@ export async function POST(req: NextRequest) {
       .select('id, coach_instance_id')
       .eq('invite_token', orgToken)
       .single();
+    if (!org) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      return NextResponse.json({ error: 'Invalid invite link.' }, { status: 400 });
+    }
     if (org) {
       organizationId = (org as any).id;
       resolvedCoachInstanceId = (org as any).coach_instance_id;
@@ -85,6 +89,10 @@ export async function POST(req: NextRequest) {
       .select('id, auto_approve_users, coach_user_id')
       .eq('invite_token', coachToken)
       .single();
+    if (!inst) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      return NextResponse.json({ error: 'Invalid invite link.' }, { status: 400 });
+    }
     if (inst) {
       resolvedCoachInstanceId = (inst as any).id;
       autoApprove = (inst as any).auto_approve_users;
