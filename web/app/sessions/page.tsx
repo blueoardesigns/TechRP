@@ -419,15 +419,6 @@ export default function SessionsPage() {
 
             return (
               <div className="divide-y divide-white/5">
-                {/* Table header */}
-                <div className="grid grid-cols-12 px-6 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                  <span className="col-span-5">Date / Scenario</span>
-                  <span className="col-span-2 text-center">Duration</span>
-                  <span className="col-span-2 text-center">Score</span>
-                  <span className="col-span-2 text-center">Status</span>
-                  <span className="col-span-1" />
-                </div>
-
                 {filtered.length === 0 ? (
                   <div className="text-center py-10 text-gray-600 text-sm">No sessions match the selected filters.</div>
                 ) : filtered.map(session => {
@@ -438,41 +429,29 @@ export default function SessionsPage() {
                     <div
                       key={session.id}
                       onClick={() => router.push(`/sessions/${session.id}`)}
-                      className="grid grid-cols-12 px-6 py-4 items-center hover:bg-white/5 cursor-pointer transition-colors group"
+                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 px-5 py-4 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
                     >
-                      <div className="col-span-5">
-                        <p className="text-sm text-white font-medium">{formatDate(session.started_at)}</p>
-                        {scenarioMeta && (
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold mt-1 ${scenarioMeta.color}`}>
-                            {scenarioMeta.label}
-                          </span>
-                        )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {scenarioMeta && (
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${scenarioMeta.color}`}>
+                              {scenarioMeta.label}
+                            </span>
+                          )}
+                          {score !== null && (
+                            <span className={`text-xs font-bold ${score >= 7 ? 'text-green-400' : score >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {score}/10
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-gray-500 text-xs mt-1">{formatDate(session.started_at)}</p>
                         {(session as any).persona_name && (
-                          <p className="text-xs text-gray-500 mt-0.5">{(session as any).persona_name}</p>
+                          <p className="text-xs text-gray-600 mt-0.5">{(session as any).persona_name}</p>
                         )}
                       </div>
-                      <div className="col-span-2 text-center text-sm text-gray-400">
+                      <div className="text-xs text-gray-500 sm:ml-4 sm:text-right">
                         {formatDuration(session.started_at, session.ended_at)}
                       </div>
-                      <div className="col-span-2 text-center">
-                        {score !== null ? (
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${scoreBg(score)}`}>
-                            {score}/10
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-600">—</span>
-                        )}
-                      </div>
-                      <div className="col-span-2 text-center">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                          session.ended_at
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : 'bg-yellow-500/15 text-yellow-400'
-                        }`}>
-                          {session.ended_at ? 'Completed' : 'In Progress'}
-                        </span>
-                      </div>
-                      <div className="col-span-1 text-right text-gray-600 group-hover:text-gray-400 text-sm">→</div>
                     </div>
                   );
                 })}
