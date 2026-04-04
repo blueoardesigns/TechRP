@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SCENARIOS, type ScenarioType } from '@/lib/personas';
+import { SkeletonPlaybookCard } from '@/components/skeleton';
 import type { Database } from '../../../shared/types/database';
 
 type Playbook = Database['public']['Tables']['playbooks']['Row'];
@@ -143,7 +144,9 @@ export default function PlaybooksPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-gray-500 text-sm">Loading…</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => <SkeletonPlaybookCard key={i} />)}
+          </div>
         ) : playbooks.length === 0 ? (
           <div className="text-center py-20">
             <p className="text-gray-500 text-sm">No playbooks available yet.</p>

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '../../../shared/types/database';
+import { SkeletonRow } from '@/components/skeleton';
 
 type TrainingSession = Database['public']['Tables']['training_sessions']['Row'];
 
@@ -390,7 +391,9 @@ export default function SessionsPage() {
           })()}
 
           {loading ? (
-            <div className="text-center py-12 text-gray-500 text-sm">Loading…</div>
+            <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
+              {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
+            </div>
           ) : sessions.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-500 text-sm mb-4">No training sessions yet.</p>
