@@ -53,6 +53,7 @@ web-build/
 Thumbs.db
 
 claude/settings.local.json
+.claire/
 
 # Local planning files — not for GitHub
 TODO.md
