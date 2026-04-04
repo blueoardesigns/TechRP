@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase';
+import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
@@ -10,9 +10,19 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const daysParam = searchParams.get('days'); // null = all time
-    const userId = searchParams.get('user_id') || '00000000-0000-0000-0000-000000000001';
 
-    const supabase = createServiceRoleClient();
+    const supabaseAuth = createServerSupabase();
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const supabase = createServiceSupabase();
+    const { data: profile } = await (supabase as any)
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', authUser.id)
+      .single();
+    const userId = (profile as any)?.id ?? '';
 
     let query = (supabase as any)
       .from('training_sessions')

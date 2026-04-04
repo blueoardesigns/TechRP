@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { createServiceRoleClient } from '@/lib/supabase';
+import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 
 export const maxDuration = 120; // Allow up to 2 min for large files
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
-
-const ORG_ID  = '00000000-0000-0000-0000-000000000001';
-const USER_ID = '00000000-0000-0000-0000-000000000001';
 
 // ─── Whisper Transcription ─────────────────────────────────────────────────────
 
@@ -82,6 +79,20 @@ Respond in the following JSON format (valid JSON only, no markdown):
 
 export async function POST(request: NextRequest) {
   try {
+    const supabaseAuth = createServerSupabase();
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const supabase = createServiceSupabase();
+    const { data: profile } = await (supabase as any)
+      .from('users')
+      .select('id, organization_id')
+      .eq('auth_user_id', authUser.id)
+      .single();
+    const USER_ID = (profile as any)?.id ?? '';
+    const ORG_ID  = (profile as any)?.organization_id ?? '';
+
     let formData: FormData;
     try {
       formData = await request.formData();
@@ -139,7 +150,6 @@ export async function POST(request: NextRequest) {
     const endedAt = new Date(startedAt.getTime() + durationMs);
 
     // Step 4: Save to DB
-    const supabase = createServiceRoleClient();
     const { data, error } = await (supabase as any)
       .from('training_sessions')
       .insert({

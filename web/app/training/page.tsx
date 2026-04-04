@@ -12,6 +12,7 @@ import {
   type ScenarioConfig,
   type Persona,
 } from '@/lib/personas';
+import { useAuth } from '@/components/auth-provider';
 
 // DB persona shape (snake_case from API) mapped to Persona (camelCase)
 interface DBPersona {
@@ -42,8 +43,6 @@ function mapDBPersona(db: DBPersona): Persona {
 }
 
 const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
-const PLACEHOLDER_USER_ID = '00000000-0000-0000-0000-000000000001';
-const PLACEHOLDER_ORGANIZATION_ID = '00000000-0000-0000-0000-000000000001';
 
 type CallStatus = 'idle' | 'connecting' | 'connected';
 type Phase = 'scenario-select' | 'persona-preview' | 'calling' | 'post-call';
@@ -119,6 +118,7 @@ function PageHeader({ onBack, title }: { onBack: () => void; title: string }) {
 
 export default function TrainingPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [phase, setPhase] = useState<Phase>('scenario-select');
   const [selectedPersona, setSelectedPersona] = useState<Persona | null>(null);
   const [callStatus, setCallStatus] = useState<CallStatus>('idle');
@@ -266,8 +266,8 @@ export default function TrainingPage() {
       const messagesToSave = messagesRef.current.length > 0 ? messagesRef.current : messages;
 
       const session = await saveTrainingSession({
-        userId: PLACEHOLDER_USER_ID,
-        organizationId: PLACEHOLDER_ORGANIZATION_ID,
+        userId: user?.id ?? '',
+        organizationId: user?.organizationId ?? '',
         transcript: JSON.stringify(messagesToSave),
         startedAt,
         endedAt,
