@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { useRouter, usePathname } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 
-export type UserRole = 'individual' | 'company_admin';
+export type UserRole = 'individual' | 'company_admin' | 'coach';
 export type UserStatus = 'pending' | 'approved' | 'rejected';
 
 export interface AppUser {
@@ -15,6 +15,8 @@ export interface AppUser {
   role: UserRole;
   status: UserStatus;
   scenarioAccess: string[];
+  coachInstanceId: string | null;
+  organizationId: string | null;
 }
 
 interface AuthContextValue {
@@ -53,7 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access')
+      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access, coach_instance_id, organization_id')
       .eq('auth_user_id', authUser.id)
       .single();
 
@@ -71,6 +73,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       role: ((profile as any).app_role ?? 'individual') as UserRole,
       status: ((profile as any).status ?? 'pending') as UserStatus,
       scenarioAccess: (profile as any).scenario_access ?? [],
+      coachInstanceId: (profile as any).coach_instance_id ?? null,
+      organizationId: (profile as any).organization_id ?? null,
     };
 
     setUser(appUser);
@@ -78,6 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Redirect pending users away from protected pages
     if (appUser.status === 'pending' && !PUBLIC_PATHS.includes(pathname)) {
+      router.replace('/pending');
+    }
+    // Redirect rejected users to /pending (shows different UI there)
+    if (appUser.status === 'rejected' && !PUBLIC_PATHS.includes(pathname)) {
       router.replace('/pending');
     }
   }, [pathname, router]);
