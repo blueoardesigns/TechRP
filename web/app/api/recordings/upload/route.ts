@@ -90,8 +90,11 @@ export async function POST(request: NextRequest) {
       .select('id, organization_id')
       .eq('auth_user_id', authUser.id)
       .single();
-    const USER_ID = (profile as any)?.id ?? '';
-    const ORG_ID  = (profile as any)?.organization_id ?? '';
+    if (!profile) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const USER_ID = (profile as any).id as string;
+    const ORG_ID  = (profile as any).organization_id as string | null ?? '';
 
     let formData: FormData;
     try {

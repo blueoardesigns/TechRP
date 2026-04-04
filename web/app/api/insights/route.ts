@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
       .select('id')
       .eq('auth_user_id', authUser.id)
       .single();
-    const userId = (profile as any)?.id ?? '';
+    if (!profile) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = (profile as any).id as string;
 
     let query = (supabase as any)
       .from('training_sessions')
