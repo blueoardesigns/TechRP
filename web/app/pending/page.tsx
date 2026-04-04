@@ -9,6 +9,7 @@ export default function PendingPage() {
   const router = useRouter();
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSignOut = async () => {
     await signOut();
@@ -17,13 +18,20 @@ export default function PendingPage() {
 
   const handleResend = async () => {
     setResending(true);
+    setError('');
     try {
-      await fetch('/api/auth/resend-approval', {
+      const res = await fetch('/api/auth/resend-approval', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user?.email }),
       });
-      setResent(true);
+      if (res.ok) {
+        setResent(true);
+      } else {
+        setError('Failed to resend. Please try again.');
+      }
+    } catch {
+      setError('Failed to resend. Please try again.');
     } finally {
       setResending(false);
     }
@@ -77,13 +85,16 @@ export default function PendingPage() {
             {resent ? (
               <p className="text-sm text-green-400">Approval request resent.</p>
             ) : (
-              <button
-                onClick={handleResend}
-                disabled={resending}
-                className="text-sm text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
-              >
-                {resending ? 'Resending…' : 'Resend approval request'}
-              </button>
+              <div className="space-y-1">
+                <button
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="text-sm text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+                >
+                  {resending ? 'Resending…' : 'Resend approval request'}
+                </button>
+                {error && <p className="text-sm text-red-400">{error}</p>}
+              </div>
             )}
           </>
         )}
