@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
           organization_id: '00000000-0000-0000-0000-000000000001',
           name: pb.name, content: pb.content, scenario_type: pb.scenarioType,
           file_url: null, uploaded_by: '00000000-0000-0000-0000-000000000001',
-          is_default: true, coach_instance_id: null,
         });
         playbookResults.push({ name: pb.name, status: error ? `error: ${error.message}` : 'created' });
       }
