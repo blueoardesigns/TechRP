@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
-import { supabase } from '@/lib/supabase';
 import type { Database } from '../../../../shared/types/database';
 
 type Playbook = Database['public']['Tables']['playbooks']['Row'];
@@ -32,20 +31,18 @@ export default function PlaybookDetailPage() {
 
   useEffect(() => {
     if (!playbookId) return;
-    (supabase as any)
-      .from('playbooks')
-      .select('*')
-      .eq('id', playbookId)
-      .single()
-      .then(({ data, error }: { data: Playbook | null; error: unknown }) => {
-        if (error || !data) { setError('Playbook not found'); }
+    fetch(`/api/playbooks/${playbookId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!d.playbook) { setError('Playbook not found'); }
         else {
-          setPlaybook(data);
-          setName(data.name);
-          setContent(data.content);
+          setPlaybook(d.playbook);
+          setName(d.playbook.name);
+          setContent(d.playbook.content);
         }
         setLoading(false);
-      });
+      })
+      .catch(() => { setError('Playbook not found'); setLoading(false); });
   }, [playbookId]);
 
   const handleCancel = () => {
@@ -60,16 +57,16 @@ export default function PlaybookDetailPage() {
     if (!playbook) return;
     setSaving(true);
     setError(null);
-    const { data, error } = await (supabase as any)
-      .from('playbooks')
-      .update({ name, content })
-      .eq('id', playbook.id)
-      .select()
-      .single();
-    if (error || !data) {
-      setError(error?.message || 'Failed to save');
+    const res = await fetch(`/api/playbooks/${playbook.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, content }),
+    });
+    const d = await res.json();
+    if (!res.ok || !d.playbook) {
+      setError(d.error || 'Failed to save');
     } else {
-      setPlaybook(data);
+      setPlaybook(d.playbook);
       setIsEditing(false);
       setPreviewTab('edit');
     }
@@ -80,8 +77,8 @@ export default function PlaybookDetailPage() {
     if (!playbook) return;
     if (!window.confirm(`Delete "${playbook.name}"? This cannot be undone.`)) return;
     setDeleting(true);
-    const { error } = await (supabase as any).from('playbooks').delete().eq('id', playbook.id);
-    if (error) { setError('Failed to delete: ' + error.message); setDeleting(false); }
+    const res = await fetch(`/api/playbooks/${playbook.id}`, { method: 'DELETE' });
+    if (!res.ok) { setError('Failed to delete'); setDeleting(false); }
     else router.push('/playbooks');
   };
 
