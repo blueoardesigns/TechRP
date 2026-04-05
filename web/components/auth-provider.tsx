@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import { useRouter, usePathname } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 
-export type UserRole = 'individual' | 'company_admin' | 'coach';
+export type UserRole = 'individual' | 'company_admin' | 'coach' | 'superuser';
 export type UserStatus = 'pending' | 'approved' | 'rejected';
 
 export interface AppUser {
@@ -76,6 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       coachInstanceId: (profile as any).coach_instance_id ?? null,
       organizationId: (profile as any).organization_id ?? null,
     };
+
+    // Superusers are never blocked
+    if (appUser.role === 'superuser') {
+      setUser(appUser);
+      setLoading(false);
+      return;
+    }
 
     setUser(appUser);
     setLoading(false);

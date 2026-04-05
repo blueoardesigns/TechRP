@@ -7,6 +7,14 @@ import { useAuth, type AppUser } from '@/components/auth-provider';
 function getNavItems(user: AppUser | null) {
   if (!user || user.status !== 'approved') return [];
 
+  if (user.role === 'superuser') {
+    return [
+      { href: '/admin/users', label: 'Users' },
+      { href: '/admin',       label: 'Coaches' },
+      { href: '/insights',    label: 'Analytics' },
+    ];
+  }
+
   if (user.role === 'coach') {
     return [
       { href: '/coach',     label: 'Dashboard' },

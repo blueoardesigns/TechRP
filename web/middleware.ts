@@ -38,7 +38,17 @@ export async function middleware(request: NextRequest) {
       });
       return res;
     }
-    // No valid key — redirect to /admin/login (or 401 for API routes)
+    // No valid admin_key — check Supabase session as fallback
+    // If authenticated user, let them reach the page (page/API routes verify superuser role)
+    const supabaseCheck = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } }
+    );
+    const { data: { user: sbUser } } = await supabaseCheck.auth.getUser();
+    if (sbUser && !pathname.startsWith('/api/admin/')) {
+      return NextResponse.next({ request });
+    }
     if (pathname.startsWith('/api/admin/')) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
