@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase-server';
 
+const FALLBACK_ORG = '00000000-0000-0000-0000-000000000001';
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    // organization_id is NOT NULL — fall back to placeholder if user has no org
+    if (!body.organization_id) body.organization_id = FALLBACK_ORG;
     const supabase = createServiceSupabase();
     const { data, error } = await (supabase as any)
       .from('training_sessions')
