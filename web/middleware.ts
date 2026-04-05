@@ -7,6 +7,13 @@ const PUBLIC_PREFIXES = ['/api/auth/', '/_next/', '/favicon'];
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // /api/seed is gated by ADMIN_SECRET (idempotent operation)
+  if (pathname === '/api/seed') {
+    const key = request.nextUrl.searchParams.get('key') ?? request.cookies.get('admin_key')?.value;
+    if (key && key === process.env.ADMIN_SECRET) return NextResponse.next({ request });
+    // Fall through to normal Supabase auth below
+  }
+
   // /admin is gated by ADMIN_SECRET, not Supabase auth
   if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin/')) {
     // Allow /admin/login without authentication
