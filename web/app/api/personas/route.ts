@@ -10,18 +10,27 @@ export async function GET(request: NextRequest) {
 
     const supabase = createServiceSupabase();
     let coachInstanceId: string | null = null;
+    let appRole: string = '';
 
     if (authUser) {
       const { data: profile } = await (supabase as any)
-        .from('users').select('coach_instance_id').eq('auth_user_id', authUser.id).single();
+        .from('users').select('coach_instance_id, app_role').eq('auth_user_id', authUser.id).single();
       coachInstanceId = (profile as any)?.coach_instance_id ?? null;
+      appRole = (profile as any)?.app_role ?? '';
     }
 
     const { searchParams } = new URL(request.url);
     const scenarioType = searchParams.get('scenario_type');
 
     let query;
-    if (coachInstanceId) {
+    // Superusers see all default (global) personas
+    if (appRole === 'superuser') {
+      query = (supabase as any).from('personas').select('*')
+        .is('coach_instance_id', null)
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .order('name');
+    } else if (coachInstanceId) {
       const { data: inst } = await (supabase as any)
         .from('coach_instances').select('global_personas_enabled').eq('id', coachInstanceId).single();
       const globalEnabled = (inst as any)?.global_personas_enabled ?? false;

@@ -11,6 +11,8 @@ function getNavItems(user: AppUser | null) {
     return [
       { href: '/admin/users', label: 'Users' },
       { href: '/admin',       label: 'Coaches' },
+      { href: '/playbooks',   label: 'Playbooks' },
+      { href: '/personas',    label: 'Personas'  },
       { href: '/insights',    label: 'Analytics' },
     ];
   }

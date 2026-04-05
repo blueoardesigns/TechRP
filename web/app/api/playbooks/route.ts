@@ -11,6 +11,16 @@ export async function GET() {
     .from('users').select('coach_instance_id, app_role').eq('auth_user_id', authUser.id).single();
 
   const coachInstanceId = (profile as any)?.coach_instance_id ?? null;
+  const appRole = (profile as any)?.app_role as string;
+
+  // Superusers see all default (global) content
+  if (appRole === 'superuser') {
+    const { data } = await (supabase as any)
+      .from('playbooks').select('*')
+      .is('coach_instance_id', null)
+      .order('created_at', { ascending: false });
+    return NextResponse.json({ playbooks: data ?? [] });
+  }
 
   if (coachInstanceId) {
     const { data: inst } = await (supabase as any)
