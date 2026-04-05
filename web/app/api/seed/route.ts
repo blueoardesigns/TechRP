@@ -17,30 +17,44 @@ export async function POST(request: NextRequest) {
 
     // ── Seed scenario playbooks ────────────────────────────────────────────────
     const playbookResults = [];
-    for (const pb of DEFAULT_PLAYBOOKS) {
+
+    if (coachInstanceId) {
+      // Copy global playbooks into coach instance (skip already copied)
       const { data: existing } = await (supabase as any)
-        .from('playbooks')
-        .select('id')
-        .eq('scenario_type', pb.scenarioType)
-        .limit(1);
-
-      if (existing && existing.length > 0) {
-        playbookResults.push({ name: pb.name, status: 'skipped (already exists)' });
-        continue;
-      }
-
-      const { error } = await (supabase as any)
-        .from('playbooks')
-        .insert({
-          organization_id: '00000000-0000-0000-0000-000000000001',
-          name: pb.name,
-          content: pb.content,
-          scenario_type: pb.scenarioType,
-          file_url: null,
+        .from('playbooks').select('scenario_type').eq('coach_instance_id', coachInstanceId);
+      const existingTypes = new Set((existing ?? []).map((p: any) => p.scenario_type));
+      const { data: globalPlaybooks } = await (supabase as any)
+        .from('playbooks').select('name, content, scenario_type, organization_id').is('coach_instance_id', null);
+      for (const pb of (globalPlaybooks ?? [])) {
+        if (existingTypes.has(pb.scenario_type)) {
+          playbookResults.push({ name: pb.name, status: 'skipped (already exists)' });
+          continue;
+        }
+        const { error } = await (supabase as any).from('playbooks').insert({
+          name: pb.name, content: pb.content, scenario_type: pb.scenario_type,
+          organization_id: pb.organization_id ?? '00000000-0000-0000-0000-000000000001',
+          coach_instance_id: coachInstanceId, is_default: false, file_url: null,
           uploaded_by: '00000000-0000-0000-0000-000000000001',
         });
-
-      playbookResults.push({ name: pb.name, status: error ? `error: ${error.message}` : 'created' });
+        playbookResults.push({ name: pb.name, status: error ? `error: ${error.message}` : 'created' });
+      }
+    } else {
+      for (const pb of DEFAULT_PLAYBOOKS) {
+        const { data: existing } = await (supabase as any)
+          .from('playbooks').select('id').eq('scenario_type', pb.scenarioType)
+          .is('coach_instance_id', null).limit(1);
+        if (existing && existing.length > 0) {
+          playbookResults.push({ name: pb.name, status: 'skipped (already exists)' });
+          continue;
+        }
+        const { error } = await (supabase as any).from('playbooks').insert({
+          organization_id: '00000000-0000-0000-0000-000000000001',
+          name: pb.name, content: pb.content, scenario_type: pb.scenarioType,
+          file_url: null, uploaded_by: '00000000-0000-0000-0000-000000000001',
+          is_default: true, coach_instance_id: null,
+        });
+        playbookResults.push({ name: pb.name, status: error ? `error: ${error.message}` : 'created' });
+      }
     }
     results.playbooks = playbookResults;
 

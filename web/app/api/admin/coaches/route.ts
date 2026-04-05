@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create user profile' }, { status: 500 });
   }
 
-  // 3. Create coach instance
+  // 3. Create coach instance (global fallback enabled so old coaches without copies still see defaults)
   const inviteToken = randomBytes(6).toString('hex');
   const { data: instance, error: instanceError } = await (supabase as any)
     .from('coach_instances')
@@ -77,6 +77,8 @@ export async function POST(req: NextRequest) {
       coach_user_id: (userRow as any).id,
       name: instanceName,
       invite_token: inviteToken,
+      global_playbooks_enabled: true,
+      global_personas_enabled: true,
     })
     .select('id, invite_token')
     .single();
@@ -94,7 +96,54 @@ export async function POST(req: NextRequest) {
     console.error('Failed to link user to coach instance:', linkError);
   }
 
-  // 5. Send welcome email with magic link
+  // 5. Copy global playbooks + personas into the new coach instance
+  const instanceId = (instance as any).id as string;
+  try {
+    const { data: globalPlaybooks } = await (supabase as any)
+      .from('playbooks')
+      .select('name, content, scenario_type, organization_id')
+      .is('coach_instance_id', null);
+
+    if (globalPlaybooks?.length) {
+      await (supabase as any).from('playbooks').insert(
+        globalPlaybooks.map((pb: any) => ({
+          name: pb.name,
+          content: pb.content,
+          scenario_type: pb.scenario_type,
+          organization_id: pb.organization_id ?? '00000000-0000-0000-0000-000000000001',
+          coach_instance_id: instanceId,
+          is_default: false,
+          file_url: null,
+          uploaded_by: (userRow as any).id,
+        }))
+      );
+    }
+
+    const { data: globalPersonas } = await (supabase as any)
+      .from('personas')
+      .select('scenario_type, name, personality_type, brief_description, speaker_label, first_message, system_prompt, gender, is_active')
+      .is('coach_instance_id', null)
+      .eq('is_default', true)
+      .eq('is_active', true);
+
+    if (globalPersonas?.length) {
+      const BATCH = 25;
+      for (let i = 0; i < globalPersonas.length; i += BATCH) {
+        await (supabase as any).from('personas').insert(
+          globalPersonas.slice(i, i + BATCH).map((p: any) => ({
+            ...p,
+            coach_instance_id: instanceId,
+            is_default: false,
+            organization_id: '00000000-0000-0000-0000-000000000001',
+          }))
+        );
+      }
+    }
+  } catch (e) {
+    console.error('Failed to copy global content into coach instance:', e);
+  }
+
+  // 6. Send welcome email with magic link
   try {
     const { data: linkData } = await supabase.auth.admin.generateLink({ type: 'magiclink', email });
     await resend.emails.send({
