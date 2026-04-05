@@ -1,9 +1,3 @@
-import { supabase } from './supabase';
-import type { Database } from '../../shared/types/database';
-
-type TrainingSessionInsert = Database['public']['Tables']['training_sessions']['Insert'];
-type TrainingSessionUpdate = Database['public']['Tables']['training_sessions']['Update'];
-
 interface SaveTrainingSessionParams {
   userId: string;
   organizationId: string;
@@ -17,109 +11,51 @@ interface SaveTrainingSessionParams {
   personaScenarioType?: string | null;
 }
 
-/**
- * Save a training session to Supabase
- */
-export async function saveTrainingSession({
-  userId,
-  organizationId,
-  transcript,
-  startedAt,
-  endedAt,
-  vapiCallId = null,
-  recordingUrl = null,
-  personaId = null,
-  personaName = null,
-  personaScenarioType = null,
-}: SaveTrainingSessionParams) {
-  try {
-    const sessionData: TrainingSessionInsert & {
-      persona_id?: string | null;
-      persona_name?: string | null;
-      persona_scenario_type?: string | null;
-    } = {
-      user_id: userId,
-      organization_id: organizationId,
-      vapi_call_id: vapiCallId,
-      recording_url: recordingUrl,
-      transcript: transcript,
+export async function saveTrainingSession(params: SaveTrainingSessionParams) {
+  const res = await fetch('/api/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: params.userId,
+      organization_id: params.organizationId,
+      vapi_call_id: params.vapiCallId ?? null,
+      recording_url: params.recordingUrl ?? null,
+      transcript: params.transcript,
       assessment: null,
-      started_at: startedAt.toISOString(),
-      ended_at: endedAt.toISOString(),
-      persona_id: personaId,
-      persona_name: personaName,
-      persona_scenario_type: personaScenarioType,
-    };
-
-    const { data, error } = await (supabase as any)
-      .from('training_sessions')
-      .insert(sessionData)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error saving training session:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Failed to save training session:', error);
-    throw error;
-  }
+      started_at: params.startedAt.toISOString(),
+      ended_at: params.endedAt.toISOString(),
+      persona_id: params.personaId ?? null,
+      persona_name: params.personaName ?? null,
+      persona_scenario_type: params.personaScenarioType ?? null,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Failed to save session');
+  return data.session;
 }
 
-/**
- * Update a training session's assessment
- */
-export async function updateSessionAssessment(
-  sessionId: string,
-  assessment: string
-) {
-  try {
-    const { data, error } = await (supabase as any)
-      .from('training_sessions')
-      .update({ assessment })
-      .eq('id', sessionId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating session assessment:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Failed to update session assessment:', error);
-    throw error;
-  }
+export async function updateSessionAssessment(sessionId: string, assessment: string) {
+  const res = await fetch('/api/sessions', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: sessionId, assessment }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Failed to update assessment');
+  return data.session;
 }
 
-/**
- * Update a training session's recording URL and call ID
- */
 export async function updateSessionRecording(
   sessionId: string,
   recordingUrl: string | null,
   vapiCallId: string
 ) {
-  try {
-    const { data, error } = await (supabase as any)
-      .from('training_sessions')
-      .update({ recording_url: recordingUrl, vapi_call_id: vapiCallId })
-      .eq('id', sessionId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating session recording:', error);
-      throw error;
-    }
-
-    return data;
-  } catch (error) {
-    console.error('Failed to update session recording:', error);
-    throw error;
-  }
+  const res = await fetch('/api/sessions', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: sessionId, recording_url: recordingUrl, vapi_call_id: vapiCallId }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Failed to update recording');
+  return data.session;
 }
