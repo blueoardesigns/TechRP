@@ -30,12 +30,16 @@ export async function GET(request: NextRequest) {
     const organizationId = (profile as any).organization_id as string | null;
     const coachInstanceId = (profile as any).coach_instance_id as string | null;
 
+    // Superusers see all sessions platform-wide
     let query = (supabase as any)
       .from('training_sessions')
       .select('id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
-      .eq('user_id', userId)
       .not('assessment', 'is', null)
       .order('started_at', { ascending: false });
+
+    if (appRole !== 'superuser') {
+      query = query.eq('user_id', userId);
+    }
 
     if (daysParam) {
       const days = parseInt(daysParam, 10);

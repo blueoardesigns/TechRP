@@ -128,6 +128,7 @@ export default function TrainingPage() {
   const [lastSessionId, setLastSessionId] = useState<string | null>(null);
   const [scenarioPersonas, setScenarioPersonas] = useState<DBPersona[]>([]);
   const [personasLoading, setPersonasLoading] = useState(false);
+  const [personasError, setPersonasError] = useState<string | null>(null);
 
   const vapiRef = useRef<Vapi | null>(null);
   const callStartTimeRef = useRef<Date | null>(null);
@@ -190,17 +191,22 @@ export default function TrainingPage() {
 
   const handleSelectScenario = async (type: ScenarioType) => {
     setPersonasLoading(true);
+    setPersonasError(null);
     try {
       const res = await fetch(`/api/personas?scenario_type=${type}`);
       const data = await res.json();
       const personas: DBPersona[] = data.personas || [];
       setScenarioPersonas(personas);
-      if (personas.length === 0) return;
+      if (personas.length === 0) {
+        setPersonasError('No personas available for this scenario. Run /api/seed to populate default personas.');
+        return;
+      }
       const random = personas[Math.floor(Math.random() * personas.length)];
       setSelectedPersona(mapDBPersona(random));
       setPhase('persona-preview');
     } catch (err) {
       console.error('Failed to load personas:', err);
+      setPersonasError('Failed to load personas. Please try again.');
     } finally {
       setPersonasLoading(false);
     }
@@ -413,6 +419,11 @@ export default function TrainingPage() {
           {personasLoading && (
             <div className="text-center py-4 text-sm text-gray-500 animate-pulse">
               Loading personas…
+            </div>
+          )}
+          {personasError && (
+            <div className="text-center py-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4">
+              {personasError}
             </div>
           )}
         </div>
