@@ -239,6 +239,11 @@ export default function TrainingPage() {
         },
         voice: { provider: 'vapi', voiceId },
         firstMessage: selectedPersona.firstMessage,
+        stopSpeakingPlan: {
+          numWordsToInterruptAssistant: 1,
+          voiceSeconds: 0.2,
+          backoffSeconds: 1,
+        },
       } as any);
 
       if (callInfo?.id) {
