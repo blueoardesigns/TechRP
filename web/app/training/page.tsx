@@ -146,17 +146,23 @@ export default function TrainingPage() {
     vapiRef.current = vapiInstance;
     setVapi(vapiInstance);
 
+    vapiInstance.on('error', (error: any) => {
+      console.error('Vapi error:', error);
+      // Prevent unhandled error exception so call-end can still fire
+    });
+
     vapiInstance.on('call-start', () => {
       callStartTimeRef.current = new Date();
       setCallStatus('connected');
       setSaveStatus('idle');
     });
 
-    vapiInstance.on('call-end', async () => {
+    vapiInstance.on('call-end', () => {
       setCallStatus('idle');
       if (callStartTimeRef.current) {
-        await handleSaveSession(callStartTimeRef.current, new Date());
+        const startedAt = callStartTimeRef.current;
         callStartTimeRef.current = null;
+        handleSaveSession(startedAt, new Date());
       }
     });
 

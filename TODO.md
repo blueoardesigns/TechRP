@@ -67,7 +67,7 @@ Last updated: 2026-04-04
 - [x] Company admin team panel: manage invited individuals, view their sessions/scores
 - [x] Coach-based assessments: assessment scoped to coach's playbooks first, falls back to global
 - [x] Coach instance isolation: content queries filter by `coach_instance_id` + global toggle settings
-- [ ] Per-playbook/per-persona content toggle for coaches (more granular than instance-level) ← **future, not in this build**
+- [ ] Per-playbook/per-persona content toggle for coaches (more granular than instance-level)
 
 ---
 
@@ -78,7 +78,7 @@ Last updated: 2026-04-04
 - [ ] Job-seeker-facing landing page and positioning
 - [ ] Candidate invite: one-time links (as alternative to email+password flow)
 
----
+--
 
 ## Email & Marketing
 
@@ -108,3 +108,9 @@ Last updated: 2026-04-04
 - [x] Analytics (session counts, avg score, active users, by-scenario — `/insights` page)
 - [x] Loading skeletons on sessions / playbooks pages
 - [ ] Mobile-responsive admin panel
+- [ ] Playbook/Persona editor add formatting options for bullets, numbering and AI Prompt to change them
+- [ ] improve ability for call handler to interrupt-voice chat is finishing and not letting the user interrupt
+- [ ] When a session loads, display the playbook below it in case user wants a refresh before starting
+- [ ] Let a user choose easy, medium, hard scenarios to overcome
+
+## Bugs

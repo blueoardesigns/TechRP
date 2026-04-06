@@ -53,7 +53,8 @@ export async function middleware(request: NextRequest) {
       { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } }
     );
     const { data: { user: sbUser } } = await supabaseCheck.auth.getUser();
-    if (sbUser && !pathname.startsWith('/api/admin/')) {
+    if (sbUser) {
+      // Authenticated user — individual routes verify superuser role
       return NextResponse.next({ request });
     }
     if (pathname.startsWith('/api/admin/')) {
