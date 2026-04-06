@@ -114,6 +114,14 @@ function PageHeader({ onBack, title }: { onBack: () => void; title: string }) {
   );
 }
 
+// ─── Difficulty modifiers ─────────────────────────────────────────────────────
+
+const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
+  easy: '[DIFFICULTY: EASY] Be cooperative and relatively easy to work with. Raise at most one minor objection before warming up to the conversation.\n\n',
+  medium: '',
+  hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
+};
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrainingPage() {
@@ -129,6 +137,9 @@ export default function TrainingPage() {
   const [scenarioPersonas, setScenarioPersonas] = useState<DBPersona[]>([]);
   const [personasLoading, setPersonasLoading] = useState(false);
   const [personasError, setPersonasError] = useState<string | null>(null);
+
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const difficultyRef = useRef<'easy' | 'medium' | 'hard'>('medium');
 
   const vapiRef = useRef<Vapi | null>(null);
   const callStartTimeRef = useRef<Date | null>(null);
@@ -189,6 +200,9 @@ export default function TrainingPage() {
   // Keep persona ref in sync
   useEffect(() => { selectedPersonaRef.current = selectedPersona; }, [selectedPersona]);
 
+  // Keep difficulty ref in sync
+  useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
+
   const handleSelectScenario = async (type: ScenarioType) => {
     setPersonasLoading(true);
     setPersonasError(null);
@@ -230,12 +244,13 @@ export default function TrainingPage() {
       setSaveStatus('idle');
 
       const voiceId = selectedPersona.gender === 'male' ? 'Cole' : 'Mia';
+      const systemPrompt = DIFFICULTY_MODIFIERS[difficultyRef.current] + selectedPersona.systemPrompt;
 
       const callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
         model: {
           provider: 'anthropic',
           model: 'claude-sonnet-4-20250514',
-          messages: [{ role: 'system', content: selectedPersona.systemPrompt }],
+          messages: [{ role: 'system', content: systemPrompt }],
         },
         voice: { provider: 'vapi', voiceId },
         firstMessage: selectedPersona.firstMessage,
@@ -483,6 +498,28 @@ export default function TrainingPage() {
             </div>
           </div>
 
+          {/* Difficulty */}
+          <div className="mb-8">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Difficulty</p>
+            <div className="flex gap-2">
+              {(['easy', 'medium', 'hard'] as const).map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDifficulty(d)}
+                  className={`flex-1 py-2 rounded-xl text-sm font-medium capitalize transition-colors border ${
+                    difficulty === d
+                      ? d === 'easy'   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                      : d === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40'
+                                       : 'bg-red-500/20 text-red-400 border-red-500/40'
+                      : 'bg-transparent text-gray-600 border-white/10 hover:border-white/20 hover:text-gray-400'
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Actions */}
           <div className="space-y-3">
             <button
@@ -543,6 +580,14 @@ export default function TrainingPage() {
                   isConnecting ? 'text-yellow-400' : 'text-gray-500'
                 }`}>
                   {isConnected ? 'Live' : isConnecting ? 'Connecting…' : 'Ended'}
+                </span>
+                {/* Difficulty badge */}
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
+                  difficulty === 'easy'   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
+                  difficulty === 'hard'   ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                                         : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
+                } capitalize`}>
+                  {difficulty}
                 </span>
               </div>
               {/* Save status */}
