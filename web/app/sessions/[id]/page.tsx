@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
+import ReactMarkdown from 'react-markdown';
 
 async function getSession(id: string) {
   try {
@@ -11,6 +12,23 @@ async function getSession(id: string) {
       .single();
     if (error || !data) return null;
     return data;
+  } catch {
+    return null;
+  }
+}
+
+async function getPlaybookForScenario(scenarioType: string | null) {
+  if (!scenarioType) return null;
+  try {
+    const { data } = await (supabase as any)
+      .from('playbooks')
+      .select('name, content')
+      .eq('scenario_type', scenarioType)
+      .is('coach_instance_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data ?? null;
   } catch {
     return null;
   }
@@ -61,6 +79,7 @@ function ScoreBadge({ score }: { score: number }) {
 export default async function SessionDetailPage({ params }: { params: { id: string } }) {
   const session = await getSession(params.id);
   if (!session) notFound();
+  const playbook = await getPlaybookForScenario((session as any).persona_scenario_type ?? null);
 
   const messages = parseTranscript(session.transcript);
   const assessment = parseAssessment(session.assessment);
@@ -186,6 +205,29 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
             </div>
           )}
         </div>
+
+        {/* ── Playbook ──────────────────────────────────────────────────────── */}
+        {playbook && (
+          <details className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden group">
+            <summary className="px-5 py-4 cursor-pointer flex items-center justify-between select-none hover:bg-white/5 transition-colors">
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-0.5">Playbook Used</p>
+                <p className="text-sm font-semibold text-white">{playbook.name}</p>
+              </div>
+              <svg
+                className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+            <div className="px-8 py-6 border-t border-white/10">
+              <div className="dark-prose">
+                <ReactMarkdown>{playbook.content}</ReactMarkdown>
+              </div>
+            </div>
+          </details>
+        )}
 
       </div>
     </div>
