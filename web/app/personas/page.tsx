@@ -59,6 +59,78 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 const inputCls = "w-full bg-gray-800 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/60 transition-colors";
 
+// ─── AI Rewrite Panel ─────────────────────────────────────────────────────────
+
+const QUICK_ACTIONS = [
+  'Add bullet points',
+  'Summarize',
+  'Make more concise',
+  'Expand with examples',
+  'Add objection handling',
+] as const;
+
+function AIRewritePanel({ content, onRewrite }: { content: string; onRewrite: (c: string) => void }) {
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [rewriting, setRewriting] = useState(false);
+
+  const runRewrite = async (prompt: string) => {
+    if (!prompt.trim() || rewriting) return;
+    setRewriting(true);
+    try {
+      const res = await fetch('/api/ai/rewrite-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, prompt }),
+      });
+      const data = await res.json();
+      if (data.content) onRewrite(data.content);
+      else console.error('AI rewrite error:', data.error);
+    } catch (e) {
+      console.error('AI rewrite failed:', e);
+    } finally {
+      setRewriting(false);
+    }
+  };
+
+  return (
+    <div className="border border-white/10 rounded-xl p-4 bg-gray-900/50 space-y-3 mt-3">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Rewrite</p>
+      <div className="flex flex-wrap gap-2">
+        {QUICK_ACTIONS.map(action => (
+          <button
+            key={action}
+            type="button"
+            onClick={() => runRewrite(action)}
+            disabled={rewriting}
+            className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-300 hover:border-blue-500/50 hover:text-blue-400 transition-colors disabled:opacity-40"
+          >
+            {rewriting ? '…' : action}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={customPrompt}
+          onChange={e => setCustomPrompt(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { runRewrite(customPrompt); setCustomPrompt(''); } }}
+          placeholder="Custom instruction… (e.g. make more aggressive)"
+          disabled={rewriting}
+          className="flex-1 bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/60 disabled:opacity-40"
+        />
+        <button
+          type="button"
+          onClick={() => { runRewrite(customPrompt); setCustomPrompt(''); }}
+          disabled={rewriting || !customPrompt.trim()}
+          className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
+        >
+          {rewriting ? '…' : 'Rewrite'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function PersonasPage() {
@@ -422,6 +494,10 @@ export default function PersonasPage() {
                   className={inputCls + ' font-mono text-xs leading-relaxed resize-y'}
                 />
               </Field>
+              <AIRewritePanel
+                content={form.system_prompt}
+                onRewrite={val => setForm(f => ({ ...f, system_prompt: val }))}
+              />
             </div>
 
             {/* Modal footer */}
