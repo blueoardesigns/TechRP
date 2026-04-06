@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '../../../../shared/types/database';
@@ -12,6 +12,132 @@ function formatDate(d: string) {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
+}
+
+type FormatType = 'bold' | 'italic' | 'h2' | 'bullet' | 'numbered';
+
+function applyFormatting(
+  type: FormatType,
+  content: string,
+  selStart: number,
+  selEnd: number
+): { value: string; cursorStart: number; cursorEnd: number } {
+  const lineStart = content.lastIndexOf('\n', selStart - 1) + 1;
+
+  switch (type) {
+    case 'bold': {
+      const sel = content.slice(selStart, selEnd) || 'bold text';
+      const out = `**${sel}**`;
+      return {
+        value: content.slice(0, selStart) + out + content.slice(selEnd),
+        cursorStart: selStart + 2,
+        cursorEnd: selStart + 2 + sel.length,
+      };
+    }
+    case 'italic': {
+      const sel = content.slice(selStart, selEnd) || 'italic text';
+      const out = `*${sel}*`;
+      return {
+        value: content.slice(0, selStart) + out + content.slice(selEnd),
+        cursorStart: selStart + 1,
+        cursorEnd: selStart + 1 + sel.length,
+      };
+    }
+    case 'h2': {
+      const prefix = '## ';
+      return {
+        value: content.slice(0, lineStart) + prefix + content.slice(lineStart),
+        cursorStart: selStart + prefix.length,
+        cursorEnd: selEnd + prefix.length,
+      };
+    }
+    case 'bullet': {
+      const prefix = '- ';
+      return {
+        value: content.slice(0, lineStart) + prefix + content.slice(lineStart),
+        cursorStart: selStart + prefix.length,
+        cursorEnd: selEnd + prefix.length,
+      };
+    }
+    case 'numbered': {
+      const prefix = '1. ';
+      return {
+        value: content.slice(0, lineStart) + prefix + content.slice(lineStart),
+        cursorStart: selStart + prefix.length,
+        cursorEnd: selEnd + prefix.length,
+      };
+    }
+  }
+}
+
+const QUICK_ACTIONS = [
+  'Add bullet points',
+  'Summarize',
+  'Make more concise',
+  'Expand with examples',
+  'Add objection handling',
+] as const;
+
+function AIRewritePanel({ content, onRewrite }: { content: string; onRewrite: (c: string) => void }) {
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [rewriting, setRewriting] = useState(false);
+
+  const runRewrite = async (prompt: string) => {
+    if (!prompt.trim() || rewriting) return;
+    setRewriting(true);
+    try {
+      const res = await fetch('/api/ai/rewrite-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, prompt }),
+      });
+      const data = await res.json();
+      if (data.content) onRewrite(data.content);
+      else console.error('AI rewrite error:', data.error);
+    } catch (e) {
+      console.error('AI rewrite failed:', e);
+    } finally {
+      setRewriting(false);
+    }
+  };
+
+  return (
+    <div className="border border-white/10 rounded-xl p-4 bg-gray-900/50 space-y-3 mt-3">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Rewrite</p>
+      <div className="flex flex-wrap gap-2">
+        {QUICK_ACTIONS.map(action => (
+          <button
+            key={action}
+            type="button"
+            onClick={() => runRewrite(action)}
+            disabled={rewriting}
+            className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-300 hover:border-blue-500/50 hover:text-blue-400 transition-colors disabled:opacity-40"
+          >
+            {rewriting ? '…' : action}
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={customPrompt}
+          onChange={e => setCustomPrompt(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { runRewrite(customPrompt); setCustomPrompt(''); } }}
+          placeholder="Custom instruction… (e.g. rewrite for plumbers)"
+          disabled={rewriting}
+          className="flex-1 bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/60 disabled:opacity-40"
+        />
+        <button
+          type="button"
+          onClick={() => { runRewrite(customPrompt); setCustomPrompt(''); }}
+          disabled={rewriting || !customPrompt.trim()}
+          className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
+        >
+          {rewriting ? '…' : 'Rewrite'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function PlaybookDetailPage() {
@@ -28,6 +154,21 @@ export default function PlaybookDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState<'edit' | 'preview'>('edit');
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleFormat = (type: FormatType) => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const { value, cursorStart, cursorEnd } = applyFormatting(
+      type, content, ta.selectionStart, ta.selectionEnd
+    );
+    setContent(value);
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.setSelectionRange(cursorStart, cursorEnd);
+    });
+  };
 
   useEffect(() => {
     if (!playbookId) return;
@@ -193,13 +334,35 @@ export default function PlaybookDetailPage() {
           {/* Editor panel */}
           <div className={`flex flex-col flex-1 min-w-0 ${previewTab === 'preview' ? 'hidden lg:flex' : 'flex'}`}>
             <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">Markdown</p>
+            {/* Formatting toolbar */}
+            <div className="flex items-center gap-1 mb-2">
+              {([
+                { type: 'bold'     as FormatType, label: 'B',  title: 'Bold'          },
+                { type: 'italic'   as FormatType, label: 'I',  title: 'Italic'        },
+                { type: 'h2'       as FormatType, label: 'H2', title: 'Heading'       },
+                { type: 'bullet'   as FormatType, label: '•',  title: 'Bullet list'   },
+                { type: 'numbered' as FormatType, label: '1.', title: 'Numbered list' },
+              ]).map(({ type, label, title }) => (
+                <button
+                  key={type}
+                  type="button"
+                  title={title}
+                  onMouseDown={e => { e.preventDefault(); handleFormat(type); }}
+                  className="px-2.5 py-1 text-xs font-mono font-semibold text-gray-400 hover:text-white bg-gray-900 hover:bg-gray-800 border border-white/10 hover:border-white/25 rounded-lg transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <textarea
+              ref={textareaRef}
               value={content}
               onChange={e => setContent(e.target.value)}
               className="flex-1 w-full bg-gray-900 border border-white/10 rounded-xl px-5 py-4 font-mono text-sm text-gray-200 leading-relaxed resize-none outline-none focus:border-blue-500/50 transition-colors placeholder-gray-700 min-h-[calc(100vh-12rem)]"
               placeholder="Write your playbook in Markdown…"
               spellCheck={false}
             />
+            <AIRewritePanel content={content} onRewrite={setContent} />
           </div>
 
           {/* Preview panel */}
