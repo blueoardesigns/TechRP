@@ -38,17 +38,35 @@ export default function PendingPage() {
   };
 
   const isRejected = user?.status === 'rejected';
+  const isSuspended = user?.status === 'suspended';
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-6">
       <div className="max-w-sm w-full text-center space-y-5">
 
-        <div className={`w-16 h-16 ${isRejected ? 'bg-red-500/15 border-red-500/20' : 'bg-yellow-500/15 border-yellow-500/20'} border rounded-full flex items-center justify-center mx-auto`}>
-          <span className="text-3xl">{isRejected ? '✋' : '⏳'}</span>
-        </div>
-
-        {isRejected ? (
+        {isSuspended ? (
           <>
+            <div className="w-16 h-16 bg-orange-500/15 border border-orange-500/20 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-3xl">🔒</span>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white mb-2">Session Limit Reached</h1>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                You&apos;ve used all your available training sessions. Contact your admin to upgrade your account.
+              </p>
+            </div>
+            <a
+              href="mailto:tim@blueoardesigns.com"
+              className="inline-block text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            >
+              Contact your admin →
+            </a>
+          </>
+        ) : isRejected ? (
+          <>
+            <div className="w-16 h-16 bg-red-500/15 border border-red-500/20 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-3xl">✋</span>
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-white mb-2">Application Not Approved</h1>
               <p className="text-gray-400 text-sm leading-relaxed">
@@ -64,6 +82,9 @@ export default function PendingPage() {
           </>
         ) : (
           <>
+            <div className="w-16 h-16 bg-yellow-500/15 border border-yellow-500/20 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-3xl">⏳</span>
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-white mb-2">Pending Approval</h1>
               <p className="text-gray-400 text-sm leading-relaxed">
@@ -72,7 +93,6 @@ export default function PendingPage() {
                 once you&apos;re approved — usually within 24 hours.
               </p>
             </div>
-
             <div className="bg-gray-900 border border-white/10 rounded-xl px-5 py-4 text-left space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">What happens next</p>
               <ul className="text-sm text-gray-400 space-y-1.5">
@@ -81,7 +101,6 @@ export default function PendingPage() {
                 <li className="flex items-start gap-2"><span className="text-blue-400 mt-0.5">→</span> Sign back in to start training</li>
               </ul>
             </div>
-
             {resent ? (
               <p className="text-sm text-green-400">Approval request resent.</p>
             ) : (
