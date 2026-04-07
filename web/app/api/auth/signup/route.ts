@@ -24,7 +24,9 @@ export async function POST(req: NextRequest) {
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email,
     password,
-    email_confirm: true, // skip confirmation email — we approve manually
+    // SKIP_EMAIL_CONFIRM=false in production to require email verification.
+    // Defaults to true (skip verification) to preserve current behaviour.
+    email_confirm: process.env.SKIP_EMAIL_CONFIRM !== 'false',
   });
 
   if (authError || !authData.user) {
