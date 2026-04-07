@@ -10,3 +10,12 @@ ALTER TABLE users
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
 ALTER TABLE users ADD CONSTRAINT users_status_check
   CHECK (status IN ('pending', 'approved', 'rejected', 'suspended'));
+
+-- 3. RPC function for atomic sessions_used increment (bypasses RLS)
+CREATE OR REPLACE FUNCTION increment_sessions_used(target_user_id UUID)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  UPDATE users SET sessions_used = sessions_used + 1 WHERE id = target_user_id;
+$$;
