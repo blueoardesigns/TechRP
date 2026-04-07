@@ -107,9 +107,10 @@ Last updated: 2026-04-06
 - [x] Error monitoring (Sentry)
 - [x] Analytics (session counts, avg score, active users, by-scenario — `/insights` page)
 - [x] Loading skeletons on sessions / playbooks pages
-- [ ] Mobile-responsive admin panel
+- [x] Mobile-responsive admin panel
 - [x] Playbook/Persona editor add formatting options for bullets, numbering and AI Prompt to change them
-- [ ] improve ability for call handler to interrupt-voice chat is finishing and not letting the user interrupt
+- [x] improve ability for call handler to interrupt-voice chat is finishing and not letting the user interrupt
+- [x] Prefer Voice agents with accents you'd hear in America (not British) — pool of 4 male/4 female American Vapi voices, assigned deterministically per persona
 - [x] When a session loads, display the playbook below it in case user wants a refresh before starting
 - [x] Let a user choose easy, medium, hard scenarios to overcome
 

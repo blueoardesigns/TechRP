@@ -44,6 +44,20 @@ function mapDBPersona(db: DBPersona): Persona {
 
 const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
 
+// American-accented Vapi voices — varied so personas don't all sound the same
+const MALE_VOICES = ['Cole', 'Andrew', 'Elliot', 'Luke'];
+const FEMALE_VOICES = ['Mia', 'Bria', 'Joanna', 'Kora'];
+
+function pickVoice(persona: Persona): string {
+  const pool = persona.gender === 'male' ? MALE_VOICES : FEMALE_VOICES;
+  // Deterministic selection so the same persona always gets the same voice
+  let hash = 0;
+  for (let i = 0; i < persona.id.length; i++) {
+    hash = (hash * 31 + persona.id.charCodeAt(i)) >>> 0;
+  }
+  return pool[hash % pool.length];
+}
+
 type CallStatus = 'idle' | 'connecting' | 'connected';
 type Phase = 'scenario-select' | 'persona-preview' | 'calling' | 'post-call';
 
@@ -253,7 +267,7 @@ export default function TrainingPage() {
       vapiCallIdRef.current = null;
       setSaveStatus('idle');
 
-      const voiceId = selectedPersona.gender === 'male' ? 'Cole' : 'Mia';
+      const voiceId = pickVoice(selectedPersona);
       const systemPrompt = DIFFICULTY_MODIFIERS[difficultyRef.current] + selectedPersona.systemPrompt;
 
       const callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
@@ -264,6 +278,11 @@ export default function TrainingPage() {
         },
         voice: { provider: 'vapi', voiceId },
         firstMessage: selectedPersona.firstMessage,
+        stopSpeakingPlan: {
+          numWords: 0,         // use VAD (voice activity detection) instead of word count
+          voiceSeconds: 0.1,   // detect interrupt after 0.1s of speech (more responsive than default 0.2)
+          backoffSeconds: 0.5, // wait 0.5s before resuming after interrupted (tighter than default 1s)
+        },
       } as any);
 
       if (callInfo?.id) {
