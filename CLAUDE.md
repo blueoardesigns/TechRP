@@ -87,15 +87,21 @@ Uses `@anthropic-ai/sdk`. Receives transcript (`messages[]`) and `PersonaContext
 | `POST /api/seed` | Seed default playbooks and personas (idempotent) |
 | `POST /api/recordings/upload` | Upload field recordings |
 | `GET /api/insights` | Analytics/insights |
+| `PATCH /api/account` | Update individual user's name/email |
+| `POST /api/auth/signup` | Signup (supports `?coach=TOKEN`, `?org=TOKEN`) |
 
 ### Notes
 - Transcript filtering: use `transcriptType === 'final'` to avoid partials
 - Vapi recordings expire after 7 days
 - `@/*` maps to `web/` root in path aliases
 
+## Auth System
+Role-based auth is live. Roles: `individual`, `company_admin`, `coach`, `superuser`. Status flow: `pending` → `approved` | `rejected` | `suspended`. Auth context in `web/components/auth-provider.tsx` exposes `user`, `refreshUser`. Pending SQL migration required to enable session limit enforcement: run `web/supabase/session-limit-migration.sql` in Supabase SQL Editor.
+
+Password reset uses Supabase native email flow (`/forgot-password` → `/reset-password`). Email verification skipped by default; set `SKIP_EMAIL_CONFIRM=false` in production to require it.
+
 ## Known Issues
-- RLS disabled on `playbooks` and `training_sessions` (temporary until auth built)
-- No authentication system (using placeholder user/org IDs)
+- RLS disabled on `playbooks` and `training_sessions` (pending — blocked on auth, which is now complete)
 - Mobile Vapi integration not yet working (needs Expo dev build)
 - Field recording upload not yet built
 
