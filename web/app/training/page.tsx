@@ -147,6 +147,7 @@ export default function TrainingPage() {
   const sessionIdRef = useRef<string | null>(null);
   const vapiCallIdRef = useRef<string | null>(null);
   const selectedPersonaRef = useRef<Persona | null>(null);
+  const userRef = useRef<typeof user>(null);
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -209,6 +210,9 @@ export default function TrainingPage() {
   // Keep difficulty ref in sync
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
 
+  // Keep user ref in sync so call-end handler always has the current user
+  useEffect(() => { userRef.current = user; }, [user]);
+
   const handleSelectScenario = async (type: ScenarioType) => {
     setPersonasLoading(true);
     setPersonasError(null);
@@ -260,11 +264,6 @@ export default function TrainingPage() {
         },
         voice: { provider: 'vapi', voiceId },
         firstMessage: selectedPersona.firstMessage,
-        stopSpeakingPlan: {
-          numWordsToInterruptAssistant: 1,
-          voiceSeconds: 0.2,
-          backoffSeconds: 1,
-        },
       } as any);
 
       if (callInfo?.id) {
@@ -297,9 +296,10 @@ export default function TrainingPage() {
       setSaveStatus('saving');
       const messagesToSave = messagesRef.current.length > 0 ? messagesRef.current : messages;
 
+      const currentUser = userRef.current;
       const session = await saveTrainingSession({
-        userId: user?.id ?? '',
-        organizationId: user?.organizationId ?? '',
+        userId: currentUser?.id ?? '',
+        organizationId: currentUser?.organizationId ?? '',
         transcript: JSON.stringify(messagesToSave),
         startedAt,
         endedAt,

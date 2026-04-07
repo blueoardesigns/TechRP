@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import type { Database } from '../../../shared/types/database';
 import { SkeletonRow } from '@/components/skeleton';
 
@@ -176,14 +175,13 @@ export default function SessionsPage() {
   const [dateFilter, setDateFilter] = useState<'all' | '7d' | '30d' | '90d'>('all');
 
   useEffect(() => {
-    (supabase as any)
-      .from('training_sessions')
-      .select('*')
-      .order('started_at', { ascending: false })
-      .then(({ data, error }: { data: TrainingSession[] | null; error: unknown }) => {
-        if (!error) setSessions(data || []);
+    fetch('/api/sessions')
+      .then(r => r.json())
+      .then(({ sessions }) => {
+        setSessions(sessions || []);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const loadInsights = useCallback(async (period: PeriodOption) => {

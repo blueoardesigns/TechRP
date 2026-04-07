@@ -3,6 +3,20 @@ import { createServiceSupabase } from '@/lib/supabase-server';
 
 const FALLBACK_ORG = '00000000-0000-0000-0000-000000000001';
 
+export async function GET() {
+  try {
+    const supabase = createServiceSupabase();
+    const { data, error } = await (supabase as any)
+      .from('training_sessions')
+      .select('*')
+      .order('started_at', { ascending: false });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ sessions: data ?? [] });
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();

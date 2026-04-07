@@ -1,10 +1,11 @@
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { createServiceSupabase } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 
 async function getSession(id: string) {
   try {
+    const supabase = createServiceSupabase();
     const { data, error } = await (supabase as any)
       .from('training_sessions')
       .select('*')
@@ -20,6 +21,7 @@ async function getSession(id: string) {
 async function getPlaybookForScenario(scenarioType: string | null) {
   if (!scenarioType) return null;
   try {
+    const supabase = createServiceSupabase();
     const { data } = await (supabase as any)
       .from('playbooks')
       .select('name, content')

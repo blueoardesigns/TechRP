@@ -108,9 +108,9 @@ Last updated: 2026-04-04
 - [x] Analytics (session counts, avg score, active users, by-scenario — `/insights` page)
 - [x] Loading skeletons on sessions / playbooks pages
 - [ ] Mobile-responsive admin panel
-- [ ] Playbook/Persona editor add formatting options for bullets, numbering and AI Prompt to change them
+- [x] Playbook/Persona editor add formatting options for bullets, numbering and AI Prompt to change them
 - [ ] improve ability for call handler to interrupt-voice chat is finishing and not letting the user interrupt
-- [ ] When a session loads, display the playbook below it in case user wants a refresh before starting
-- [ ] Let a user choose easy, medium, hard scenarios to overcome
+- [x] When a session loads, display the playbook below it in case user wants a refresh before starting
+- [x] Let a user choose easy, medium, hard scenarios to overcome
 
 ## Bugs
