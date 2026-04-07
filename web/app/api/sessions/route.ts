@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase-server';
 
+// Depends on increment_sessions_used RPC — see web/supabase/session-limit-migration.sql
+
 const FALLBACK_ORG = '00000000-0000-0000-0000-000000000001';
 
 export async function GET() {
@@ -29,6 +31,33 @@ export async function POST(req: NextRequest) {
       .select()
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    // Increment sessions_used and auto-suspend if limit reached
+    const userId = body.user_id;
+    if (userId) {
+      const { error: rpcError } = await (supabase as any).rpc('increment_sessions_used', { target_user_id: userId });
+      if (rpcError) {
+        console.error('Failed to increment sessions_used for user', userId, rpcError);
+      }
+
+      const { data: userRow } = await (supabase as any)
+        .from('users')
+        .select('sessions_used, session_limit')
+        .eq('id', userId)
+        .single();
+
+      if (
+        userRow &&
+        userRow.session_limit !== null &&
+        userRow.sessions_used >= userRow.session_limit
+      ) {
+        await (supabase as any)
+          .from('users')
+          .update({ status: 'suspended' })
+          .eq('id', userId);
+      }
+    }
+
     return NextResponse.json({ session: data }, { status: 201 });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 });

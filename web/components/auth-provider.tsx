@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 
 export type UserRole = 'individual' | 'company_admin' | 'coach' | 'superuser';
-export type UserStatus = 'pending' | 'approved' | 'rejected';
+export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
 
 export interface AppUser {
   id: string;
@@ -23,12 +23,14 @@ interface AuthContextValue {
   user: AppUser | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
   signOut: async () => {},
+  refreshUser: async () => {},
 });
 
 export function useAuth() {
@@ -95,6 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (appUser.status === 'rejected' && !PUBLIC_PATHS.includes(pathname)) {
       router.replace('/pending');
     }
+    // Redirect suspended users to /pending (shows limit-reached UI)
+    if (appUser.status === 'suspended' && !PUBLIC_PATHS.includes(pathname)) {
+      router.replace('/pending');
+    }
   }, [pathname, router]);
 
   useEffect(() => {
@@ -116,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut, refreshUser: loadUser }}>
       {children}
     </AuthContext.Provider>
   );
