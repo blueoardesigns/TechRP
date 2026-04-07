@@ -48,6 +48,7 @@ function getNavItems(user: AppUser | null) {
     { href: '/training',   label: 'Train'    },
     { href: '/sessions',   label: 'Sessions' },
     { href: '/recordings', label: 'Upload'   },
+    { href: '/account',    label: 'Account'  },
   ];
 }
 
@@ -98,9 +99,12 @@ export function AppNav() {
 
         <div className="flex items-center gap-3">
           {user && (
-            <span className="text-xs text-gray-500 hidden sm:block">
+            <Link
+              href="/account"
+              className="text-xs text-gray-500 hover:text-white transition-colors hidden sm:block"
+            >
               {user.fullName || user.email}
-            </span>
+            </Link>
           )}
           <button onClick={handleSignOut} className="text-xs text-gray-500 hover:text-white transition-colors">
             Sign out
