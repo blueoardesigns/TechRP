@@ -1,6 +1,6 @@
 # TechRP — Backlog & TODO
 
-Last updated: 2026-04-04
+Last updated: 2026-04-06
 
 > **Auth + Coach Role build complete.** All 16 tasks shipped: coach schema, Tim's `/admin`, coach dashboard, invite flows, role-based nav, content isolation, scenario access enforcement, real `user_id` wiring, loading skeletons, mobile-responsive sessions, Sentry, analytics dashboard.
 
@@ -12,10 +12,10 @@ Last updated: 2026-04-04
 - [x] Wire real `user_id` in recordings and insights API routes (same placeholder issue)
 - [x] Rejected user UI — `/pending` shows same message for pending and rejected; rejected users need distinct state + contact link
 - [x] Surface "Resend approval email" button on `/pending` page (API route exists, not wired to UI)
-- [ ] Session limit enforcement: increment `sessions_used` after each session; auto-suspend temp accounts when limit reached
-- [ ] Password reset flow (Supabase "forgot password" email)
-- [ ] Email verification toggle (currently disabled — consider re-enabling for production)
-- [ ] Individual users: allow name/email edit in Account Settings
+- [x] Session limit enforcement: increment `sessions_used` after each session; auto-suspend temp accounts when limit reached
+- [x] Password reset flow (Supabase "forgot password" email)
+- [x] Email verification toggle (currently disabled — consider re-enabling for production)
+- [x] Individual users: allow name/email edit in Account Settings
 
 ---
 
