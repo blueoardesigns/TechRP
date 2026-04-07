@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { AppNav } from '@/components/nav';
@@ -9,8 +9,16 @@ export default function AccountPage() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
 
-  const [fullName, setFullName] = useState(user?.fullName ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+
+  // Initialise fields once user loads (guards against auth loading race)
+  useEffect(() => {
+    if (user) {
+      setFullName(user.fullName);
+      setEmail(user.email);
+    }
+  }, [user?.id]);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
