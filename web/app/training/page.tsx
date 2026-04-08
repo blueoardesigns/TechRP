@@ -270,20 +270,41 @@ export default function TrainingPage() {
       const voiceId = pickVoice(selectedPersona);
       const systemPrompt = DIFFICULTY_MODIFIERS[difficultyRef.current] + selectedPersona.systemPrompt;
 
-      const callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
-        model: {
-          provider: 'anthropic',
-          model: 'claude-sonnet-4-20250514',
-          messages: [{ role: 'system', content: systemPrompt }],
-        },
+      const sharedOverrides = {
         voice: { provider: 'vapi', voiceId },
         firstMessage: selectedPersona.firstMessage,
         stopSpeakingPlan: {
-          numWords: 0,         // use VAD (voice activity detection) instead of word count
-          voiceSeconds: 0.1,   // detect interrupt after 0.1s of speech (more responsive than default 0.2)
-          backoffSeconds: 0.5, // wait 0.5s before resuming after interrupted (tighter than default 1s)
+          numWords: 0,
+          voiceSeconds: 0.1,
+          backoffSeconds: 0.5,
         },
-      } as any);
+      };
+
+      const groqModel = {
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'system', content: systemPrompt }],
+      };
+
+      const haikuModel = {
+        provider: 'anthropic',
+        model: 'claude-3-haiku-20240307',
+        messages: [{ role: 'system', content: systemPrompt }],
+      };
+
+      let callInfo: any;
+      try {
+        callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
+          model: groqModel,
+          ...sharedOverrides,
+        } as any);
+      } catch (groqError) {
+        console.warn('[Groq fallback] Groq failed to start, falling back to Claude Haiku 3:', groqError);
+        callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
+          model: haikuModel,
+          ...sharedOverrides,
+        } as any);
+      }
 
       if (callInfo?.id) {
         vapiCallIdRef.current = callInfo.id;
