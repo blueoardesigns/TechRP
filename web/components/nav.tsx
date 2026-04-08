@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth, type AppUser } from '@/components/auth-provider';
+import { NotificationBell } from '@/components/notification-bell';
 
 function getNavItems(user: AppUser | null) {
   if (!user || user.status !== 'approved') return [];
@@ -98,6 +99,7 @@ export function AppNav() {
         </nav>
 
         <div className="flex items-center gap-3">
+          {user?.role === 'company_admin' && <NotificationBell />}
           {user && (
             <Link
               href="/account"

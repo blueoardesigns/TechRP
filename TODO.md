@@ -21,13 +21,13 @@ Last updated: 2026-04-04
 
 ## Company Admin (Module 3)
 
-- [ ] SQL: Add RLS policy so company admins can view users in their org without infinite recursion
+- [x] SQL: Add RLS policy so company admins can view users in their org without infinite recursion
   - Use a `SECURITY DEFINER` function to avoid recursive policy
-- [ ] Admin panel: assign/edit modules per team member
+- [x] Admin panel: assign/edit modules per team member
 - [x] Admin panel: deactivate / remove team members
-- [ ] Candidate invites: auto-suspend account when `sessions_used >= session_limit`
-- [ ] Candidate invites: "Send Upgrade Email" (invite suspended temp users to create full account)
-- [ ] Candidate upgrade: pre-fill email on signup page from invite link
+- [x] Candidate invites: auto-suspend account when `sessions_used >= session_limit`
+- [x] Candidate invites: "Send Upgrade Email" (invite suspended temp users to create full account)
+- [x] Candidate upgrade: pre-fill email on signup page from invite link
 
 ---
 
@@ -69,6 +69,16 @@ Last updated: 2026-04-04
 - [x] Coach instance isolation: content queries filter by `coach_instance_id` + global toggle settings
 - [ ] Per-playbook/per-persona content toggle for coaches (more granular than instance-level)
 - [ ] Allow coaches to upload PDFs or Document files to base playbooks on. Take them through AI Queries, ask questions about the playbooks they upload to build out playbooks with all the necessary information.
+
+---
+
+## Candidate Invites Feature (Complete)
+
+- [x] Candidate invites: full lifecycle (invite, signup, complete, upgrade)
+- [x] Notification bell for company admins (in-app + email on candidate completion)
+- [x] Auto-suspend candidates when session limit reached
+- [x] Upgrade email flow for suspended candidates
+- [x] Pre-fill email from invite token on signup page
 
 ---
 

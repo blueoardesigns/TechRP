@@ -1,3 +1,4 @@
+import { checkCandidateCompletion } from '@/lib/candidate-completion';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase-server';
 import { checkCandidateCompletion } from '@/lib/candidate-completion';

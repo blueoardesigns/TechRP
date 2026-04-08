@@ -38,11 +38,13 @@ function SignupPageInner() {
   const searchParams = useSearchParams();
   const coachToken = searchParams.get('coach');
   const orgToken   = searchParams.get('org');
+  const candidateToken = searchParams.get('candidate');
   const typeParam  = searchParams.get('type');
 
   // Determine locked role from invite context
   const lockedRole: 'individual' | 'company_admin' | null =
     orgToken ? 'individual' :
+    candidateToken ? 'individual' :
     coachToken && typeParam !== 'individual' ? 'company_admin' :
     coachToken && typeParam === 'individual' ? 'individual' :
     null;
@@ -62,6 +64,24 @@ function SignupPageInner() {
         .then(d => { if (d.name) setOrgInfo(d); });
     }
   }, [coachToken, orgToken]);
+
+  const [candidateInfo, setCandidateInfo] = useState<{
+    email: string; full_name: string | null; assigned_scenarios: { scenario_type: string; count: number }[]
+  } | null>(null);
+  const [candidateError, setCandidateError] = useState('');
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
+  useEffect(() => {
+    if (!candidateToken) return;
+    fetch(`/api/auth/invite-info?candidate=${candidateToken}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { setCandidateError(d.error); return; }
+        setCandidateInfo(d);
+        setEmail(d.email);
+        if (d.full_name) setFullName(d.full_name);
+      });
+  }, [candidateToken]);
 
   // Form state
   const [step, setStep] = useState<Step>('account');
@@ -89,8 +109,8 @@ function SignupPageInner() {
     setError('');
     if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    // Skip module selection for org invites (modules inherited from company admin) or company_admin signups
-    if (role === 'individual' && !orgToken) {
+    // Skip module selection for org/candidate invites or company_admin signups
+    if (role === 'individual' && !orgToken && !candidateToken) {
       setStep('modules');
     } else {
       setStep('tos');
@@ -112,9 +132,11 @@ function SignupPageInner() {
           password,
           role,
           companyName: role === 'company_admin' ? companyName : undefined,
-          scenarioAccess: orgToken ? [] : role === 'individual' ? selectedModules : ['technician', 'property_manager', 'insurance', 'plumber_bd'],
+          scenarioAccess: orgToken || candidateToken ? [] : role === 'individual' ? selectedModules : ['technician', 'property_manager', 'insurance', 'plumber_bd'],
           coachToken: coachToken ?? undefined,
           orgToken:   orgToken   ?? undefined,
+          candidateToken: candidateToken ?? undefined,
+          marketingConsent,
         }),
       });
 
@@ -131,6 +153,20 @@ function SignupPageInner() {
       setLoading(false);
     }
   };
+
+  // ── Invalid candidate token ──────────────────────────────────────────────────
+
+  if (candidateToken && candidateError) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <div className="text-3xl">⚠️</div>
+          <h1 className="text-xl font-bold">Invalid Invite Link</h1>
+          <p className="text-gray-400 text-sm">{candidateError}</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Success state ────────────────────────────────────────────────────────────
 
@@ -248,11 +284,12 @@ function SignupPageInner() {
                 <label className="block text-xs font-medium text-gray-400 mb-1.5">Email</label>
                 <input
                   type="email"
-                  required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
                   placeholder="you@company.com"
-                  className="w-full bg-gray-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                  value={email}
+                  onChange={e => !candidateToken && setEmail(e.target.value)}
+                  readOnly={!!candidateToken}
+                  required
+                  className={`w-full bg-gray-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${candidateToken ? 'opacity-60 cursor-not-allowed border-white/5' : 'border-white/10 hover:border-white/20'}`}
                 />
               </div>
 
@@ -398,6 +435,19 @@ function SignupPageInner() {
             </div>
             <span className="text-sm text-gray-300 leading-relaxed">
               I have read and agree to the Terms of Service, including that my training calls are processed by third-party AI services.
+            </span>
+          </label>
+
+          {/* Marketing consent — optional */}
+          <label className="flex items-start gap-3 cursor-pointer mb-5">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={e => setMarketingConsent(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-gray-600 text-blue-500 focus:ring-blue-500 bg-gray-900 shrink-0"
+            />
+            <span className="text-xs text-gray-400 leading-relaxed">
+              I&apos;d like to receive tips, updates, and offers from TechRP by email. You can unsubscribe at any time.
             </span>
           </label>
 
