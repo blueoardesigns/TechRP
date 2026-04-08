@@ -8,7 +8,7 @@ const APPROVAL_SECRET = process.env.APPROVAL_SECRET ?? 'change-me-in-env';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function POST(req: NextRequest) {
-  const { fullName, email, password, role, companyName, scenarioAccess, coachToken, orgToken } = await req.json();
+  const { fullName, email, password, role, companyName, scenarioAccess, coachToken, orgToken, candidateToken, marketingConsent } = await req.json();
 
   if (!fullName || !email || !password || !role) {
     return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
@@ -113,6 +113,85 @@ export async function POST(req: NextRequest) {
         if (newOrg) organizationId = (newOrg as any).id;
       }
     }
+  } else if (candidateToken) {
+    // Candidate signing up via personal invite link
+    const { data: invite } = await (supabase as any)
+      .from('candidate_invites')
+      .select('id, email, organization_id, coach_instance_id, assigned_scenarios, status, expires_at, invited_by_user_id')
+      .eq('personal_token', candidateToken)
+      .single();
+
+    if (!invite || (invite as any).status !== 'pending') {
+      await supabase.auth.admin.deleteUser(authUserId);
+      return NextResponse.json({ error: 'Invalid or already-used invite link.' }, { status: 400 });
+    }
+    if ((invite as any).expires_at && new Date((invite as any).expires_at) < new Date()) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      return NextResponse.json({ error: 'This invite link has expired.' }, { status: 400 });
+    }
+
+    organizationId = (invite as any).organization_id;
+    resolvedCoachInstanceId = (invite as any).coach_instance_id;
+    autoApprove = true; // candidates skip the approval queue
+
+    // Compute session_limit and scenario_access from assigned_scenarios
+    const assigned: { scenario_type: string; count: number }[] = (invite as any).assigned_scenarios ?? [];
+    const sessionLimit = assigned.reduce((sum, s) => sum + s.count, 0);
+    finalScenarioAccess = [...new Set(assigned.map(s => s.scenario_type))];
+
+    // Insert user profile with candidate-specific fields
+    const { error: candidateProfileError } = await (supabase as any).from('users').insert({
+      auth_user_id: authUserId,
+      organization_id: organizationId,
+      coach_instance_id: resolvedCoachInstanceId,
+      name: fullName,
+      full_name: fullName,
+      email: (invite as any).email, // use invite email, not form email
+      role: 'technician',
+      app_role: 'individual',
+      status: 'approved',
+      scenario_access: finalScenarioAccess,
+      session_limit: sessionLimit,
+      user_type: 'candidate',
+      marketing_consent: marketingConsent ?? false,
+      tos_accepted_at: new Date().toISOString(),
+    });
+
+    if (candidateProfileError) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      console.error('Candidate profile insert error:', candidateProfileError);
+      return NextResponse.json({ error: 'Failed to create candidate profile.' }, { status: 500 });
+    }
+
+    // Get new user's id to link invite
+    const { data: newUser } = await (supabase as any)
+      .from('users').select('id').eq('auth_user_id', authUserId).single();
+
+    // Update invite to signed_up
+    if (newUser) {
+      await (supabase as any)
+        .from('candidate_invites')
+        .update({ status: 'signed_up', signed_up_user_id: (newUser as any).id })
+        .eq('id', (invite as any).id);
+
+      // Link user back to invite
+      await (supabase as any)
+        .from('users')
+        .update({ candidate_invite_id: (invite as any).id })
+        .eq('id', (newUser as any).id);
+
+      // Notify company admin that candidate signed up
+      await (supabase as any).from('notifications').insert({
+        user_id: (invite as any).invited_by_user_id,
+        type: 'candidate_signed_up',
+        title: `${fullName} accepted your candidate invite`,
+        body: 'They can now begin their assigned sessions.',
+        data: { candidate_invite_id: (invite as any).id, candidate_user_id: (newUser as any).id },
+      });
+    }
+
+    // Return early — skip the default profile insert below
+    return NextResponse.json({ success: true, autoApproved: true });
   } else if (role === 'company_admin' && companyName) {
     // Direct TechRP signup — create org
     const { data: org } = await (supabase as any)
