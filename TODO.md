@@ -1,6 +1,6 @@
 # TechRP — Backlog & TODO
 
-Last updated: 2026-04-06
+Last updated: 2026-04-04
 
 > **Auth + Coach Role build complete.** All 16 tasks shipped: coach schema, Tim's `/admin`, coach dashboard, invite flows, role-based nav, content isolation, scenario access enforcement, real `user_id` wiring, loading skeletons, mobile-responsive sessions, Sentry, analytics dashboard.
 
@@ -12,10 +12,10 @@ Last updated: 2026-04-06
 - [x] Wire real `user_id` in recordings and insights API routes (same placeholder issue)
 - [x] Rejected user UI — `/pending` shows same message for pending and rejected; rejected users need distinct state + contact link
 - [x] Surface "Resend approval email" button on `/pending` page (API route exists, not wired to UI)
-- [x] Session limit enforcement: increment `sessions_used` after each session; auto-suspend temp accounts when limit reached
-- [x] Password reset flow (Supabase "forgot password" email)
-- [x] Email verification toggle (currently disabled — consider re-enabling for production)
-- [x] Individual users: allow name/email edit in Account Settings
+- [ ] Session limit enforcement: increment `sessions_used` after each session; auto-suspend temp accounts when limit reached
+- [ ] Password reset flow (Supabase "forgot password" email)
+- [ ] Email verification toggle (currently disabled — consider re-enabling for production)
+- [ ] Individual users: allow name/email edit in Account Settings
 
 ---
 
@@ -68,6 +68,7 @@ Last updated: 2026-04-06
 - [x] Coach-based assessments: assessment scoped to coach's playbooks first, falls back to global
 - [x] Coach instance isolation: content queries filter by `coach_instance_id` + global toggle settings
 - [ ] Per-playbook/per-persona content toggle for coaches (more granular than instance-level)
+- [ ] Allow coaches to upload PDFs or Document files to base playbooks on. Take them through AI Queries, ask questions about the playbooks they upload to build out playbooks with all the necessary information.
 
 ---
 
@@ -89,6 +90,8 @@ Last updated: 2026-04-06
 - [ ] TOS: final legal review (currently placeholder text)
 - [ ] Improve welcome email to include "How to use" with screenshots and explanation encourating the user to engage with app.
 - [ ] Build out funnel for new users for email
+- [ ] Give users an opportunity to share a referral code that gives them a free month or something similar
+- [ ] Candidates sent a "join free and get 3 hours of role playing free" after completing assessment.
 
 ---
 
@@ -102,16 +105,23 @@ Last updated: 2026-04-06
 
 ## Infrastructure & Polish
 
-- [ ] Enable RLS on `training_sessions` and `playbooks` tables ← blocked until auth+coach build is complete
-- [ ] Supabase MCP: confirm project-scoped setup working
+- [x] Enable RLS on `training_sessions` and `playbooks` tables ← blocked until auth+coach build is complete
+- [ ] Implement minute cap per month on users by plan using session-limit-migration.sql
+- [x] Switch in call LLM to Groq Llama 3.3 70B with Fallback to Claude Haiku 3
+- [ ] Claude sonnet performs post call assessment
+- [ ] improve UI of post call analysis, add a scoring system, gamify the call progression
+- [ ] Let users share their high score on LinkedIn with a referral link that rewards users for sharing and getting others to sign up
 - [x] Error monitoring (Sentry)
 - [x] Analytics (session counts, avg score, active users, by-scenario — `/insights` page)
 - [x] Loading skeletons on sessions / playbooks pages
 - [x] Mobile-responsive admin panel
 - [x] Playbook/Persona editor add formatting options for bullets, numbering and AI Prompt to change them
 - [x] improve ability for call handler to interrupt-voice chat is finishing and not letting the user interrupt
-- [x] Prefer Voice agents with accents you'd hear in America (not British) — pool of 4 male/4 female American Vapi voices, assigned deterministically per persona
 - [x] When a session loads, display the playbook below it in case user wants a refresh before starting
 - [x] Let a user choose easy, medium, hard scenarios to overcome
+- [x] Prefer Voice agents with accents you'd hear in America (not British)
+- [ ] when user suspends account, give them option to retain their data or delete account completely.
+- [ ] build a way for superadmin to send notifications to certain types of users or all users
+- [ ] build tutorial videos for new users
 
 ## Bugs
