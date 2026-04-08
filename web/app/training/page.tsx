@@ -43,6 +43,8 @@ function mapDBPersona(db: DBPersona): Persona {
 }
 
 const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const HAIKU_MODEL = 'claude-3-haiku-20240307';
 
 // American-accented Vapi voices — varied so personas don't all sound the same
 const MALE_VOICES = ['Cole', 'Andrew', 'Elliot', 'Luke'];
@@ -274,21 +276,21 @@ export default function TrainingPage() {
         voice: { provider: 'vapi', voiceId },
         firstMessage: selectedPersona.firstMessage,
         stopSpeakingPlan: {
-          numWords: 0,
-          voiceSeconds: 0.1,
-          backoffSeconds: 0.5,
+          numWords: 0,         // use VAD (voice activity detection) instead of word count
+          voiceSeconds: 0.1,   // detect interrupt after 0.1s of speech (more responsive than default 0.2)
+          backoffSeconds: 0.5, // wait 0.5s before resuming after interrupted (tighter than default 1s)
         },
       };
 
       const groqModel = {
         provider: 'groq',
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_MODEL,
         messages: [{ role: 'system', content: systemPrompt }],
       };
 
       const haikuModel = {
         provider: 'anthropic',
-        model: 'claude-3-haiku-20240307',
+        model: HAIKU_MODEL,
         messages: [{ role: 'system', content: systemPrompt }],
       };
 
@@ -299,11 +301,21 @@ export default function TrainingPage() {
           ...sharedOverrides,
         } as any);
       } catch (groqError) {
+        // Only fall back if the error is likely a Groq provider/model issue.
+        // Errors from bad voiceId, VAPI_ASSISTANT_ID, or SDK config will fail
+        // on Haiku too — don't silently double-fail in those cases.
+        const isProviderError = groqError instanceof Error
+          ? /groq|model|provider|rate.?limit|unavailable/i.test(groqError.message)
+          : true; // unknown error types: attempt fallback
+
+        if (!isProviderError) throw groqError; // re-throw to outer catch
+
         console.warn('[Groq fallback] Groq failed to start, falling back to Claude Haiku 3:', groqError);
         callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
           model: haikuModel,
           ...sharedOverrides,
         } as any);
+        console.info('[Groq fallback] Successfully started call with Claude Haiku 3 fallback');
       }
 
       if (callInfo?.id) {
