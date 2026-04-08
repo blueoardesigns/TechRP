@@ -304,11 +304,11 @@ export default function TrainingPage() {
         // Only fall back if the error is likely a Groq provider/model issue.
         // Errors from bad voiceId, VAPI_ASSISTANT_ID, or SDK config will fail
         // on Haiku too — don't silently double-fail in those cases.
-        const isProviderError = groqError instanceof Error
+        const shouldFallback = groqError instanceof Error
           ? /groq|model|provider|rate.?limit|unavailable/i.test(groqError.message)
-          : true; // unknown error types: attempt fallback
+          : true; // non-Error SDK throws: default to fallback (conservative, safe choice)
 
-        if (!isProviderError) throw groqError; // re-throw to outer catch
+        if (!shouldFallback) throw groqError; // re-throw to outer catch
 
         console.warn('[Groq fallback] Groq failed to start, falling back to Claude Haiku 3:', groqError);
         callInfo = await vapiRef.current.start(VAPI_ASSISTANT_ID, {
