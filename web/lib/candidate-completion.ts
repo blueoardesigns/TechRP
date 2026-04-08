@@ -67,13 +67,18 @@ export async function checkCandidateCompletion(userId: string): Promise<void> {
   );
   if (!allComplete) return;
 
-  // --- All quotas met: fire completion ---
-
-  // 1. Mark invite complete + stamp notification time atomically
-  await (supabase as any)
+  // --- All quotas met: atomically claim the completion notification ---
+  // Use conditional update (WHERE notification_sent_at IS NULL) to prevent duplicate
+  // notifications if two sessions complete at nearly the same time.
+  const { data: claimed } = await (supabase as any)
     .from('candidate_invites')
     .update({ status: 'complete', notification_sent_at: new Date().toISOString() })
-    .eq('id', (invite as any).id);
+    .eq('id', (invite as any).id)
+    .is('notification_sent_at', null)  // only if not already stamped — race condition guard
+    .select('id')
+    .single();
+
+  if (!claimed) return;  // another concurrent call already handled completion
 
   // 2. Auto-suspend candidate
   await (supabase as any)

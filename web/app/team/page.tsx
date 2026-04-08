@@ -138,7 +138,12 @@ export default function TeamPage() {
   };
 
   const sendUpgradeEmail = async (id: string) => {
-    await fetch(`/api/team/candidates/${id}/upgrade-email`, { method: 'POST' });
+    const res = await fetch(`/api/team/candidates/${id}/upgrade-email`, { method: 'POST' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(`Failed to send upgrade email: ${data.error ?? 'Unknown error'}`);
+      return;
+    }
     alert('Upgrade email sent!');
   };
 

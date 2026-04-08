@@ -84,6 +84,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'email and assigned_scenarios are required' }, { status: 400 });
   }
 
+  // Validate assigned_scenarios shape and scenario types
+  const validScenarioTypes = ['technician', 'property_manager', 'insurance', 'plumber_bd'];
+  for (const entry of assigned_scenarios) {
+    if (!entry.scenario_type || !validScenarioTypes.includes(entry.scenario_type)) {
+      return NextResponse.json(
+        { error: `Invalid scenario type: ${entry.scenario_type}. Must be one of: ${validScenarioTypes.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    if (!Number.isInteger(entry.count) || entry.count < 1) {
+      return NextResponse.json({ error: 'Each scenario count must be a positive integer.' }, { status: 400 });
+    }
+  }
+
   const supabase = createServiceSupabase();
   const personal_token = randomBytes(16).toString('hex');
   const expires_at = new Date(Date.now() + expires_in_days * 86400_000).toISOString();
