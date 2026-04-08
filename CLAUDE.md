@@ -13,6 +13,8 @@ TechRP is a voice AI roleplay training platform for field technicians selling dr
 - **LLM:** Claude API (`claude-sonnet-4-20250514`)
 - **Database:** Supabase (PostgreSQL, multi-tenant)
 
+Do not make any changes until you have 95% confidence in what you need to build. Ask me follow up questions until you reach that confidence.
+
 ## Commands
 ```bash
 # Web
@@ -115,3 +117,4 @@ Pre-built index files are in `.ai-codex/`. Read these FIRST before exploring the
 
 ## Future Revisions
 Future Revisions/Plans are found and should be stored when suggested by me in TODO.md
+Please mark items in TODO.md as complete when finished
