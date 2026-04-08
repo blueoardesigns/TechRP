@@ -22,7 +22,11 @@ CREATE TABLE IF NOT EXISTS candidate_invites (
   UNIQUE(email, organization_id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_candidate_invites_org ON candidate_invites(organization_id);
+
 -- ── 2. Extend users ──────────────────────────────────────────
+-- user_type is orthogonal to app_role: app_role controls permissions (individual/company_admin/coach/superuser),
+-- user_type distinguishes candidates (temp, quota-limited) from standard users within the same app_role.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS user_type TEXT NOT NULL DEFAULT 'standard'
     CHECK (user_type IN ('standard', 'candidate')),
@@ -50,6 +54,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public, pg_temp
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM users
@@ -84,6 +89,7 @@ RETURNS UUID
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public, pg_temp
 AS $$
   SELECT id FROM users WHERE auth_user_id = auth.uid() LIMIT 1;
 $$;
