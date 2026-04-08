@@ -17,6 +17,8 @@ export interface AppUser {
   scenarioAccess: string[];
   coachInstanceId: string | null;
   organizationId: string | null;
+  userType: 'standard' | 'candidate';
+  marketingConsent: boolean;
 }
 
 interface AuthContextValue {
@@ -57,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: profile } = await (supabase as any)
       .from('users')
-      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access, coach_instance_id, organization_id')
+      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access, coach_instance_id, organization_id, user_type, marketing_consent')
       .eq('auth_user_id', authUser.id)
       .single();
 
@@ -77,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       scenarioAccess: (profile as any).scenario_access ?? [],
       coachInstanceId: (profile as any).coach_instance_id ?? null,
       organizationId: (profile as any).organization_id ?? null,
+      userType: ((profile as any).user_type ?? 'standard') as 'standard' | 'candidate',
+      marketingConsent: (profile as any).marketing_consent ?? false,
     };
 
     // Superusers are never blocked
