@@ -28,10 +28,33 @@ export async function PATCH(req: NextRequest, { params }: { params: { memberId: 
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const { status } = await req.json();
-  if (status !== 'rejected') {
-    return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+  const body = await req.json();
+
+  // Handle status deactivation
+  if ('status' in body) {
+    if (body.status !== 'rejected') {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
+    await (supabase as any).from('users').update({ status: 'rejected' }).eq('id', params.memberId);
+    return NextResponse.json({ success: true });
   }
-  await (supabase as any).from('users').update({ status }).eq('id', params.memberId);
-  return NextResponse.json({ success: true });
+
+  // Handle scenario_access update
+  if ('scenario_access' in body) {
+    if (!Array.isArray(body.scenario_access)) {
+      return NextResponse.json({ error: 'scenario_access must be an array' }, { status: 400 });
+    }
+    const valid = ['technician', 'property_manager', 'insurance', 'plumber_bd'];
+    const invalid = body.scenario_access.filter((s: string) => !valid.includes(s));
+    if (invalid.length > 0) {
+      return NextResponse.json({ error: `Invalid scenario types: ${invalid.join(', ')}` }, { status: 400 });
+    }
+    await (supabase as any)
+      .from('users')
+      .update({ scenario_access: body.scenario_access })
+      .eq('id', params.memberId);
+    return NextResponse.json({ success: true });
+  }
+
+  return NextResponse.json({ error: 'No valid field to update' }, { status: 400 });
 }
