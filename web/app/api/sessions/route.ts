@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase-server';
+import { checkCandidateCompletion } from '@/lib/candidate-completion';
 
 // Depends on increment_sessions_used RPC — see web/supabase/session-limit-migration.sql
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
       const { data: userRow } = await (supabase as any)
         .from('users')
-        .select('sessions_used, session_limit')
+        .select('sessions_used, session_limit, user_type')
         .eq('id', userId)
         .single();
 
@@ -55,6 +56,13 @@ export async function POST(req: NextRequest) {
           .from('users')
           .update({ status: 'suspended' })
           .eq('id', userId);
+      }
+
+      // Candidate-specific completion check (fires email + in-app notification)
+      if (userRow?.user_type === 'candidate') {
+        checkCandidateCompletion(userId).catch(err =>
+          console.error('Candidate completion check failed:', err)
+        );
       }
     }
 
