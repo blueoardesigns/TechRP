@@ -43,16 +43,18 @@ function mapDBPersona(db: DBPersona): Persona {
 }
 
 const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_MODEL = 'llama-3.1-8b-instant';
 const HAIKU_MODEL = 'claude-3-haiku-20240307';
 
-// American-accented Vapi voices — varied so personas don't all sound the same
-const MALE_VOICES = ['Cole', 'Andrew', 'Elliot', 'Luke'];
-const FEMALE_VOICES = ['Mia', 'Bria', 'Joanna', 'Kora'];
+// ElevenLabs voice pools — deterministic per persona so the same person always
+// gets the same voice across sessions.
+const VOICE_POOLS = {
+  male:   ['burt', 'drew', 'josh', 'paul'],
+  female: ['sarah', 'rachel', 'domi', 'bella'],
+};
 
 function pickVoice(persona: Persona): string {
-  const pool = persona.gender === 'male' ? MALE_VOICES : FEMALE_VOICES;
-  // Deterministic selection so the same persona always gets the same voice
+  const pool = persona.gender === 'male' ? VOICE_POOLS.male : VOICE_POOLS.female;
   let hash = 0;
   for (let i = 0; i < persona.id.length; i++) {
     hash = (hash * 31 + persona.id.charCodeAt(i)) >>> 0;
@@ -170,6 +172,15 @@ export default function TrainingPage() {
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
     if (!publicKey) { console.error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set'); return; }
 
+    // Krisp (noise cancellation) throws an unhandled rejection when the mic is
+    // unavailable. It's non-fatal — catch and suppress so the overlay doesn't appear.
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      if (event.reason?.name === 'KrispInitError' || String(event.reason).includes('Krisp')) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
     const vapiInstance = new Vapi(publicKey);
     vapiRef.current = vapiInstance;
     setVapi(vapiInstance);
@@ -191,6 +202,10 @@ export default function TrainingPage() {
         const startedAt = callStartTimeRef.current;
         callStartTimeRef.current = null;
         handleSaveSession(startedAt, new Date());
+      } else {
+        // Call ended before connecting (e.g. mic not available) — go back so
+        // the user can try again rather than getting stuck on the calling phase.
+        setPhase('persona-preview');
       }
     });
 
@@ -212,7 +227,10 @@ export default function TrainingPage() {
       }
     });
 
-    return () => { try { vapiInstance.stop(); } catch {} };
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      try { vapiInstance.stop(); } catch {}
+    };
   }, []);
 
   // Auto-scroll transcript
@@ -226,6 +244,7 @@ export default function TrainingPage() {
   // Keep difficulty ref in sync
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
 
+  // Keep voice provider ref in sync
   // Keep user ref in sync so call-end handler always has the current user
   useEffect(() => { userRef.current = user; }, [user]);
 
@@ -273,7 +292,7 @@ export default function TrainingPage() {
       const systemPrompt = DIFFICULTY_MODIFIERS[difficultyRef.current] + selectedPersona.systemPrompt;
 
       const sharedOverrides = {
-        voice: { provider: 'vapi', voiceId },
+        voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
         firstMessage: selectedPersona.firstMessage,
         stopSpeakingPlan: {
           numWords: 0,         // use VAD (voice activity detection) instead of word count
@@ -350,8 +369,8 @@ export default function TrainingPage() {
 
       const currentUser = userRef.current;
       const session = await saveTrainingSession({
-        userId: currentUser?.id ?? '',
-        organizationId: currentUser?.organizationId ?? '',
+        userId: currentUser?.id || null,
+        organizationId: currentUser?.organizationId || null,
         transcript: JSON.stringify(messagesToSave),
         startedAt,
         endedAt,

@@ -1,6 +1,6 @@
 interface SaveTrainingSessionParams {
-  userId: string;
-  organizationId: string;
+  userId: string | null;
+  organizationId: string | null;
   transcript: string | null;
   startedAt: Date;
   endedAt: Date;

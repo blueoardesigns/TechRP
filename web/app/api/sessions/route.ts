@@ -1,4 +1,3 @@
-import { checkCandidateCompletion } from '@/lib/candidate-completion';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase-server';
 import { checkCandidateCompletion } from '@/lib/candidate-completion';
@@ -24,8 +23,9 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    // organization_id is NOT NULL — fall back to placeholder if user has no org
-    if (!body.organization_id) body.organization_id = FALLBACK_ORG;
+    // Coerce empty strings to null/fallback so UUID columns don't reject them
+    body.user_id = body.user_id || null;
+    body.organization_id = body.organization_id || FALLBACK_ORG;
     const supabase = createServiceSupabase();
     const { data, error } = await (supabase as any)
       .from('training_sessions')

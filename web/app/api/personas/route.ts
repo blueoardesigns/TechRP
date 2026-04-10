@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 
 // GET /api/personas?scenario_type=homeowner_inbound
 // GET /api/personas  (all)
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const supabaseAuth = createServerSupabase();
     const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
 
-    const supabase = createServiceSupabase();
+    const supabase = createServiceRoleClient();
     let coachInstanceId: string | null = null;
     let appRole: string = '';
 
@@ -41,9 +42,22 @@ export async function GET(request: NextRequest) {
           .eq('is_active', true)
           .order('name');
       } else {
-        query = (supabase as any).from('personas').select('*')
+        // Instance-only first; if none exist, fall back to global defaults so
+        // the app works out-of-the-box before custom personas are created.
+        const instanceQuery = (supabase as any).from('personas').select('*')
           .eq('coach_instance_id', coachInstanceId)
           .eq('is_active', true)
+          .order('name');
+        const instanceFilter = scenarioType ? instanceQuery.eq('scenario_type', scenarioType) : instanceQuery;
+        const { data: instanceData } = await instanceFilter;
+        if (instanceData && instanceData.length > 0) {
+          return NextResponse.json({ personas: instanceData });
+        }
+        // No custom personas — serve global defaults
+        query = (supabase as any).from('personas').select('*')
+          .is('coach_instance_id', null)
+          .eq('is_active', true)
+          .order('is_default', { ascending: false })
           .order('name');
       }
     } else {
@@ -63,6 +77,7 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching personas:', error);
       return NextResponse.json({ error: 'Failed to fetch personas' }, { status: 500 });
     }
+
     return NextResponse.json({ personas: data || [] });
   } catch (error) {
     console.error('Error in GET /api/personas:', error);
@@ -73,7 +88,7 @@ export async function GET(request: NextRequest) {
 // POST /api/personas — create a new persona
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServiceSupabase();
+    const supabase = createServiceRoleClient();
     const body = await request.json();
 
     const {
