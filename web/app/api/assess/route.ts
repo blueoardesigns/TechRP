@@ -117,35 +117,59 @@ export async function POST(request: NextRequest) {
       ? `The rep is practicing a "${persona.personalityType}" scenario — talking to ${persona.name}, a ${persona.speakerLabel}. Scenario type: ${persona.scenarioType}.`
       : 'The rep is practicing a water damage restoration sales/service scenario.';
 
-    const scenarioEvalCriteria = persona?.scenarioType.startsWith('homeowner')
-      ? `1. Objection handling — How well did they address cost, urgency, insurance, and skepticism concerns?
-2. Rapport and empathy — Did they connect with the homeowner and make them feel at ease?
-3. Explanation quality — Did they clearly explain the restoration process and why it's needed?
-4. Insurance/billing clarity — How well did they address financial concerns?
-5. Closing — Did they move toward scheduling or commitment appropriately?`
-      : `1. Opening and hook — Did they earn the contact's attention quickly?
-2. Objection handling — How well did they address pushback (existing vendor, no time, not interested)?
-3. Value proposition — Did they articulate a clear, differentiated reason to consider them?
-4. Active listening — Did they ask questions and respond to what was actually said?
-5. Next step — Did they successfully move toward a meeting, lunch, or continued conversation?`;
+    // Technician scenarios: homeowner calls + plumber-referred leads (sign the job)
+    // BD scenarios: referral partner outreach (earn future referrals)
+    const isTechnicianScenario = persona
+      ? persona.scenarioType.startsWith('homeowner') || persona.scenarioType === 'plumber_lead'
+      : true;
 
-    // If a playbook is provided, use it as the rubric
+    const primaryOutcome = isTechnicianScenario
+      ? `Did the rep set this job up to sign? Would a homeowner in this situation agree to move forward with the company by the end of this call or visit?`
+      : `Did the rep build a relationship that will generate referrals? How likely is this contact to send work their way in the future?`;
+
+    const primaryCriteria = isTechnicianScenario
+      ? `- Did they earn trust and move the homeowner toward a clear YES (schedule, sign, or firm next step)?
+- Did they handle objections (cost, insurance, urgency) in a way that removed barriers to signing?
+- Did they create urgency without being pushy — making inaction feel riskier than acting now?
+- Did they close or attempt to close at the right moment?`
+      : `- Did they make a memorable, positive impression that a busy referral source would remember?
+- Did they give the contact a real reason to send work their way (differentiation, trust, likability)?
+- Did they handle pushback (existing vendor, no time) without damaging the relationship?
+- Did they land a concrete next step (lunch, follow-up, intro) that keeps the door open?`;
+
     const playbookSection = resolvedPlaybookContent
-      ? `\n\nACTIVE PLAYBOOK FOR THIS SCENARIO (evaluate the rep against this):\n${resolvedPlaybookContent}\n`
+      ? `\n\nPLAYBOOK FOR THIS SCENARIO (use as a secondary reference — see scoring weights below):\n${resolvedPlaybookContent}\n`
       : '';
 
     // Create the assessment prompt
-    const assessmentPrompt = `You are a sales manager evaluating a training call. ${scenarioContext}${playbookSection}
+    const assessmentPrompt = `You are an experienced sales manager grading a training call for a water damage restoration company. ${scenarioContext}${playbookSection}
 
 Here is the conversation transcript:
 
 ${transcriptText}
 
-Please provide a detailed assessment of the rep's performance. Evaluate them on:
+## Scoring Framework
 
-${scenarioEvalCriteria}
+Your score (1–10) must reflect these weights:
 
-Be encouraging but direct — like a good sales manager. Give specific, actionable feedback including example lines they could have used.
+**75% — Sales Outcome**
+${primaryOutcome}
+
+${primaryCriteria}
+
+**25% — Playbook Execution**
+${resolvedPlaybookContent
+  ? `How closely did the rep follow the playbook above? Use it as a helpful guide, not a rigid checklist — give credit for the intent even if the exact phrasing differed.`
+  : `No playbook is loaded for this scenario. Base this 25% on general best practices: structured opener, active listening, clear value prop, and a defined close.`}
+
+## Scoring Guide
+- 9–10: Would almost certainly sign/refer. Handled objections confidently, created urgency, strong close.
+- 7–8: Likely outcome is positive. Good fundamentals, minor missed opportunities.
+- 5–6: Uncertain outcome. Some good moments but left key objections unaddressed or failed to close.
+- 3–4: Unlikely to sign/refer. Lost control of the conversation or failed to build trust.
+- 1–2: Call was damaging. Would likely cost the company the job or relationship.
+
+Be encouraging but direct — like a good sales manager who wants the rep to improve. Give specific, actionable feedback and include example lines they could have used.
 
 Respond in the following JSON format (valid JSON only, no markdown):
 {

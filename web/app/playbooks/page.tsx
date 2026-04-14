@@ -9,14 +9,20 @@ import type { Database } from '../../../shared/types/database';
 type Playbook = Database['public']['Tables']['playbooks']['Row'];
 
 // Scenario metadata — icon + color badge
+// Discovery meeting types share the same icon/color as their cold-call counterpart
 const SCENARIO_META: Record<string, { icon: string; color: string }> = {
-  homeowner_inbound:           { icon: '📞', color: 'bg-blue-500/15 text-blue-400 border-blue-500/20' },
-  homeowner_facetime:          { icon: '🚪', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/20' },
-  plumber_lead:                { icon: '🔧', color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20' },
-  property_manager:            { icon: '🏠', color: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
-  commercial_property_manager: { icon: '🏢', color: 'bg-purple-500/15 text-purple-400 border-purple-500/20' },
-  insurance_broker:            { icon: '🤝', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
-  plumber_bd:                  { icon: '🪠', color: 'bg-orange-500/15 text-orange-400 border-orange-500/20' },
+  homeowner_inbound:              { icon: '📞', color: 'bg-blue-500/15 text-blue-400 border-blue-500/20' },
+  homeowner_facetime:             { icon: '🚪', color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/20' },
+  plumber_lead:                   { icon: '🔧', color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/20' },
+  property_manager:               { icon: '🏠', color: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
+  commercial_property_manager:    { icon: '🏢', color: 'bg-purple-500/15 text-purple-400 border-purple-500/20' },
+  insurance_broker:               { icon: '🤝', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
+  plumber_bd:                     { icon: '🪠', color: 'bg-orange-500/15 text-orange-400 border-orange-500/20' },
+  // Discovery meeting counterparts
+  property_manager_discovery:     { icon: '🏠', color: 'bg-violet-500/15 text-violet-400 border-violet-500/20' },
+  commercial_pm_discovery:        { icon: '🏢', color: 'bg-purple-500/15 text-purple-400 border-purple-500/20' },
+  insurance_broker_discovery:     { icon: '🤝', color: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' },
+  plumber_bd_discovery:           { icon: '🪠', color: 'bg-orange-500/15 text-orange-400 border-orange-500/20' },
 };
 
 function formatDate(d: string) {

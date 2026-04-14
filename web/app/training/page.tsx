@@ -239,6 +239,21 @@ export default function TrainingPage() {
     };
 
     const handleCallEnd = () => {
+      // Reset the Krisp noise-cancellation processor BEFORE the SDK calls
+      // cleanup() → call.destroy(). Krisp holds a module-level processor
+      // reference; if it's not explicitly disabled before destroy(), that
+      // reference becomes null. The next session's start() then throws
+      // "KrispInitError: Cannot read properties of null (reading 'disable')"
+      // which Daily.co escalates to a fatal ejection ("Meeting has ended").
+      // At this point (call-end fires before SDK cleanup), the Daily call
+      // object is still accessible via the TS-private property.
+      const dailyCall = vapiRef.current && (vapiRef.current as any).call;
+      if (dailyCall?.updateInputSettings) {
+        dailyCall.updateInputSettings({
+          audio: { processor: { type: 'none' } },
+        }).catch(() => {/* non-critical — proceed regardless */});
+      }
+
       setCallStatus('idle');
       if (callStartTimeRef.current) {
         const startedAt = callStartTimeRef.current;
@@ -407,6 +422,16 @@ export default function TrainingPage() {
   const handleEndCall = async () => {
     if (!vapiRef.current) return;
     try {
+      // Disable Krisp processor before stop() → destroy() so its module-level
+      // state is cleanly null (not stale) for the next session. If the AI
+      // already ended the call, handleCallEnd will have done this; the double
+      // call is a harmless no-op.
+      const dailyCall = (vapiRef.current as any).call;
+      if (dailyCall?.updateInputSettings) {
+        await dailyCall.updateInputSettings({
+          audio: { processor: { type: 'none' } },
+        }).catch(() => {});
+      }
       await vapiRef.current.stop();
     } catch (error) {
       console.error('Error ending call:', error);
@@ -419,6 +444,14 @@ export default function TrainingPage() {
 
   const handleSaveSession = async (startedAt: Date, endedAt: Date) => {
     const persona = selectedPersonaRef.current;
+
+    // Skip sessions under 30 seconds — accidental taps or failed connections.
+    const durationSecs = (endedAt.getTime() - startedAt.getTime()) / 1000;
+    if (durationSecs < 30) {
+      setPhase('persona-preview');
+      return;
+    }
+
     try {
       setSaveStatus('saving');
       const messagesToSave = messagesRef.current.length > 0 ? messagesRef.current : messages;

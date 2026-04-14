@@ -244,7 +244,25 @@ export default function PersonasPage() {
     }
   };
 
-  const groups: ScenarioGroup[] = ['technician', 'bizdev'];
+  // Split into three sections so BD cold calls and discovery meetings get
+  // their own subheadings (otherwise they render as duplicates of each other)
+  const sections = [
+    {
+      key: 'technician',
+      label: GROUP_LABELS['technician'],
+      scenarios: SCENARIOS.filter(s => s.group === 'technician'),
+    },
+    {
+      key: 'bizdev_cold',
+      label: 'Business Development — Cold Calls',
+      scenarios: SCENARIOS.filter(s => s.group === 'bizdev' && s.callType === 'cold_call'),
+    },
+    {
+      key: 'bizdev_discovery',
+      label: 'Business Development — Discovery Meetings',
+      scenarios: SCENARIOS.filter(s => s.group === 'bizdev' && s.callType === 'discovery'),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -272,16 +290,15 @@ export default function PersonasPage() {
           <div className="text-center py-20 text-gray-600 text-sm">Loading personas…</div>
         ) : (
           <div className="space-y-10">
-            {groups.map(group => {
-              const groupScenarios = SCENARIOS.filter(s => s.group === group);
+            {sections.map(section => {
               return (
-                <div key={group}>
+                <div key={section.key}>
                   <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-4">
-                    {GROUP_LABELS[group]}
+                    {section.label}
                   </p>
 
                   <div className="space-y-2">
-                    {groupScenarios.map(scenario => {
+                    {section.scenarios.map(scenario => {
                       const personas = personasByScenario[scenario.type] || [];
                       const isExpanded = expandedScenarios.has(scenario.type);
 
