@@ -66,6 +66,8 @@ export default function CoachPage() {
           requestedAt: c.requestedAt ?? c.requested_at,
         }))
       );
+    } catch (err) {
+      console.error('Failed to load connections:', err);
     } finally {
       setConnectionsLoading(false);
     }
@@ -390,8 +392,12 @@ export default function CoachPage() {
                       onClick={async () => {
                         if (!confirm(`Remove connection with ${conn.companyName}? This cannot be undone.`)) return;
                         setRemovingConnectionId(conn.id);
-                        await fetch(`/api/coach/connections/${conn.id}`, { method: 'DELETE' });
-                        setConnections((prev) => prev.filter((c) => c.id !== conn.id));
+                        const res = await fetch(`/api/coach/connections/${conn.id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                          setConnections((prev) => prev.filter((c) => c.id !== conn.id));
+                        } else {
+                          alert('Failed to remove connection. Please try again.');
+                        }
                         setRemovingConnectionId(null);
                       }}
                       disabled={removingConnectionId === conn.id}

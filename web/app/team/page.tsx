@@ -107,6 +107,8 @@ export default function TeamPage() {
           status: c.status,
         }))
       );
+    } catch (err) {
+      console.error('Failed to load coach connections:', err);
     } finally {
       setCoachesLoading(false);
     }
@@ -275,7 +277,7 @@ export default function TeamPage() {
                 <p className="text-sm text-gray-400">Invite a coach to access your team&apos;s sessions and playbooks</p>
               </div>
               <button
-                onClick={() => { setShowAddCoach(true); loadCoachConnections(); }}
+                onClick={() => setShowAddCoach(true)}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition-colors"
               >
                 + Add Coach
@@ -384,8 +386,12 @@ export default function TeamPage() {
                       onClick={async () => {
                         if (!confirm(`Remove ${conn.coachName}? They will lose access immediately.`)) return;
                         setRemovingCoachId(conn.id);
-                        await fetch(`/api/company/coaches/${conn.id}`, { method: 'DELETE' });
-                        setCoachConnections((prev) => prev.filter((c) => c.id !== conn.id));
+                        const res = await fetch(`/api/company/coaches/${conn.id}`, { method: 'DELETE' });
+                        if (res.ok) {
+                          setCoachConnections((prev) => prev.filter((c) => c.id !== conn.id));
+                        } else {
+                          alert('Failed to remove coach. Please try again.');
+                        }
                         setRemovingCoachId(null);
                       }}
                       disabled={removingCoachId === conn.id}
