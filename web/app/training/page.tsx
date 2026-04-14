@@ -43,6 +43,19 @@ function mapDBPersona(db: DBPersona): Persona {
 }
 
 const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
+
+// Module-level singleton — KrispSDK (bundled inside @vapi-ai/web) registers itself
+// globally and throws "KrispSDK is duplicated" if Vapi is instantiated more than once
+// per page load. React 18 StrictMode double-invokes effects, so we guard here.
+let _vapiSingleton: Vapi | null = null;
+function getOrCreateVapi(): Vapi | null {
+  const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
+  if (!publicKey) return null;
+  if (!_vapiSingleton) {
+    _vapiSingleton = new Vapi(publicKey);
+  }
+  return _vapiSingleton;
+}
 const GROQ_MODEL = 'llama-3.1-8b-instant';
 const HAIKU_MODEL = 'claude-3-haiku-20240307';
 
@@ -200,8 +213,11 @@ export default function TrainingPage() {
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
-    if (!publicKey) { console.error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set'); return; }
+    const vapiInstance = getOrCreateVapi();
+    if (!vapiInstance) { console.error('NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set'); return; }
+
+    vapiRef.current = vapiInstance;
+    setVapi(vapiInstance);
 
     // Krisp (noise cancellation) throws an unhandled rejection when the mic is
     // unavailable. It's non-fatal — catch and suppress so the overlay doesn't appear.
@@ -212,22 +228,17 @@ export default function TrainingPage() {
     };
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
-    const vapiInstance = new Vapi(publicKey);
-    vapiRef.current = vapiInstance;
-    setVapi(vapiInstance);
-
-    vapiInstance.on('error', (error: any) => {
+    const handleError = (error: any) => {
       console.error('Vapi error:', error);
-      // Prevent unhandled error exception so call-end can still fire
-    });
+    };
 
-    vapiInstance.on('call-start', () => {
+    const handleCallStart = () => {
       callStartTimeRef.current = new Date();
       setCallStatus('connected');
       setSaveStatus('idle');
-    });
+    };
 
-    vapiInstance.on('call-end', () => {
+    const handleCallEnd = () => {
       setCallStatus('idle');
       if (callStartTimeRef.current) {
         const startedAt = callStartTimeRef.current;
@@ -238,9 +249,9 @@ export default function TrainingPage() {
         // the user can try again rather than getting stuck on the calling phase.
         setPhase('persona-preview');
       }
-    });
+    };
 
-    vapiInstance.on('message', (message: any) => {
+    const handleMessage = (message: any) => {
       if (message.type === 'transcript' && message.transcriptType === 'final') {
         const role = message.role || (message.from === 'user' ? 'user' : 'assistant');
         const content = message.transcript || message.content || message.text || '';
@@ -256,11 +267,21 @@ export default function TrainingPage() {
           });
         }
       }
-    });
+    };
+
+    vapiInstance.on('error', handleError);
+    vapiInstance.on('call-start', handleCallStart);
+    vapiInstance.on('call-end', handleCallEnd);
+    vapiInstance.on('message', handleMessage);
 
     return () => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-      try { vapiInstance.stop(); } catch {}
+      // Remove named handlers so StrictMode re-mount doesn't stack duplicate listeners.
+      // Do NOT stop() the singleton here — it persists for the page's lifetime.
+      vapiInstance.off('error', handleError);
+      vapiInstance.off('call-start', handleCallStart);
+      vapiInstance.off('call-end', handleCallEnd);
+      vapiInstance.off('message', handleMessage);
     };
   }, []);
 
