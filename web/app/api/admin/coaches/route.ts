@@ -20,7 +20,7 @@ export async function GET() {
     .from('users')
     .select(`
       id, full_name, email, status, created_at,
-      coach_instances ( id, name, invite_token )
+      coach_instances!coach_user_id ( id, name, invite_token )
     `)
     .eq('app_role', 'coach')
     .order('created_at', { ascending: false });
