@@ -41,11 +41,64 @@ export async function GET() {
     return NextResponse.json({ playbooks: data ?? [] });
   }
 
-  const { data } = await (supabase as any)
-    .from('playbooks').select('*')
+  // company_admin, individual, or users with no coach_instance_id — apply whitelist
+  const { data: orgProfile } = await (supabase as any)
+    .from('users')
+    .select('organization_id')
+    .eq('auth_user_id', authUser.id)
+    .single();
+
+  const orgId = (orgProfile as any)?.organization_id ?? null;
+
+  // Get the coach_instance_id for this org (if any)
+  let coachInstanceForOrg: string | null = null;
+  if (orgId) {
+    const { data: org } = await (supabase as any)
+      .from('organizations')
+      .select('coach_instance_id')
+      .eq('id', orgId)
+      .single();
+    coachInstanceForOrg = (org as any)?.coach_instance_id ?? null;
+  }
+
+  // Always include global playbooks
+  let allPlaybooks: any[] = [];
+
+  const { data: globalPlaybooks } = await (supabase as any)
+    .from('playbooks')
+    .select('*')
     .is('coach_instance_id', null)
     .order('created_at', { ascending: false });
-  return NextResponse.json({ playbooks: data ?? [] });
+
+  allPlaybooks = globalPlaybooks ?? [];
+
+  // Add coach playbooks filtered by whitelist (if org has a coach)
+  if (orgId && coachInstanceForOrg) {
+    const { data: whitelistRows } = await (supabase as any)
+      .from('playbook_company_access')
+      .select('playbook_id')
+      .eq('organization_id', orgId);
+
+    if (whitelistRows && whitelistRows.length > 0) {
+      const allowedIds = (whitelistRows as any[]).map((r) => r.playbook_id);
+      const { data: coachPlaybooks } = await (supabase as any)
+        .from('playbooks')
+        .select('*')
+        .eq('coach_instance_id', coachInstanceForOrg)
+        .in('id', allowedIds)
+        .order('created_at', { ascending: false });
+      allPlaybooks = [...allPlaybooks, ...(coachPlaybooks ?? [])];
+    } else {
+      const { data: coachPlaybooks } = await (supabase as any)
+        .from('playbooks')
+        .select('*')
+        .eq('coach_instance_id', coachInstanceForOrg)
+        .order('created_at', { ascending: false });
+      allPlaybooks = [...allPlaybooks, ...(coachPlaybooks ?? [])];
+    }
+  }
+
+  return NextResponse.json({ playbooks: allPlaybooks });
 }
 
 export async function POST(request: NextRequest) {
