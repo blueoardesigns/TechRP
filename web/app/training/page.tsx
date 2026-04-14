@@ -147,6 +147,7 @@ TIMING: This is a training call with a strict 10-minute limit. Around the 7 to 7
 function getInterruptInstructions(personalityType: string): string {
   const pt = personalityType.toLowerCase();
 
+  // Priority: hostile/angry > busy/rushed > analytical > default
   if (/skeptic|frustrat|angry|upset|irate|hostile|aggressive|pushy|difficult/.test(pt)) {
     return `
 
@@ -274,7 +275,6 @@ export default function TrainingPage() {
   // Keep difficulty ref in sync
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
 
-  // Keep voice provider ref in sync
   // Keep user ref in sync so call-end handler always has the current user
   useEffect(() => { userRef.current = user; }, [user]);
 
