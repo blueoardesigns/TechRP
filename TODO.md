@@ -1,6 +1,6 @@
 # TechRP — Backlog & TODO
 
-Last updated: 2026-04-07
+Last updated: 2026-04-14
 
 > **Auth + Coach Role build complete.** All 16 tasks shipped: coach schema, Tim's `/admin`, coach dashboard, invite flows, role-based nav, content isolation, scenario access enforcement, real `user_id` wiring, loading skeletons, mobile-responsive sessions, Sentry, analytics dashboard.
 
@@ -52,6 +52,7 @@ Last updated: 2026-04-07
 - [x] Plumber Leads playbook merge: PATCH seeded ID `a0310662-7a97-49f2-b738-563b54994c83`, DELETE custom `deb506ea-1644-49dd-b85d-38a9da55bc04`
 - [x] Playbook UI: edit + delete (company admin only)
 - [x] Company admins can request new playbooks from admin panel
+- [x] Hard cap of 10 minute calls-- get the bot to get off the phone in 10 minutes.
 
 ---
 
@@ -67,8 +68,10 @@ Last updated: 2026-04-07
 - [x] Company admin team panel: manage invited individuals, view their sessions/scores
 - [x] Coach-based assessments: assessment scoped to coach's playbooks first, falls back to global
 - [x] Coach instance isolation: content queries filter by `coach_instance_id` + global toggle settings
+- [x] Per-company playbook visibility: coaches control which playbooks each connected company can see (whitelist model)
+- [x] Company–coach connections: company admins invite consulting coaches via invite code with scoped permissions (edit playbooks vs read-only); email approval flow; both parties can disconnect
 - [ ] Per-playbook/per-persona content toggle for coaches (more granular than instance-level)
-- [ ] Allow coaches to upload PDFs or Document files to base playbooks on. Take them through AI Queries, ask questions about the playbooks they upload to build out playbooks with all the necessary information.
+- [x] Allow coaches to upload PDFs or Document files to base playbooks on. Take them through AI Queries, ask questions about the playbooks they upload to build out playbooks with all the necessary information.
 
 ---
 
@@ -116,9 +119,8 @@ Last updated: 2026-04-07
 ## Infrastructure & Polish
 
 - [x] Enable RLS on `training_sessions` and `playbooks` tables ← blocked until auth+coach build is complete
-- [ ] Implement minute cap per month on users by plan using session-limit-migration.sql
 - [x] Switch in call LLM to Groq Llama 3.3 70B with Fallback to Claude Haiku 3
-- [ ] Claude sonnet performs post call assessment
+- [x] Claude sonnet performs post call assessment
 - [ ] improve UI of post call analysis, add a scoring system, gamify the call progression
 - [ ] Let users share their high score on LinkedIn with a referral link that rewards users for sharing and getting others to sign up
 - [x] Error monitoring (Sentry)
