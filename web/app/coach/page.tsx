@@ -23,7 +23,7 @@ export default function CoachPage() {
   const [instance, setInstance] = useState<CoachInstance | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<CoachUser[]>([]);
-  const [tab, setTab] = useState<'companies' | 'users' | 'content'>('companies');
+  const [tab, setTab] = useState<'companies' | 'users' | 'content' | 'connections'>('companies');
   const [newCompanyName, setNewCompanyName] = useState('');
   const [addingCompany, setAddingCompany] = useState(false);
   const [copiedToken, setCopiedToken] = useState('');
@@ -31,6 +31,16 @@ export default function CoachPage() {
   const [orgPlaybooks, setOrgPlaybooks] = React.useState<{ id: string; name: string; scenario_type: string | null; visible: boolean }[]>([]);
   const [playbookAccessLoading, setPlaybookAccessLoading] = React.useState(false);
   const [playbookAccessSaving, setPlaybookAccessSaving] = React.useState(false);
+  const [connections, setConnections] = React.useState<{
+    id: string;
+    companyName: string;
+    adminEmail: string;
+    permissionLevel: 'edit_playbooks' | 'readonly';
+    status: 'pending' | 'active';
+    requestedAt: string;
+  }[]>([]);
+  const [connectionsLoading, setConnectionsLoading] = React.useState(false);
+  const [removingConnectionId, setRemovingConnectionId] = React.useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -38,7 +48,28 @@ export default function CoachPage() {
     fetch('/api/coach/instance').then(r => r.json()).then(d => setInstance(d.instance));
     fetch('/api/coach/companies').then(r => r.json()).then(d => setCompanies(d.companies ?? []));
     fetch('/api/coach/users').then(r => r.json()).then(d => setUsers(d.users ?? []));
+    loadConnections();
   }, [user, router]);
+
+  async function loadConnections() {
+    setConnectionsLoading(true);
+    try {
+      const res = await fetch('/api/coach/connections');
+      const data = await res.json();
+      setConnections(
+        (data.connections ?? []).map((c: any) => ({
+          id: c.id,
+          companyName: c.companyName,
+          adminEmail: c.adminEmail,
+          permissionLevel: c.permission_level,
+          status: c.status,
+          requestedAt: c.requestedAt ?? c.requested_at,
+        }))
+      );
+    } finally {
+      setConnectionsLoading(false);
+    }
+  }
 
   const copyLink = (token: string, type: 'coach' | 'org') => {
     const url = type === 'coach'
@@ -113,9 +144,10 @@ export default function CoachPage() {
   if (!instance) return null;
 
   const TABS = [
-    { key: 'companies', label: 'Client Companies' },
-    { key: 'users',     label: 'All Users' },
-    { key: 'content',   label: 'Content' },
+    { key: 'companies',   label: 'Client Companies' },
+    { key: 'users',       label: 'All Users' },
+    { key: 'content',     label: 'Content' },
+    { key: 'connections', label: 'Connections' },
   ] as const;
 
   return (
@@ -314,6 +346,60 @@ export default function CoachPage() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Connections tab */}
+        {tab === 'connections' && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Company Connections</h2>
+              <p className="text-sm text-gray-400">Companies that have invited you as a consulting coach</p>
+            </div>
+
+            {connectionsLoading ? (
+              <p className="text-gray-500 text-sm">Loading...</p>
+            ) : connections.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p>No company connections yet.</p>
+                <p className="text-sm mt-1">Share your invite code with a company admin to get started.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {connections.map((conn) => (
+                  <div key={conn.id} className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-white font-medium">{conn.companyName}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          conn.status === 'active'
+                            ? 'bg-green-900/50 text-green-400'
+                            : 'bg-yellow-900/50 text-yellow-400'
+                        }`}>
+                          {conn.status === 'active' ? 'Active' : 'Pending approval'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {conn.permissionLevel === 'edit_playbooks' ? 'Edit playbooks' : 'View only'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Remove connection with ${conn.companyName}? This cannot be undone.`)) return;
+                        setRemovingConnectionId(conn.id);
+                        await fetch(`/api/coach/connections/${conn.id}`, { method: 'DELETE' });
+                        setConnections((prev) => prev.filter((c) => c.id !== conn.id));
+                        setRemovingConnectionId(null);
+                      }}
+                      disabled={removingConnectionId === conn.id}
+                      className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40 transition-colors"
+                    >
+                      {removingConnectionId === conn.id ? 'Removing...' : 'Disconnect'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
