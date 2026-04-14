@@ -140,6 +140,36 @@ const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
   hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
 };
 
+const TIMING_INSTRUCTIONS = `
+
+TIMING: This is a training call with a strict 10-minute limit. Around the 7 to 7.5 minute mark, naturally steer the conversation toward a close or a clear next step — even if the conversation isn't fully complete. If the call is going well at that point, push for commitment: agree to sign, schedule a follow-up appointment, or lock in a concrete next action before ending. Never let the call drift past 10 minutes without a resolution.`;
+
+function getInterruptInstructions(personalityType: string): string {
+  const pt = personalityType.toLowerCase();
+
+  if (/skeptic|frustrat|angry|upset|irate|hostile|aggressive|pushy|difficult/.test(pt)) {
+    return `
+
+INTERRUPTION: You interrupt freely when the technician rambles, repeats themselves, or does not directly answer your question. Cut in mid-sentence with phrases like "Hold on—", "Wait, that's not what I asked", or "I'm going to stop you there." Do not wait for them to finish if you are frustrated.`;
+  }
+
+  if (/busy|dismiss|rushed|impatient|no.?time|distract/.test(pt)) {
+    return `
+
+INTERRUPTION: You have very limited time. If the technician doesn't get to the point within two or three sentences, cut in with "I need the short version" or "Can you just tell me the bottom line?" You interrupt when they repeat themselves or give you information you didn't ask for.`;
+  }
+
+  if (/analytical|engineer|detail|methodical|research/.test(pt)) {
+    return `
+
+INTERRUPTION: You occasionally cut in to ask a specific clarifying question when something is vague or doesn't add up. Don't let imprecise statements slide — interject with "What exactly does that mean?" or "Can you give me a specific number on that?"`;
+  }
+
+  return `
+
+INTERRUPTION: You generally let the technician finish speaking. You may interject if they say something confusing or contradictory, but you are not naturally interruptive.`;
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function TrainingPage() {
@@ -289,11 +319,16 @@ export default function TrainingPage() {
       setSaveStatus('idle');
 
       const voiceId = pickVoice(selectedPersona);
-      const systemPrompt = DIFFICULTY_MODIFIERS[difficultyRef.current] + selectedPersona.systemPrompt;
+      const systemPrompt =
+        DIFFICULTY_MODIFIERS[difficultyRef.current] +
+        selectedPersona.systemPrompt +
+        TIMING_INSTRUCTIONS +
+        getInterruptInstructions(selectedPersona.personalityType);
 
       const sharedOverrides = {
         voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
         firstMessage: selectedPersona.firstMessage,
+        maxDurationSeconds: 600,
         stopSpeakingPlan: {
           numWords: 0,         // use VAD (voice activity detection) instead of word count
           voiceSeconds: 0.1,   // detect interrupt after 0.1s of speech (more responsive than default 0.2)
