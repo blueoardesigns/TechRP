@@ -179,7 +179,10 @@ export default function CoachPage() {
           {TABS.map(t => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => {
+                setTab(t.key);
+                if (t.key === 'connections') loadConnections();
+              }}
               className={`px-4 py-2 text-sm rounded-t-md transition-colors ${tab === t.key ? 'text-white border-b-2 border-blue-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
               {t.label}
