@@ -28,7 +28,7 @@ interface CandidateInvite {
   assigned_scenarios: AssignedScenario[];
 }
 
-type Tab = 'employees' | 'candidates';
+type Tab = 'employees' | 'candidates' | 'coaches';
 
 export default function TeamPage() {
   const { user } = useAuth();
@@ -54,6 +54,22 @@ export default function TeamPage() {
   const [newInviteUrl, setNewInviteUrl] = useState('');
   const [copiedInvite, setCopiedInvite] = useState('');
 
+  // Coaches state
+  const [coachConnections, setCoachConnections] = useState<{
+    id: string;
+    coachName: string;
+    coachEmail: string;
+    permissionLevel: 'edit_playbooks' | 'readonly';
+    status: 'pending' | 'active';
+  }[]>([]);
+  const [coachesLoading, setCoachesLoading] = useState(false);
+  const [showAddCoach, setShowAddCoach] = useState(false);
+  const [coachInviteToken, setCoachInviteToken] = useState('');
+  const [coachPermission, setCoachPermission] = useState<'edit_playbooks' | 'readonly'>('readonly');
+  const [addingCoach, setAddingCoach] = useState(false);
+  const [addCoachError, setAddCoachError] = useState('');
+  const [removingCoachId, setRemovingCoachId] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -74,7 +90,49 @@ export default function TeamPage() {
       setCandidates(candidatesData.candidates ?? []);
       setLoading(false);
     });
+    loadCoachConnections();
   }, [user]);
+
+  async function loadCoachConnections() {
+    setCoachesLoading(true);
+    try {
+      const res = await fetch('/api/company/coaches');
+      const data = await res.json();
+      setCoachConnections(
+        (data.connections ?? []).map((c: any) => ({
+          id: c.id,
+          coachName: c.coachName,
+          coachEmail: c.coachEmail,
+          permissionLevel: c.permission_level,
+          status: c.status,
+        }))
+      );
+    } finally {
+      setCoachesLoading(false);
+    }
+  }
+
+  async function handleAddCoach() {
+    if (!coachInviteToken.trim()) return;
+    setAddingCoach(true);
+    setAddCoachError('');
+    try {
+      const res = await fetch('/api/company/coaches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteToken: coachInviteToken.trim(), permissionLevel: coachPermission }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send request');
+      setShowAddCoach(false);
+      setCoachInviteToken('');
+      await loadCoachConnections();
+    } catch (err: any) {
+      setAddCoachError(err.message);
+    } finally {
+      setAddingCoach(false);
+    }
+  }
 
   const copyInvite = (url: string, key: string) => {
     navigator.clipboard.writeText(url);
@@ -195,10 +253,10 @@ export default function TeamPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-white/10 pb-0">
-          {(['employees', 'candidates'] as Tab[]).map(t => (
+          {(['employees', 'candidates', 'coaches'] as Tab[]).map(t => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => { setTab(t); if (t === 'coaches') loadCoachConnections(); }}
               className={`px-4 py-2 text-sm font-medium rounded-t-md transition-colors capitalize ${tab === t ? 'text-white border-b-2 border-blue-500' : 'text-gray-400 hover:text-white'}`}
             >
               {t}
@@ -208,6 +266,138 @@ export default function TeamPage() {
 
         {loading ? (
           <p className="text-gray-500 py-20 text-center">Loading…</p>
+        ) : tab === 'coaches' ? (
+          // ── Coaches Tab ─────────────────────────────────────────────────
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Coaches</h2>
+                <p className="text-sm text-gray-400">Invite a coach to access your team&apos;s sessions and playbooks</p>
+              </div>
+              <button
+                onClick={() => { setShowAddCoach(true); loadCoachConnections(); }}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg font-medium transition-colors"
+              >
+                + Add Coach
+              </button>
+            </div>
+
+            {showAddCoach && (
+              <div className="bg-gray-800 rounded-xl p-5 flex flex-col gap-4 border border-gray-700">
+                <h3 className="text-white font-medium">Add a Consulting Coach</h3>
+
+                <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-lg p-3 text-sm text-yellow-300">
+                  <strong>Before you continue:</strong> The coach will be able to view your users, training sessions, and recordings.
+                  {coachPermission === 'edit_playbooks' && ' They will also be able to edit your playbooks.'}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-gray-400">Coach Invite Code</label>
+                  <input
+                    type="text"
+                    value={coachInviteToken}
+                    onChange={(e) => setCoachInviteToken(e.target.value)}
+                    placeholder="Paste the coach's invite code here"
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500">Ask your coach to share their invite code from their dashboard.</p>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm text-gray-400">Permission Level</label>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="permission"
+                        value="readonly"
+                        checked={coachPermission === 'readonly'}
+                        onChange={() => setCoachPermission('readonly')}
+                        className="mt-0.5 accent-blue-500"
+                      />
+                      <div>
+                        <p className="text-sm text-white">View only</p>
+                        <p className="text-xs text-gray-400">Coach can view sessions and recordings but cannot edit playbooks</p>
+                      </div>
+                    </label>
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="permission"
+                        value="edit_playbooks"
+                        checked={coachPermission === 'edit_playbooks'}
+                        onChange={() => setCoachPermission('edit_playbooks')}
+                        className="mt-0.5 accent-blue-500"
+                      />
+                      <div>
+                        <p className="text-sm text-white">Edit playbooks</p>
+                        <p className="text-xs text-gray-400">Coach can view sessions, recordings, and edit your custom playbooks</p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {addCoachError && <p className="text-red-400 text-sm">{addCoachError}</p>}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleAddCoach}
+                    disabled={addingCoach || !coachInviteToken.trim()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-sm rounded-lg font-medium transition-colors"
+                  >
+                    {addingCoach ? 'Sending Request...' : 'Send Request'}
+                  </button>
+                  <button
+                    onClick={() => { setShowAddCoach(false); setAddCoachError(''); setCoachInviteToken(''); }}
+                    className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {coachesLoading ? (
+              <p className="text-gray-500 text-sm">Loading...</p>
+            ) : coachConnections.length === 0 ? (
+              <p className="text-gray-500 text-sm">No coaches connected yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {coachConnections.map((conn) => (
+                  <div key={conn.id} className="bg-gray-800 rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-white font-medium">{conn.coachName}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          conn.status === 'active'
+                            ? 'bg-green-900/50 text-green-400'
+                            : 'bg-yellow-900/50 text-yellow-400'
+                        }`}>
+                          {conn.status === 'active' ? 'Active' : 'Awaiting coach approval'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {conn.permissionLevel === 'edit_playbooks' ? 'Can edit playbooks' : 'View only'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Remove ${conn.coachName}? They will lose access immediately.`)) return;
+                        setRemovingCoachId(conn.id);
+                        await fetch(`/api/company/coaches/${conn.id}`, { method: 'DELETE' });
+                        setCoachConnections((prev) => prev.filter((c) => c.id !== conn.id));
+                        setRemovingCoachId(null);
+                      }}
+                      disabled={removingCoachId === conn.id}
+                      className="text-xs text-red-400 hover:text-red-300 disabled:opacity-40 transition-colors"
+                    >
+                      {removingCoachId === conn.id ? 'Removing...' : 'Remove'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : tab === 'employees' ? (
           // ── Employees Tab ───────────────────────────────────────────────
           members.length === 0 ? (
