@@ -44,7 +44,7 @@ export default function CoachPage() {
 
   useEffect(() => {
     if (!user) return;
-    if (user.role !== 'coach') { router.replace('/'); return; }
+    if (user.role !== 'coach' && user.role !== 'superuser') { router.replace('/'); return; }
     fetch('/api/coach/instance').then(r => r.json()).then(d => setInstance(d.instance));
     fetch('/api/coach/companies').then(r => r.json()).then(d => setCompanies(d.companies ?? []));
     fetch('/api/coach/users').then(r => r.json()).then(d => setUsers(d.users ?? []));

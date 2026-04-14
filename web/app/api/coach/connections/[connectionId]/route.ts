@@ -17,7 +17,7 @@ export async function DELETE(
     .eq('auth_user_id', authUser.id)
     .single();
 
-  if (!profile || (profile as any).app_role !== 'coach') {
+  if (!profile || (profile as any).app_role !== 'coach' && (profile as any).app_role !== 'superuser') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

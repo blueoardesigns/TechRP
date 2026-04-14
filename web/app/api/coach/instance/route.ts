@@ -11,7 +11,7 @@ async function getCoachProfile() {
     .select('id, app_role, coach_instance_id')
     .eq('auth_user_id', authUser.id)
     .single();
-  if (!data || (data as any).app_role !== 'coach') return null;
+  if (!data || (data as any).app_role !== 'coach' && (data as any).app_role !== 'superuser') return null;
   return data as any;
 }
 

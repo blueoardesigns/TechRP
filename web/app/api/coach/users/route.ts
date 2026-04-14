@@ -13,7 +13,7 @@ export async function GET() {
     .eq('auth_user_id', authUser.id)
     .single();
 
-  if (!coach || (coach as any).app_role !== 'coach') {
+  if (!coach || (coach as any).app_role !== 'coach' && (coach as any).app_role !== 'superuser') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
