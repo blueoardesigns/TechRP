@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
   let generateInputs: Record<string, unknown> | null = null;
 
   if (isReady) {
-    const jsonMatch = responseText.match(/__READY__\s*\n([\s\S]+)/);
-    if (jsonMatch) {
+    const jsonPart = responseText.split('__READY__')[1]?.trim();
+    if (jsonPart) {
       try {
-        generateInputs = JSON.parse(jsonMatch[1].trim());
+        generateInputs = JSON.parse(jsonPart);
       } catch {
         // Malformed JSON — continue chatting rather than failing
       }
