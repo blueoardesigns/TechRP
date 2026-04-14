@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import * as React from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { AppNav } from '@/components/nav';
 import { useRouter } from 'next/navigation';
@@ -26,6 +27,10 @@ export default function CoachPage() {
   const [newCompanyName, setNewCompanyName] = useState('');
   const [addingCompany, setAddingCompany] = useState(false);
   const [copiedToken, setCopiedToken] = useState('');
+  const [playbookAccessOrgId, setPlaybookAccessOrgId] = React.useState<string | null>(null);
+  const [orgPlaybooks, setOrgPlaybooks] = React.useState<{ id: string; name: string; scenario_type: string | null; visible: boolean }[]>([]);
+  const [playbookAccessLoading, setPlaybookAccessLoading] = React.useState(false);
+  const [playbookAccessSaving, setPlaybookAccessSaving] = React.useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -67,6 +72,33 @@ export default function CoachPage() {
     setNewCompanyName('');
     setAddingCompany(false);
   };
+
+  async function loadOrgPlaybooks(orgId: string) {
+    setPlaybookAccessLoading(true);
+    setPlaybookAccessOrgId(orgId);
+    try {
+      const res = await fetch(`/api/coach/companies/${orgId}/playbooks`);
+      const data = await res.json();
+      setOrgPlaybooks(data.playbooks ?? []);
+    } finally {
+      setPlaybookAccessLoading(false);
+    }
+  }
+
+  async function saveOrgPlaybooks(orgId: string) {
+    setPlaybookAccessSaving(true);
+    try {
+      const selectedIds = orgPlaybooks.filter((p) => p.visible).map((p) => p.id);
+      await fetch(`/api/coach/companies/${orgId}/playbooks`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playbookIds: selectedIds }),
+      });
+      setPlaybookAccessOrgId(null);
+    } finally {
+      setPlaybookAccessSaving(false);
+    }
+  }
 
   const deactivateUser = async (userId: string) => {
     if (!confirm('Deactivate this user?')) return;
@@ -152,18 +184,85 @@ export default function CoachPage() {
                 </thead>
                 <tbody>
                   {companies.map(c => (
-                    <tr key={c.id} className="border-b border-white/5 hover:bg-white/5">
-                      <td className="px-5 py-3 font-medium">{c.name}</td>
-                      <td className="px-5 py-3 text-gray-400">{c.userCount}</td>
-                      <td className="px-5 py-3">
-                        <button
-                          onClick={() => copyLink(c.invite_token, 'org')}
-                          className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          {copiedToken === c.invite_token ? 'Copied!' : 'Copy invite link'}
-                        </button>
-                      </td>
-                    </tr>
+                    <React.Fragment key={c.id}>
+                      <tr className="border-b border-white/5 hover:bg-white/5">
+                        <td className="px-5 py-3 font-medium">{c.name}</td>
+                        <td className="px-5 py-3 text-gray-400">{c.userCount}</td>
+                        <td className="px-5 py-3">
+                          <button
+                            onClick={() => copyLink(c.invite_token, 'org')}
+                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            {copiedToken === c.invite_token ? 'Copied!' : 'Copy invite link'}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-white/5">
+                        <td colSpan={3} className="px-5 pb-3">
+                          {/* Playbook Access toggle */}
+                          <div className="mt-3 border-t border-gray-700 pt-3">
+                            {playbookAccessOrgId === c.id ? (
+                              <div className="flex flex-col gap-2">
+                                <p className="text-sm font-medium text-gray-300">Playbook Access</p>
+                                {playbookAccessLoading ? (
+                                  <p className="text-xs text-gray-500">Loading...</p>
+                                ) : orgPlaybooks.length === 0 ? (
+                                  <p className="text-xs text-gray-500">No playbooks in your instance yet.</p>
+                                ) : (
+                                  <>
+                                    <p className="text-xs text-gray-500">
+                                      {orgPlaybooks.every((p) => p.visible) ? 'All playbooks visible (default)' : `${orgPlaybooks.filter((p) => p.visible).length} of ${orgPlaybooks.length} playbooks visible`}
+                                    </p>
+                                    <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
+                                      {orgPlaybooks.map((p) => (
+                                        <label key={p.id} className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            checked={p.visible}
+                                            onChange={(e) =>
+                                              setOrgPlaybooks((prev) =>
+                                                prev.map((pb) => pb.id === p.id ? { ...pb, visible: e.target.checked } : pb)
+                                              )
+                                            }
+                                            className="accent-blue-500"
+                                          />
+                                          {p.name}
+                                          {p.scenario_type && (
+                                            <span className="text-xs text-gray-500">({p.scenario_type})</span>
+                                          )}
+                                        </label>
+                                      ))}
+                                    </div>
+                                    <div className="flex gap-2 mt-1">
+                                      <button
+                                        onClick={() => saveOrgPlaybooks(c.id)}
+                                        disabled={playbookAccessSaving}
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white text-xs rounded-lg transition-colors"
+                                      >
+                                        {playbookAccessSaving ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        onClick={() => setPlaybookAccessOrgId(null)}
+                                        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => loadOrgPlaybooks(c.id)}
+                                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                              >
+                                Manage Playbook Access →
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    </React.Fragment>
                   ))}
                   {companies.length === 0 && (
                     <tr><td colSpan={3} className="px-5 py-10 text-center text-gray-500">No client companies yet.</td></tr>
