@@ -32,7 +32,8 @@ export async function DELETE(
     return NextResponse.json({ error: 'Connection not found' }, { status: 404 });
   }
 
-  await (supabase as any).from('company_coach_connections').delete().eq('id', params.id);
+  const { error: deleteError } = await (supabase as any).from('company_coach_connections').delete().eq('id', params.id);
+  if (deleteError) return NextResponse.json({ error: 'Failed to remove connection' }, { status: 500 });
 
   // Get org name and coach email for notification
   const [{ data: org }, { data: coachUser }] = await Promise.all([

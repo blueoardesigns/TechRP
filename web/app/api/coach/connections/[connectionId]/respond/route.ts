@@ -4,6 +4,14 @@ import { sendConnectionAccepted, sendConnectionDeclined } from '@/lib/connection
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { connectionId: string } }
@@ -37,10 +45,17 @@ export async function GET(
   }
 
   if (action === 'accept') {
-    await (supabase as any)
+    const { error: updateError } = await (supabase as any)
       .from('company_coach_connections')
       .update({ status: 'active', accepted_at: new Date().toISOString() })
       .eq('id', (conn as any).id);
+
+    if (updateError) {
+      return new NextResponse(
+        '<html><body style="font-family:sans-serif;padding:40px"><h2>Something went wrong. Please try again later.</h2></body></html>',
+        { status: 500, headers: { 'Content-Type': 'text/html' } }
+      );
+    }
 
     const [{ data: org }, { data: adminUser }, { data: coachUser }] = await Promise.all([
       (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).single(),
@@ -63,16 +78,23 @@ export async function GET(
     return new NextResponse(
       `<html><body style="font-family:sans-serif;padding:40px;max-width:480px">
         <h2 style="color:#16a34a">&#10003; Connection Accepted</h2>
-        <p>You now have access to <strong>${(org as any)?.name ?? 'the company'}</strong>'s data on TechRP.</p>
+        <p>You now have access to <strong>${escapeHtml((org as any)?.name ?? 'the company')}</strong>'s data on TechRP.</p>
         <a href="${APP_URL}/coach" style="color:#2563eb">Go to your dashboard &rarr;</a>
       </body></html>`,
       { status: 200, headers: { 'Content-Type': 'text/html' } }
     );
   } else {
-    await (supabase as any)
+    const { error: declineError } = await (supabase as any)
       .from('company_coach_connections')
       .update({ status: 'declined' })
       .eq('id', (conn as any).id);
+
+    if (declineError) {
+      return new NextResponse(
+        '<html><body style="font-family:sans-serif;padding:40px"><h2>Something went wrong. Please try again later.</h2></body></html>',
+        { status: 500, headers: { 'Content-Type': 'text/html' } }
+      );
+    }
 
     const [{ data: org }, { data: adminUser }, { data: coachUser }] = await Promise.all([
       (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).single(),
@@ -95,7 +117,7 @@ export async function GET(
     return new NextResponse(
       `<html><body style="font-family:sans-serif;padding:40px;max-width:480px">
         <h2>Request Declined</h2>
-        <p>You have declined the connection request from <strong>${(org as any)?.name ?? 'the company'}</strong>.</p>
+        <p>You have declined the connection request from <strong>${escapeHtml((org as any)?.name ?? 'the company')}</strong>.</p>
       </body></html>`,
       { status: 200, headers: { 'Content-Type': 'text/html' } }
     );
