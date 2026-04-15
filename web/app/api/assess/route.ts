@@ -150,7 +150,7 @@ ${transcriptText}
 
 ## Scoring Framework
 
-Your score (1–10) must reflect these weights:
+Your score (1–100) must reflect these weights:
 
 **75% — Sales Outcome**
 ${primaryOutcome}
@@ -162,29 +162,41 @@ ${resolvedPlaybookContent
   ? `How closely did the rep follow the playbook above? Use it as a helpful guide, not a rigid checklist — give credit for the intent even if the exact phrasing differed.`
   : `No playbook is loaded for this scenario. Base this 25% on general best practices: structured opener, active listening, clear value prop, and a defined close.`}
 
-## Scoring Guide
-- 9–10: Would almost certainly sign/refer. Handled objections confidently, created urgency, strong close.
-- 7–8: Likely outcome is positive. Good fundamentals, minor missed opportunities.
-- 5–6: Uncertain outcome. Some good moments but left key objections unaddressed or failed to close.
-- 3–4: Unlikely to sign/refer. Lost control of the conversation or failed to build trust.
-- 1–2: Call was damaging. Would likely cost the company the job or relationship.
+## Scoring Guide (map score to letter grade)
+- **A (90–100):** Would almost certainly sign/refer. Strong close, confident objection handling.
+- **B (80–89):** Likely positive outcome. Good fundamentals, minor missed opportunities.
+- **C (70–79):** Uncertain outcome. Some good moments; key objections unaddressed.
+- **D (60–69):** Unlikely to sign/refer. Lost control or failed to build trust.
+- **F (below 60):** Damaging. Would likely cost the company the job or relationship.
 
-Be encouraging but direct — like a good sales manager who wants the rep to improve. Give specific, actionable feedback and include example lines they could have used.
+## Actions to Take
+
+Include 1–5 specific moments where the rep missed an opportunity. For each, quote what ${contactLabel} said verbatim in "ai_said", then give a specific better response in "suggested_response". Optionally tag a technique name (e.g., "Reframe to discovery", "Trial close", "Feel-felt-found").
+
+Be encouraging but direct — like a good sales manager who wants the rep to improve.
 
 Respond in the following JSON format (valid JSON only, no markdown):
 {
-  "score": <number 1-10>,
-  "strengths": [<array of strings, 2-4 items>],
-  "improvements": [<array of strings, 2-4 items>],
-  "summary": "<2-3 sentence overall feedback in a sales manager voice>"
+  "score": <number 1-100>,
+  "letter_grade": "<A|B|C|D|F>",
+  "strengths": [<array of 2–4 strings>],
+  "improvements": [<array of 2–4 strings>],
+  "summary": "<2–3 sentence overall feedback in a sales manager voice>",
+  "actions_to_take": [
+    {
+      "ai_said": "<verbatim quote from ${contactLabel}>",
+      "suggested_response": "<what the rep could have said>",
+      "technique": "<optional short tag>"
+    }
+  ]
 }
 
-Be specific and constructive. Reference actual moments from the conversation where possible.`;
+Be specific and constructive. Reference actual moments from the conversation.`;
 
     // Call Claude API
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      max_tokens: 2048,
       messages: [
         {
           role: 'user',
@@ -212,11 +224,21 @@ Be specific and constructive. Reference actual moments from the conversation whe
     }
 
     // Validate assessment structure
-    if (!assessment.score || !assessment.strengths || !assessment.improvements || !assessment.summary) {
+    if (
+      typeof assessment.score !== 'number' ||
+      !Array.isArray(assessment.strengths) ||
+      !Array.isArray(assessment.improvements) ||
+      typeof assessment.summary !== 'string'
+    ) {
       return NextResponse.json(
         { error: 'Invalid assessment structure from API' },
         { status: 500 }
       );
+    }
+
+    // actions_to_take is optional; normalize to array
+    if (!Array.isArray(assessment.actions_to_take)) {
+      assessment.actions_to_take = [];
     }
 
     return NextResponse.json({ assessment });
