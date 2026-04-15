@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createServiceSupabase } from '@/lib/supabase-server';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
+import { getDisplayScore, gradeColor, type Assessment } from '@/lib/scoring';
 
 async function getSession(id: string) {
   try {
@@ -52,7 +53,6 @@ function formatDateTime(d: string): string {
 }
 
 interface Message { role: 'user' | 'assistant'; content: string; timestamp?: string; }
-interface Assessment { score: number; strengths: string[]; improvements: string[]; summary: string; }
 
 function parseAssessment(a: string | null): Assessment | null {
   if (!a) return null;
@@ -67,13 +67,14 @@ function parseTranscript(t: string | null): Message[] {
   } catch { return []; }
 }
 
-function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 8 ? 'text-emerald-400' : score >= 6 ? 'text-yellow-400' : 'text-red-400';
-  const ring  = score >= 8 ? 'border-emerald-500/40' : score >= 6 ? 'border-yellow-500/40' : 'border-red-500/40';
+function ScoreBadge({ assessment }: { assessment: Assessment }) {
+  const { score, letter } = getDisplayScore(assessment);
+  const { text, ring } = gradeColor(letter);
   return (
-    <div className={`w-20 h-20 rounded-full border-2 ${ring} flex flex-col items-center justify-center`}>
-      <span className={`text-3xl font-bold ${color}`}>{score}</span>
-      <span className="text-xs text-gray-600">/10</span>
+    <div className={`w-24 h-24 rounded-full border-2 ${ring} flex flex-col items-center justify-center`}>
+      <span className={`text-3xl font-bold ${text} leading-none`}>{score}</span>
+      <span className="text-[10px] text-gray-600 mt-0.5">/ 100</span>
+      <span className={`text-xs font-bold ${text} mt-0.5`}>{letter}</span>
     </div>
   );
 }
@@ -124,7 +125,7 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
           <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Performance Assessment</p>
             <div className="flex items-start gap-6 mb-5">
-              <ScoreBadge score={assessment.score} />
+              <ScoreBadge assessment={assessment} />
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Coaching Summary</p>
                 <p className="text-sm text-gray-300 leading-relaxed">{assessment.summary}</p>
@@ -152,6 +153,28 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
                 </ul>
               </div>
             </div>
+
+            {assessment.actions_to_take && assessment.actions_to_take.length > 0 && (
+              <div className="mt-5 border border-blue-500/20 bg-blue-500/5 rounded-xl p-4">
+                <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-3">Actions to Take</p>
+                <ol className="space-y-4">
+                  {assessment.actions_to_take.map((a, i) => (
+                    <li key={i} className="text-sm text-gray-300">
+                      <p className="text-xs text-gray-500 mb-1">
+                        {i + 1}. When <span className="font-semibold text-white">{personaName || 'they'}</span> said:
+                      </p>
+                      <p className="italic text-gray-400 border-l-2 border-gray-700 pl-3 mb-2">&ldquo;{a.ai_said}&rdquo;</p>
+                      <p className="text-gray-300">
+                        <span className="text-blue-300 font-semibold">You could have said:</span> &ldquo;{a.suggested_response}&rdquo;
+                      </p>
+                      {a.technique && (
+                        <p className="text-[10px] uppercase tracking-wide text-blue-400/70 mt-1">{a.technique}</p>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         )}
 
