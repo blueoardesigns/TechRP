@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  // Deduct from org pool if company user
+  // Deduct from org pool if company user (never goes below 0)
   if (user.organization_id) {
     const { data: org } = await (db as any).from('organizations')
       .select('minutes_pool').eq('id', user.organization_id).single()
@@ -45,11 +45,15 @@ export async function POST(req: NextRequest) {
     session_id: sessionId ?? null,
   })
 
-  // Check trial 25-minute cutoff
+  // Trial 25-minute cutoff — only fire if still in trialing status
   if (user.trial_ends_at && newMinutesUsed >= TRIAL_MINUTES) {
     const { data: sub } = await (db as any).from('subscriptions')
-      .select('stripe_subscription_id').eq('user_id', userId).eq('status', 'trialing').single()
-    if (sub?.stripe_subscription_id) {
+      .select('stripe_subscription_id, status')
+      .eq('user_id', userId)
+      .eq('status', 'trialing')
+      .single()
+    // Guard: only update if sub is still trialing (avoids double-fire)
+    if (sub?.stripe_subscription_id && sub.status === 'trialing') {
       try {
         await stripe.subscriptions.update(sub.stripe_subscription_id as string, { trial_end: 'now' })
         await (db as any).from('subscriptions')
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
           .eq('stripe_subscription_id', sub.stripe_subscription_id)
       } catch (err: unknown) {
         // If trial end fails (already ended), log but don't fail the usage record
-        console.warn('Failed to end trial:', err instanceof Error ? err.message : String(err))
+        console.warn('record-usage: trial end update failed:', err instanceof Error ? err.message : String(err))
       }
     }
   }

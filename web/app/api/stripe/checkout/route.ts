@@ -18,67 +18,82 @@ export async function POST(req: NextRequest) {
 
   const db = createServiceRoleClient()
 
-  // Get or create Stripe customer
-  let customerId: string | undefined
-  if (orgId) {
-    const { data: org } = await (db as any).from('organizations')
-      .select('stripe_customer_id').eq('id', orgId).single()
-    customerId = org?.stripe_customer_id ?? undefined
-  } else {
-    const { data: user } = await (db as any).from('users')
-      .select('stripe_customer_id, email, full_name').eq('id', userId).single()
-    customerId = user?.stripe_customer_id ?? undefined
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user?.email,
-        name: user?.full_name,
-        metadata: { user_id: userId },
-      })
-      customerId = customer.id
-      await (db as any).from('users').update({ stripe_customer_id: customerId }).eq('id', userId)
+  try {
+    // Get or create Stripe customer
+    let customerId: string | undefined
+    if (orgId) {
+      const { data: org } = await (db as any).from('organizations')
+        .select('stripe_customer_id, name').eq('id', orgId).single()
+      customerId = org?.stripe_customer_id ?? undefined
+      // Create org customer if missing
+      if (!customerId && org) {
+        const customer = await stripe.customers.create({
+          name: org.name,
+          metadata: { org_id: orgId },
+        })
+        customerId = customer.id
+        await (db as any).from('organizations').update({ stripe_customer_id: customerId }).eq('id', orgId)
+      }
+    } else {
+      const { data: user } = await (db as any).from('users')
+        .select('stripe_customer_id, email, full_name').eq('id', userId).single()
+      customerId = user?.stripe_customer_id ?? undefined
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user?.email,
+          name: user?.full_name,
+          metadata: { user_id: userId },
+        })
+        customerId = customer.id
+        await (db as any).from('users').update({ stripe_customer_id: customerId }).eq('id', userId)
+      }
     }
-  }
 
-  if (mode === 'addon') {
-    // One-time hour block purchase
+    if (mode === 'addon') {
+      // One-time hour block purchase
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'payment',
+        line_items: [{
+          price: getPriceId(planKey),
+          quantity: addonQty ?? 1,
+        }],
+        metadata: {
+          user_id: userId,
+          org_id: orgId ?? '',
+          addon_key: planKey,
+          addon_qty: String(addonQty ?? 1),
+        },
+        success_url: `${APP_URL}/billing?addon_success=true`,
+        cancel_url: `${APP_URL}/billing/add-hours`,
+      })
+      return NextResponse.json({ url: session.url })
+    }
+
+    // Subscription checkout
+    const quantity = isCompanyPlan(planKey) ? (seats ?? 2) : 1
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      mode: 'payment',
-      line_items: [{
-        price: getPriceId(planKey),
-        quantity: addonQty ?? 1,
-      }],
-      metadata: {
-        user_id: userId,
-        org_id: orgId ?? '',
-        addon_key: planKey,
-        addon_qty: String(addonQty ?? 1),
+      mode: 'subscription',
+      line_items: [{ price: getPriceId(planKey), quantity }],
+      subscription_data: {
+        trial_period_days: TRIAL_DAYS,
+        metadata: {
+          user_id: userId,
+          org_id: orgId ?? '',
+          plan_id: planKey,
+        },
       },
-      success_url: `${APP_URL}/billing?addon_success=true`,
-      cancel_url: `${APP_URL}/billing/add-hours`,
+      metadata: { user_id: userId, org_id: orgId ?? '', plan_id: planKey },
+      success_url: `${APP_URL}/billing?success=true`,
+      cancel_url: `${APP_URL}/pricing`,
     })
+
     return NextResponse.json({ url: session.url })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('Checkout session creation failed:', message)
+    return NextResponse.json({ error: 'Failed to create checkout session', details: message }, { status: 500 })
   }
-
-  // Subscription checkout
-  const quantity = isCompanyPlan(planKey) ? (seats ?? 2) : 1
-
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: 'subscription',
-    line_items: [{ price: getPriceId(planKey), quantity }],
-    subscription_data: {
-      trial_period_days: TRIAL_DAYS,
-      metadata: {
-        user_id: userId,
-        org_id: orgId ?? '',
-        plan_id: planKey,
-      },
-    },
-    metadata: { user_id: userId, org_id: orgId ?? '', plan_id: planKey },
-    success_url: `${APP_URL}/billing?success=true`,
-    cancel_url: `${APP_URL}/pricing`,
-  })
-
-  return NextResponse.json({ url: session.url })
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase'
 import { checkMinuteGate } from '@/lib/minute-gate'
-import { getPerUserCap, isCompanyPlan, TRIAL_MINUTES } from '@/lib/plans'
+import { getPerUserCap, TRIAL_MINUTES } from '@/lib/plans'
 import { stripe } from '@/lib/stripe'
 
 // POST /api/calls/check-minutes
@@ -43,6 +43,21 @@ export async function POST(req: NextRequest) {
     planId = (activeSub?.plan_id as string) ?? null
   }
 
+  // Trial 25-minute cutoff — checked BEFORE the gate so it takes precedence
+  if (subscriptionStatus === 'trialing' && (user.minutes_used as number) >= TRIAL_MINUTES) {
+    try {
+      const { data: sub } = await (db as any).from('subscriptions')
+        .select('stripe_subscription_id').eq('user_id', userId).eq('status', 'trialing').single()
+      if (sub?.stripe_subscription_id) {
+        await stripe.subscriptions.update(sub.stripe_subscription_id as string, { trial_end: 'now' })
+      }
+    } catch (err: unknown) {
+      // Log but don't fail — trial end may already be processed
+      console.warn('check-minutes: trial end update failed:', err instanceof Error ? err.message : String(err))
+    }
+    return NextResponse.json({ allowed: false, reason: 'trial_expired', minutesRemaining: 0 })
+  }
+
   const result = checkMinuteGate({
     role: user.app_role as string,
     subscriptionStatus,
@@ -54,16 +69,6 @@ export async function POST(req: NextRequest) {
     orgBonusMinutes: orgData ? (orgData.bonus_minutes as number) : null,
     perUserCap: orgData && planId ? getPerUserCap(planId) : null,
   })
-
-  // Trial 25-minute cutoff
-  if (subscriptionStatus === 'trialing' && (user.minutes_used as number) >= TRIAL_MINUTES) {
-    const { data: sub } = await (db as any).from('subscriptions')
-      .select('stripe_subscription_id').eq('user_id', userId).eq('status', 'trialing').single()
-    if (sub?.stripe_subscription_id) {
-      await stripe.subscriptions.update(sub.stripe_subscription_id as string, { trial_end: 'now' })
-    }
-    return NextResponse.json({ allowed: false, reason: 'trial_expired', minutesRemaining: 0 })
-  }
 
   // Auto-refill signal
   if (!result.allowed && result.reason === 'minutes_exhausted') {
