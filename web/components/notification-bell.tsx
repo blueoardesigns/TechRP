@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
 interface Notification {
   id: string;
@@ -9,14 +11,21 @@ interface Notification {
   body: string;
   read: boolean;
   created_at: string;
-  data?: { candidate_invite_id?: string; candidate_user_id?: string } | null;
+  data?: Record<string, unknown> | null;
 }
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [profileId, setProfileId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const fetchNotifications = async () => {
     const res = await fetch('/api/notifications');
@@ -24,14 +33,40 @@ export function NotificationBell() {
     const data = await res.json();
     setNotifications(data.notifications ?? []);
     setUnreadCount(data.unreadCount ?? 0);
+    // Sniff user_id from the first notification for the realtime filter.
+    const first = (data.notifications ?? [])[0];
+    if (first?.user_id) setProfileId(first.user_id as string);
   };
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh every 60 seconds
-    const interval = setInterval(fetchNotifications, 60_000);
+    // Safety poll every 5 minutes in case the realtime channel drops.
+    const interval = setInterval(fetchNotifications, 300_000);
     return () => clearInterval(interval);
   }, []);
+
+  // Realtime subscription — subscribes once profileId is known.
+  useEffect(() => {
+    if (!profileId) return;
+    const channel = supabase
+      .channel(`notifications:${profileId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${profileId}`,
+        },
+        (payload) => {
+          const n = payload.new as Notification;
+          setNotifications((prev) => [n, ...prev].slice(0, 50));
+          setUnreadCount((c) => c + 1);
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profileId]);
 
   // Close on outside click
   useEffect(() => {
@@ -54,6 +89,15 @@ export function NotificationBell() {
     await fetch(`/api/notifications/${id}/read`, { method: 'PATCH' });
     setNotifications(n => n.map(x => x.id === id ? { ...x, read: true } : x));
     setUnreadCount(c => Math.max(0, c - 1));
+  };
+
+  const handleClick = async (n: Notification) => {
+    await markOneRead(n.id);
+    const link = (n.data as Record<string, unknown> | null)?.link;
+    if (typeof link === 'string' && link.length > 0) {
+      setOpen(false);
+      router.push(link);
+    }
   };
 
   const timeAgo = (iso: string) => {
@@ -102,7 +146,7 @@ export function NotificationBell() {
                 <li
                   key={n.id}
                   className={`px-4 py-3 cursor-pointer transition-colors hover:bg-white/5 ${!n.read ? 'bg-blue-500/5' : ''}`}
-                  onClick={() => { markOneRead(n.id); }}
+                  onClick={() => handleClick(n)}
                 >
                   <div className="flex items-start gap-2">
                     {!n.read && <span className="mt-1.5 w-1.5 h-1.5 bg-blue-500 rounded-full shrink-0" />}
