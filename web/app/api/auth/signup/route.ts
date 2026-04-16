@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
 
   // 3. Insert user profile
   const newReferralCode = generateReferralCode();
-  const { error: profileError } = await (supabase as any).from('users').insert({
+  const { data: profileData, error: profileError } = await (supabase as any).from('users').insert({
     auth_user_id: authUserId,
     organization_id: organizationId,
     coach_instance_id: resolvedCoachInstanceId,
@@ -219,13 +219,28 @@ export async function POST(req: NextRequest) {
     scenario_access: finalScenarioAccess,
     tos_accepted_at: new Date().toISOString(),
     referral_code: newReferralCode,
-  });
+  }).select('id, organization_id').single();
 
   if (profileError) {
     // Clean up auth user if profile insert failed
     await supabase.auth.admin.deleteUser(authUserId);
     console.error('Profile insert error:', profileError);
     return NextResponse.json({ error: 'Failed to create user profile.' }, { status: 500 });
+  }
+
+  // Coach invite token — create coach_referrals row for pricing discounts/affiliates
+  const pricingCoachToken = req.nextUrl?.searchParams.get('coach')
+  if (pricingCoachToken && organizationId) {
+    const { verifyCoachToken } = await import('@/lib/coach-token')
+    const coachPayload = verifyCoachToken(pricingCoachToken)
+    if (coachPayload) {
+      await (supabase as any).from('coach_referrals').insert({
+        coach_id: coachPayload.coachId,
+        org_id: organizationId,
+        type: coachPayload.type,
+        percentage: coachPayload.percentage,
+      }).then(() => {}) // fire-and-forget, don't fail signup
+    }
   }
 
   // Apply referral credit if the user signed up via a referral link.
@@ -277,5 +292,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, autoApproved: autoApprove });
+  return NextResponse.json({
+    success: true,
+    autoApproved: autoApprove,
+    userId: profileData?.id ?? null,
+    orgId: profileData?.organization_id ?? null,
+  });
 }

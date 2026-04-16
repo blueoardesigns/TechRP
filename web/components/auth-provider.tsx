@@ -19,6 +19,10 @@ export interface AppUser {
   organizationId: string | null;
   userType: 'standard' | 'candidate';
   marketingConsent: boolean;
+  minutesUsed: number;
+  bonusMinutes: number;
+  trialEndsAt: string | null;
+  autoRefillEnabled: boolean;
 }
 
 interface AuthContextValue {
@@ -59,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: profile } = await (supabase as any)
       .from('users')
-      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access, coach_instance_id, organization_id, user_type, marketing_consent')
+      .select('id, auth_user_id, email, name, full_name, app_role, status, scenario_access, coach_instance_id, organization_id, user_type, marketing_consent, minutes_used, bonus_minutes, trial_ends_at, auto_refill_enabled')
       .eq('auth_user_id', authUser.id)
       .single();
 
@@ -81,6 +85,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       organizationId: (profile as any).organization_id ?? null,
       userType: ((profile as any).user_type ?? 'standard') as 'standard' | 'candidate',
       marketingConsent: (profile as any).marketing_consent ?? false,
+      minutesUsed: (profile as any).minutes_used ?? 0,
+      bonusMinutes: (profile as any).bonus_minutes ?? 0,
+      trialEndsAt: (profile as any).trial_ends_at ?? null,
+      autoRefillEnabled: (profile as any).auto_refill_enabled ?? false,
     };
 
     // Superusers are never blocked
