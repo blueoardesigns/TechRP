@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
+import { applyReferral, generateReferralCode, type ReferralSource } from '@/lib/referral';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -8,7 +9,7 @@ const APPROVAL_SECRET = process.env.APPROVAL_SECRET ?? 'change-me-in-env';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function POST(req: NextRequest) {
-  const { fullName, email, password, role, companyName, scenarioAccess, coachToken, orgToken, candidateToken, marketingConsent } = await req.json();
+  const { fullName, email, password, role, companyName, scenarioAccess, coachToken, orgToken, candidateToken, marketingConsent, refCode, refSource } = await req.json();
 
   if (!fullName || !email || !password || !role) {
     return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
@@ -155,6 +156,7 @@ export async function POST(req: NextRequest) {
       user_type: 'candidate',
       marketing_consent: marketingConsent ?? false,
       tos_accepted_at: new Date().toISOString(),
+      referral_code: generateReferralCode(),
     });
 
     if (candidateProfileError) {
@@ -203,6 +205,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. Insert user profile
+  const newReferralCode = generateReferralCode();
   const { error: profileError } = await (supabase as any).from('users').insert({
     auth_user_id: authUserId,
     organization_id: organizationId,
@@ -215,6 +218,7 @@ export async function POST(req: NextRequest) {
     status: autoApprove ? 'approved' : 'pending',
     scenario_access: finalScenarioAccess,
     tos_accepted_at: new Date().toISOString(),
+    referral_code: newReferralCode,
   });
 
   if (profileError) {
@@ -222,6 +226,23 @@ export async function POST(req: NextRequest) {
     await supabase.auth.admin.deleteUser(authUserId);
     console.error('Profile insert error:', profileError);
     return NextResponse.json({ error: 'Failed to create user profile.' }, { status: 500 });
+  }
+
+  // Apply referral credit if the user signed up via a referral link.
+  if (refCode) {
+    const { data: newUser } = await (supabase as any)
+      .from('users')
+      .select('id')
+      .eq('auth_user_id', authUserId)
+      .single();
+    if (newUser) {
+      await applyReferral(
+        refCode,
+        (newUser as any).id,
+        fullName,
+        (refSource === 'share_page' ? 'share_page' : 'signup_link') as ReferralSource,
+      );
+    }
   }
 
   // 4. Send approval notification (skip if auto-approved)
