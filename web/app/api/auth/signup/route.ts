@@ -228,6 +228,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create user profile.' }, { status: 500 });
   }
 
+  // Coach invite token — create coach_referrals row for pricing discounts/affiliates
+  const pricingCoachToken = req.nextUrl?.searchParams.get('coach')
+  if (pricingCoachToken && organizationId) {
+    const { verifyCoachToken } = await import('@/lib/coach-token')
+    const coachPayload = verifyCoachToken(pricingCoachToken)
+    if (coachPayload) {
+      await (supabase as any).from('coach_referrals').insert({
+        coach_id: coachPayload.coachId,
+        org_id: organizationId,
+        type: coachPayload.type,
+        percentage: coachPayload.percentage,
+      }).then(() => {}) // fire-and-forget, don't fail signup
+    }
+  }
+
   // Apply referral credit if the user signed up via a referral link.
   if (refCode) {
     const { data: newUser } = await (supabase as any)
