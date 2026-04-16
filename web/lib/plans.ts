@@ -67,3 +67,12 @@ export function isCompanyPlan(planId: string): boolean {
 export function isIndividualPlan(planId: string): boolean {
   return planId.startsWith('individual_')
 }
+
+export type PlanId =
+  | 'individual_starter' | 'individual_growth' | 'individual_pro'
+  | 'co_std_t1' | 'co_std_t2' | 'co_std_t3' | 'co_std_t4'
+  | 'co_pro_t1' | 'co_pro_t2' | 'co_pro_t3' | 'co_pro_t4'
+
+export type AddonPriceKey =
+  | 'addon_hr_individual_starter' | 'addon_hr_individual_growth' | 'addon_hr_individual_pro'
+  | 'addon_hr_co_t1' | 'addon_hr_co_t2' | 'addon_hr_co_t3' | 'addon_hr_co_t4'
