@@ -20,7 +20,7 @@ export async function GET() {
 
   const unreadCount = ((notifications ?? []) as any[]).filter(n => !n.read).length;
 
-  return NextResponse.json({ notifications: notifications ?? [], unreadCount });
+  return NextResponse.json({ notifications: notifications ?? [], unreadCount, profileId: (profile as any).id });
 }
 
 export async function PATCH() {

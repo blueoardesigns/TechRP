@@ -59,7 +59,7 @@ export async function GET(
 
     const [{ data: org }, { data: adminUser }, { data: coachUser }] = await Promise.all([
       (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).single(),
-      (supabase as any).from('users').select('full_name, email').eq('organization_id', (conn as any).organization_id).eq('app_role', 'company_admin').single(),
+      (supabase as any).from('users').select('id, full_name, email').eq('organization_id', (conn as any).organization_id).eq('app_role', 'company_admin').single(),
       (supabase as any).from('users').select('full_name').eq('coach_instance_id', (conn as any).coach_instance_id).eq('app_role', 'coach').single(),
     ]);
 
@@ -76,22 +76,14 @@ export async function GET(
     }
 
     // In-app notification to the company admin.
-    if (adminUser) {
-      const { data: adminProfile } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .eq('email', (adminUser as any).email)
-        .eq('app_role', 'company_admin')
-        .single();
-      if (adminProfile) {
-        await (supabase as any).from('notifications').insert({
-          user_id: (adminProfile as any).id,
-          type: 'coach_assigned',
-          title: `${(coachUser as any)?.full_name ?? 'Your coach'} accepted the connection`,
-          body: `They now have access to ${(org as any)?.name ?? 'your company'}'s data on TechRP.`,
-          data: { link: '/playbooks' },
-        });
-      }
+    if (adminUser && (adminUser as any).id) {
+      await (supabase as any).from('notifications').insert({
+        user_id: (adminUser as any).id,
+        type: 'coach_assigned',
+        title: `${(coachUser as any)?.full_name ?? 'Your coach'} accepted the connection`,
+        body: `They now have access to ${(org as any)?.name ?? 'your company'}'s data on TechRP.`,
+        data: { link: '/playbooks' },
+      });
     }
 
     return new NextResponse(

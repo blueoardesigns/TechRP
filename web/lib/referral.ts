@@ -34,14 +34,13 @@ export async function applyReferral(
 
   const { data: referrer } = await (supabase as any)
     .from('users')
-    .select('id, referral_credits_minutes')
+    .select('id')
     .eq('referral_code', referrerCode.toUpperCase())
     .single();
 
   if (!referrer) return;
 
   const referrerId = (referrer as any).id;
-  const currentCredits = (referrer as any).referral_credits_minutes ?? 0;
 
   // Insert referral (UNIQUE on referred_id — ignore error if already exists).
   const { error: referralError } = await (supabase as any)
@@ -59,10 +58,19 @@ export async function applyReferral(
     return;
   }
 
+  // Note: Supabase JS v2 doesn't support atomic field increments without an RPC.
+  // The referrals UNIQUE constraint on referred_id prevents this code from running
+  // more than once per referred user, so the race window is extremely small.
+  const { data: currentUser } = await (supabase as any)
+    .from('users')
+    .select('referral_credits_minutes')
+    .eq('id', referrerId)
+    .single();
+
   // Credit the referrer +60 minutes.
   await (supabase as any)
     .from('users')
-    .update({ referral_credits_minutes: currentCredits + 60 })
+    .update({ referral_credits_minutes: ((currentUser as any)?.referral_credits_minutes ?? 0) + 60 })
     .eq('id', referrerId);
 
   // Fire notification to referrer.

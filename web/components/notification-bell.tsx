@@ -33,9 +33,7 @@ export function NotificationBell() {
     const data = await res.json();
     setNotifications(data.notifications ?? []);
     setUnreadCount(data.unreadCount ?? 0);
-    // Sniff user_id from the first notification for the realtime filter.
-    const first = (data.notifications ?? [])[0];
-    if (first?.user_id) setProfileId(first.user_id as string);
+    if (data.profileId) setProfileId(data.profileId as string);
   };
 
   useEffect(() => {
