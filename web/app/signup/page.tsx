@@ -40,6 +40,8 @@ function SignupPageInner() {
   const orgToken   = searchParams.get('org');
   const candidateToken = searchParams.get('candidate');
   const typeParam  = searchParams.get('type');
+  const refCode    = searchParams.get('ref') ?? undefined;
+  const refSource  = searchParams.get('ref_source') ?? undefined;
 
   // Determine locked role from invite context
   const lockedRole: 'individual' | 'company_admin' | null =
@@ -137,6 +139,8 @@ function SignupPageInner() {
           orgToken:   orgToken   ?? undefined,
           candidateToken: candidateToken ?? undefined,
           marketingConsent,
+          refCode,
+          refSource,
         }),
       });
 
