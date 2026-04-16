@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import type { Database } from '../../../shared/types/database';
 import { SkeletonRow } from '@/components/skeleton';
+import { getDisplayScore } from '@/lib/scoring';
 
 type TrainingSession = Database['public']['Tables']['training_sessions']['Row'];
 
@@ -60,24 +61,25 @@ function getScore(session: TrainingSession): number | null {
   const a = session.assessment as any;
   if (!a) return null;
   const s = typeof a === 'string' ? JSON.parse(a) : a;
-  return typeof s?.score === 'number' ? s.score : null;
+  if (typeof s?.score !== 'number') return null;
+  return getDisplayScore(s).score;
 }
 
 function scoreColor(score: number): string {
-  if (score >= 8) return 'text-emerald-400';
-  if (score >= 6) return 'text-yellow-400';
+  if (score >= 80) return 'text-emerald-400';
+  if (score >= 60) return 'text-yellow-400';
   return 'text-red-400';
 }
 
 function scoreBg(score: number): string {
-  if (score >= 8) return 'bg-emerald-500/20 text-emerald-300';
-  if (score >= 6) return 'bg-yellow-500/20 text-yellow-300';
+  if (score >= 80) return 'bg-emerald-500/20 text-emerald-300';
+  if (score >= 60) return 'bg-yellow-500/20 text-yellow-300';
   return 'bg-red-500/20 text-red-300';
 }
 
 function scoreBarColor(score: number): string {
-  if (score >= 8) return '#34d399';
-  if (score >= 6) return '#fbbf24';
+  if (score >= 80) return '#34d399';
+  if (score >= 60) return '#fbbf24';
   return '#f87171';
 }
 
@@ -93,7 +95,7 @@ function ScoreChart({ sessions }: { sessions: TrainingSession[] }) {
 
   const scores = scored.map(s => getScore(s) as number);
   const avg = Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10;
-  const maxScore = 10;
+  const maxScore = 100;
   const chartH = 80;
   const barW = Math.max(8, Math.min(24, Math.floor(340 / scored.length) - 3));
   const gap = 3;
@@ -107,7 +109,7 @@ function ScoreChart({ sessions }: { sessions: TrainingSession[] }) {
           <p className="text-xs text-gray-500 mt-0.5">Last {scored.length} scored sessions</p>
         </div>
         <div className="text-right">
-          <p className="text-2xl font-bold text-white">{avg}<span className="text-sm font-normal text-gray-500">/10</span></p>
+          <p className="text-2xl font-bold text-white">{avg}<span className="text-sm font-normal text-gray-500">/100</span></p>
           <p className="text-xs text-gray-500">avg score</p>
         </div>
       </div>
@@ -139,7 +141,7 @@ function ScoreChart({ sessions }: { sessions: TrainingSession[] }) {
                   opacity={0.85}
                 />
                 {/* Score label on hover via title */}
-                <title>{scored[i] ? formatDate(scored[i].started_at) + ' · ' + score + '/10' : ''}</title>
+                <title>{scored[i] ? formatDate(scored[i].started_at) + ' · ' + score + '/100' : ''}</title>
               </g>
             );
           })}
@@ -150,9 +152,9 @@ function ScoreChart({ sessions }: { sessions: TrainingSession[] }) {
       </div>
 
       <div className="flex items-center gap-4 mt-2 text-xs text-gray-600">
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> 8–10</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> 6–7</span>
-        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> &lt;6</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> 80–100</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" /> 60–79</span>
+        <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> &lt;60</span>
         <span className="flex items-center gap-1.5 ml-auto"><span className="inline-block w-5 border-t border-dashed border-gray-500" /> avg</span>
       </div>
     </div>
@@ -274,7 +276,7 @@ export default function SessionsPage() {
                       </div>
                       {insights.avgScore !== null && (
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">{insights.avgScore}<span className="text-xs font-normal text-blue-500">/10</span></div>
+                          <div className="text-2xl font-bold text-blue-400">{insights.avgScore}<span className="text-xs font-normal text-blue-500">/100</span></div>
                           <div className="text-xs text-blue-500">Avg Score</div>
                         </div>
                       )}
@@ -437,8 +439,8 @@ export default function SessionsPage() {
                             </span>
                           )}
                           {score !== null && (
-                            <span className={`text-xs font-bold ${score >= 7 ? 'text-green-400' : score >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {score}/10
+                            <span className={`text-xs font-bold ${score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                              {score}/100
                             </span>
                           )}
                         </div>

@@ -31,7 +31,7 @@ export default function InsightsPage() {
 
   const STAT_CARDS = metrics ? [
     { label: 'Total Sessions', value: metrics.totalSessions },
-    { label: 'Avg Score',      value: metrics.avgScore ? `${metrics.avgScore}/10` : '—' },
+    { label: 'Avg Score',      value: metrics.avgScore ? `${metrics.avgScore}/100` : '—' },
     { label: 'Active (30d)',   value: metrics.activeUsers },
   ] : [];
 

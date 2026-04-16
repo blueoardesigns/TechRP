@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getDisplayScore } from '@/lib/scoring';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
@@ -98,8 +99,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Compute average score
-    const scores = assessments.map((a: any) => a.score).filter((s: any) => s !== null);
+    // Compute average score — normalize each row through getDisplayScore so legacy 1–10 values
+    // are scaled to 1–100 before averaging.
+    const scores = assessments
+      .map((a: any) => (a.score !== null ? getDisplayScore({ score: a.score }).score : null))
+      .filter((s: any) => s !== null);
     const avgScore = scores.length > 0
       ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
       : null;
@@ -113,7 +117,7 @@ export async function GET(request: NextRequest) {
 
 Period: ${daysParam ? `Last ${daysParam} days` : 'All time'}
 Sessions analyzed: ${assessments.length}
-Average score: ${avgScore ?? 'N/A'} / 10
+Average score: ${avgScore ?? 'N/A'} / 100
 
 INDIVIDUAL STRENGTHS NOTED ACROSS ALL SESSIONS:
 ${allStrengths.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')}

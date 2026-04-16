@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getDisplayScore } from '@/lib/scoring';
 
 type Stage = 'idle' | 'uploading' | 'transcribing' | 'assessing' | 'done' | 'error';
 
@@ -19,11 +20,12 @@ interface UploadResult {
 }
 
 function ScoreBadge({ score }: { score: number }) {
-  const color = score >= 8 ? 'text-emerald-400 border-emerald-500/40' : score >= 6 ? 'text-yellow-400 border-yellow-500/40' : 'text-red-400 border-red-500/40';
+  const display = getDisplayScore({ score });
+  const color = display.score >= 80 ? 'text-emerald-400 border-emerald-500/40' : display.score >= 60 ? 'text-yellow-400 border-yellow-500/40' : 'text-red-400 border-red-500/40';
   return (
     <div className={`w-24 h-24 rounded-full border-2 ${color} flex flex-col items-center justify-center shrink-0`}>
-      <span className={`text-4xl font-bold ${color.split(' ')[0]}`}>{score}</span>
-      <span className="text-xs text-gray-600">/10</span>
+      <span className={`text-4xl font-bold ${color.split(' ')[0]}`}>{display.score}</span>
+      <span className="text-xs text-gray-600">/100</span>
     </div>
   );
 }
