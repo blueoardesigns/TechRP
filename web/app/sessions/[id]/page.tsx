@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { createServiceSupabase } from '@/lib/supabase-server';
+import { createServiceSupabase, createServerSupabase } from '@/lib/supabase-server';
+import { ShareDialog } from './share-dialog';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { getDisplayScore, gradeColor, type Assessment } from '@/lib/scoring';
@@ -32,6 +33,19 @@ async function getPlaybookForScenario(scenarioType: string | null) {
       .limit(1)
       .maybeSingle();
     return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const supabaseAuth = createServerSupabase();
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) return null;
+    const svc = createServiceSupabase();
+    const { data } = await (svc as any).from('users').select('id').eq('auth_user_id', authUser.id).single();
+    return (data as any)?.id ?? null;
   } catch {
     return null;
   }
@@ -83,6 +97,8 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
   const session = await getSession(params.id);
   if (!session) notFound();
   const playbook = await getPlaybookForScenario((session as any).persona_scenario_type ?? null);
+  const currentUserId = await getCurrentUserId();
+  const isOwner = !!(currentUserId && currentUserId === (session as any).user_id);
 
   const messages = parseTranscript(session.transcript);
   const assessment = parseAssessment(session.assessment);
@@ -99,7 +115,11 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
             ← Sessions
           </Link>
           <h1 className="text-sm font-semibold text-white">Session Details</h1>
-          <div className="w-20" />
+          {isOwner ? (
+            <ShareDialog sessionId={params.id} initialToken={(session as any).share_token ?? null} />
+          ) : (
+            <div className="w-20" />
+          )}
         </div>
       </header>
 
