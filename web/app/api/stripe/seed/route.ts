@@ -55,94 +55,105 @@ async function getOrCreatePrice(params: {
 export async function POST(req: NextRequest) {
   const adminSecret = process.env.ADMIN_SECRET
   const auth = req.headers.get('authorization')
-  if (adminSecret && auth !== `Bearer ${adminSecret}`) {
+  // Block if ADMIN_SECRET not configured (endpoint should never be open in prod)
+  if (!adminSecret || auth !== `Bearer ${adminSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const priceIds: Record<string, string> = {}
 
-  // ── Individual subscription prices ──────────────────────────────────────
-  const individualProductId = await getOrCreateProduct(
-    'techRP_individual',
-    'TechRP Individual',
-    'Voice AI sales training for individual technicians',
-  )
+  try {
+    // ── Individual subscription prices ──────────────────────────────────────
+    const individualProductId = await getOrCreateProduct(
+      'techRP_individual',
+      'TechRP Individual',
+      'Voice AI sales training for individual technicians',
+    )
 
-  const individualPlans = ['individual_starter', 'individual_growth', 'individual_pro'] as const
-  for (const planKey of individualPlans) {
-    priceIds[planKey] = await getOrCreatePrice({
-      lookupKey: planKey,
-      productId: individualProductId,
-      unitAmount: PLAN_PRICE_CENTS[planKey],
-      currency: 'usd',
-      recurring: { interval: 'month' },
-      metadata: { plan_key: planKey, label: PLAN_LABEL[planKey] },
-    })
-  }
+    const individualPlans = ['individual_starter', 'individual_growth', 'individual_pro'] as const
+    for (const planKey of individualPlans) {
+      priceIds[planKey] = await getOrCreatePrice({
+        lookupKey: planKey,
+        productId: individualProductId,
+        unitAmount: PLAN_PRICE_CENTS[planKey],
+        currency: 'usd',
+        recurring: { interval: 'month' },
+        metadata: { plan_key: planKey, label: PLAN_LABEL[planKey] },
+      })
+    }
 
-  // ── Company Standard subscription prices ────────────────────────────────
-  const stdProductId = await getOrCreateProduct(
-    'techRP_co_std',
-    'TechRP Company Standard',
-    '120 min/user/month — shared pool',
-  )
+    // ── Company Standard subscription prices ────────────────────────────────
+    const stdProductId = await getOrCreateProduct(
+      'techRP_co_std',
+      'TechRP Company Standard',
+      '120 min/user/month — shared pool',
+    )
 
-  for (const t of ['t1', 't2', 't3', 't4'] as const) {
-    const planKey = `co_std_${t}` as keyof typeof PLAN_PRICE_CENTS
-    priceIds[planKey] = await getOrCreatePrice({
-      lookupKey: planKey,
-      productId: stdProductId,
-      unitAmount: PLAN_PRICE_CENTS[planKey],
-      currency: 'usd',
-      recurring: { interval: 'month' },
-      metadata: { plan_key: planKey, label: PLAN_LABEL[planKey] },
-    })
-  }
+    for (const t of ['t1', 't2', 't3', 't4'] as const) {
+      const planKey = `co_std_${t}` as string
+      priceIds[planKey] = await getOrCreatePrice({
+        lookupKey: planKey,
+        productId: stdProductId,
+        unitAmount: PLAN_PRICE_CENTS[planKey],
+        currency: 'usd',
+        recurring: { interval: 'month' },
+        metadata: { plan_key: planKey, label: PLAN_LABEL[planKey] },
+      })
+    }
 
-  // ── Company Pro subscription prices ─────────────────────────────────────
-  const proProductId = await getOrCreateProduct(
-    'techRP_co_pro',
-    'TechRP Company Pro',
-    '240 min/user/month — shared pool',
-  )
+    // ── Company Pro subscription prices ─────────────────────────────────────
+    const proProductId = await getOrCreateProduct(
+      'techRP_co_pro',
+      'TechRP Company Pro',
+      '240 min/user/month — shared pool',
+    )
 
-  for (const t of ['t1', 't2', 't3', 't4'] as const) {
-    const planKey = `co_pro_${t}` as keyof typeof PLAN_PRICE_CENTS
-    priceIds[planKey] = await getOrCreatePrice({
-      lookupKey: planKey,
-      productId: proProductId,
-      unitAmount: PLAN_PRICE_CENTS[planKey],
-      currency: 'usd',
-      recurring: { interval: 'month' },
-      metadata: { plan_key: planKey, label: PLAN_LABEL[planKey] },
-    })
-  }
+    for (const t of ['t1', 't2', 't3', 't4'] as const) {
+      const planKey = `co_pro_${t}` as string
+      priceIds[planKey] = await getOrCreatePrice({
+        lookupKey: planKey,
+        productId: proProductId,
+        unitAmount: PLAN_PRICE_CENTS[planKey],
+        currency: 'usd',
+        recurring: { interval: 'month' },
+        metadata: { plan_key: planKey, label: PLAN_LABEL[planKey] },
+      })
+    }
 
-  // ── Add-on hour one-time prices ─────────────────────────────────────────
-  const addonProductId = await getOrCreateProduct(
-    'techRP_addon_hr',
-    'TechRP Add-on Hour',
-    '60 extra training minutes — never expire',
-  )
+    // ── Add-on hour one-time prices ─────────────────────────────────────────
+    // Note: no label in metadata — PLAN_LABEL doesn't include addon keys by design
+    const addonProductId = await getOrCreateProduct(
+      'techRP_addon_hr',
+      'TechRP Add-on Hour',
+      '60 extra training minutes — never expire',
+    )
 
-  const addonKeys = [
-    'addon_hr_individual_starter',
-    'addon_hr_individual_growth',
-    'addon_hr_individual_pro',
-    'addon_hr_co_t1',
-    'addon_hr_co_t2',
-    'addon_hr_co_t3',
-    'addon_hr_co_t4',
-  ] as const
+    const addonKeys = [
+      'addon_hr_individual_starter',
+      'addon_hr_individual_growth',
+      'addon_hr_individual_pro',
+      'addon_hr_co_t1',
+      'addon_hr_co_t2',
+      'addon_hr_co_t3',
+      'addon_hr_co_t4',
+    ] as const
 
-  for (const addonKey of addonKeys) {
-    priceIds[addonKey] = await getOrCreatePrice({
-      lookupKey: addonKey,
-      productId: addonProductId,
-      unitAmount: ADDON_PRICE_CENTS[addonKey],
-      currency: 'usd',
-      metadata: { addon_key: addonKey },
-    })
+    for (const addonKey of addonKeys) {
+      priceIds[addonKey] = await getOrCreatePrice({
+        lookupKey: addonKey,
+        productId: addonProductId,
+        unitAmount: ADDON_PRICE_CENTS[addonKey],
+        currency: 'usd',
+        metadata: { addon_key: addonKey },
+      })
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('Stripe seed failed:', message)
+    return NextResponse.json(
+      { error: 'Seed failed', details: message, partialPriceIds: priceIds },
+      { status: 500 },
+    )
   }
 
   return NextResponse.json({
