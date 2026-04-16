@@ -10,11 +10,12 @@ function getNavItems(user: AppUser | null) {
 
   if (user.role === 'superuser') {
     return [
-      { href: '/admin/users', label: 'Users' },
-      { href: '/admin',       label: 'Coaches' },
-      { href: '/playbooks',   label: 'Playbooks' },
-      { href: '/personas',    label: 'Personas'  },
-      { href: '/insights',    label: 'Analytics' },
+      { href: '/admin/users',         label: 'Users'     },
+      { href: '/admin',               label: 'Coaches'   },
+      { href: '/playbooks',           label: 'Playbooks' },
+      { href: '/personas',            label: 'Personas'  },
+      { href: '/insights',            label: 'Analytics' },
+      { href: '/admin/notifications', label: 'Broadcast' },
     ];
   }
 
