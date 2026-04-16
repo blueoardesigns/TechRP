@@ -19,6 +19,18 @@ Last updated: 2026-04-14
 
 ---
 
+## Referrals & Billing
+
+- [ ] Referral credit redemption — when billing/minute-cap lands, consume `users.referral_credits_minutes` before blocking users who hit their session cap. Referral tracking already writes to this column.
+
+---
+
+## Notifications (scale)
+
+- [ ] Global broadcast scale path — when active user count grows past ~5k, switch `POST /api/admin/notifications/broadcast` from fan-out insert into `notifications` to a `global_notifications` table + `dismissed_global_notifications` join table, with the bell unioning personal + undismissed globals.
+
+---
+
 ## Company Admin (Module 3)
 
 - [x] SQL: Add RLS policy so company admins can view users in their org without infinite recursion

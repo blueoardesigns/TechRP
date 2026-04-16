@@ -9,7 +9,7 @@ TechRP is a voice AI roleplay training platform for field technicians selling dr
 - **`shared/`** — TypeScript types and Supabase configuration shared across apps
 
 ## Tech Stack
-- **Voice AI:** Vapi.ai (Assistant ID: `a2a54457-a2b0-4046-82b5-c7506ab9a401`)
+- **Voice AI:** Vapi.ai (Assistant ID: `a2a54457-a2b0-4046-82b5-c7506ab9a401`) using Groq 8b in call
 - **LLM:** Claude API (`claude-sonnet-4-20250514`)
 - **Database:** Supabase (PostgreSQL, multi-tenant)
 
@@ -62,6 +62,8 @@ Key relationships:
 - `training_sessions` links to `persona_id`, stores `transcript`, `assessment` (JSON), `vapi_call_id`
 - `personas` drive Vapi via `system_prompt`, `first_message`, `speaker_label`, `scenario_type`
 - `playbooks` serve as scoring rubrics; `/api/assess` fetches active playbook by `scenario_type`
+- `training_sessions.share_token` (nullable) enables a public read-only share page at `/share/session/[token]`
+- `users.referral_code` (unique) powers `/signup?ref=CODE` referral tracking; `users.referral_credits_minutes` holds earned bonus minutes
 
 ### Supabase Client Pattern
 ```ts
@@ -91,6 +93,9 @@ Uses `@anthropic-ai/sdk`. Receives transcript (`messages[]`) and `PersonaContext
 | `GET /api/insights` | Analytics/insights |
 | `PATCH /api/account` | Update individual user's name/email |
 | `POST /api/auth/signup` | Signup (supports `?coach=TOKEN`, `?org=TOKEN`) |
+| `POST /api/sessions/[id]/share` | Toggle public share link for a session (owner-only) |
+| `POST /api/admin/notifications/broadcast` | Superuser: send a notification to all approved users |
+| `GET /api/admin/notifications/broadcast` | Superuser: list broadcast history |
 
 ### Notes
 - Transcript filtering: use `transcriptType === 'final'` to avoid partials
