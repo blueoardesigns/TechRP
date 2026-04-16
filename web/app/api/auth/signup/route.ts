@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
 
   // 3. Insert user profile
   const newReferralCode = generateReferralCode();
-  const { error: profileError } = await (supabase as any).from('users').insert({
+  const { data: profileData, error: profileError } = await (supabase as any).from('users').insert({
     auth_user_id: authUserId,
     organization_id: organizationId,
     coach_instance_id: resolvedCoachInstanceId,
@@ -219,7 +219,7 @@ export async function POST(req: NextRequest) {
     scenario_access: finalScenarioAccess,
     tos_accepted_at: new Date().toISOString(),
     referral_code: newReferralCode,
-  });
+  }).select('id, organization_id').single();
 
   if (profileError) {
     // Clean up auth user if profile insert failed
@@ -292,5 +292,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, autoApproved: autoApprove });
+  return NextResponse.json({
+    success: true,
+    autoApproved: autoApprove,
+    userId: profileData?.id ?? null,
+    orgId: profileData?.organization_id ?? null,
+  });
 }

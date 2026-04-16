@@ -42,6 +42,9 @@ function SignupPageInner() {
   const typeParam  = searchParams.get('type');
   const refCode    = searchParams.get('ref') ?? undefined;
   const refSource  = searchParams.get('ref_source') ?? undefined;
+  const planParam  = searchParams.get('plan') ?? undefined;
+  const seatsParam = searchParams.get('seats') ?? undefined;
+  const coachParam = searchParams.get('coach') ?? undefined;
 
   // Determine locked role from invite context
   const lockedRole: 'individual' | 'company_admin' | null =
@@ -146,6 +149,31 @@ function SignupPageInner() {
 
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Something went wrong.'); setLoading(false); return; }
+
+      // After successful signup — redirect to Stripe Checkout if plan selected
+      if (planParam) {
+        try {
+          const checkoutRes = await fetch('/api/stripe/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              planKey: planParam,
+              userId: data.userId,
+              orgId: data.orgId ?? null,
+              seats: seatsParam ? parseInt(seatsParam, 10) : undefined,
+              mode: 'subscription',
+              coachToken: coachParam ?? undefined,
+            }),
+          })
+          const { url } = await checkoutRes.json() as { url?: string }
+          if (url) {
+            window.location.href = url
+            return
+          }
+        } catch {
+          // Fall through to normal redirect if checkout fails
+        }
+      }
 
       if (data.autoApproved) {
         router.push('/training');
