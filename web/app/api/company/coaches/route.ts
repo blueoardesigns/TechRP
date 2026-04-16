@@ -146,5 +146,23 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // In-app notification to the coach that someone wants them as their coach.
+  const { data: coachProfile } = await (supabase as any)
+    .from('users')
+    .select('id')
+    .eq('coach_instance_id', (coachInstance as any).id)
+    .eq('app_role', 'coach')
+    .single();
+
+  if (coachProfile) {
+    await (supabase as any).from('notifications').insert({
+      user_id: (coachProfile as any).id,
+      type: 'coach_added_by_user',
+      title: `${(org as any)?.name ?? 'A company'} added you as their coach`,
+      body: 'Review and accept the connection request to gain access.',
+      data: { link: '/coach', organization_id: profile.organization_id },
+    });
+  }
+
   return NextResponse.json({ ok: true, connectionId: (connection as any).id }, { status: 201 });
 }

@@ -75,6 +75,25 @@ export async function GET(
       }
     }
 
+    // In-app notification to the company admin.
+    if (adminUser) {
+      const { data: adminProfile } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .eq('email', (adminUser as any).email)
+        .eq('app_role', 'company_admin')
+        .single();
+      if (adminProfile) {
+        await (supabase as any).from('notifications').insert({
+          user_id: (adminProfile as any).id,
+          type: 'coach_assigned',
+          title: `${(coachUser as any)?.full_name ?? 'Your coach'} accepted the connection`,
+          body: `They now have access to ${(org as any)?.name ?? 'your company'}'s data on TechRP.`,
+          data: { link: '/playbooks' },
+        });
+      }
+    }
+
     return new NextResponse(
       `<html><body style="font-family:sans-serif;padding:40px;max-width:480px">
         <h2 style="color:#16a34a">&#10003; Connection Accepted</h2>
