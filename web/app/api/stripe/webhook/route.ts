@@ -56,6 +56,38 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, db: DbC
   const stripeSubId = session.subscription as string | null
   const stripeCustomerId = session.customer as string | null
 
+  // Handle addon hour purchase (payment mode)
+  if (session.mode === 'payment') {
+    const { user_id: uid, org_id: oid, addon_qty } = meta
+    const qty = parseInt(addon_qty ?? '1', 10)
+    const minutesToAdd = qty * 60
+
+    if (oid) {
+      const { data: org } = await (db as any).from('organizations')
+        .select('bonus_minutes').eq('id', oid).single()
+      await (db as any).from('organizations')
+        .update({ bonus_minutes: ((org?.bonus_minutes as number) ?? 0) + minutesToAdd })
+        .eq('id', oid)
+    } else if (uid) {
+      const { data: user } = await (db as any).from('users')
+        .select('bonus_minutes').eq('id', uid).single()
+      await (db as any).from('users')
+        .update({ bonus_minutes: ((user?.bonus_minutes as number) ?? 0) + minutesToAdd })
+        .eq('id', uid)
+    }
+
+    if (uid) {
+      await (db as any).from('minute_transactions').insert({
+        user_id: uid,
+        org_id: oid || null,
+        type: 'purchase',
+        delta: minutesToAdd,
+        stripe_charge_id: session.payment_intent as string | null,
+      })
+    }
+    return
+  }
+
   if (!stripeSubId || !plan_id) return
 
   const sub = await stripe.subscriptions.retrieve(stripeSubId)
