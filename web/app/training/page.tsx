@@ -355,6 +355,7 @@ export default function TrainingPage() {
       }
       const random = personas[Math.floor(Math.random() * personas.length)];
       setSelectedPersona(mapDBPersona(random));
+      setPaymentType('random');
       setPhase('persona-preview');
     } catch (err) {
       console.error('Failed to load personas:', err);
@@ -713,6 +714,34 @@ export default function TrainingPage() {
               ))}
             </div>
           </div>
+
+          {/* Payment Type — technician scenarios only */}
+          {scenario.group === 'technician' && (
+            <div className="mb-8">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Payment Type</p>
+              <div className="flex gap-2">
+                {([
+                  { value: 'potential_claim' as const, label: 'Potential Claim' },
+                  { value: 'self_pay' as const, label: 'Self-Pay' },
+                  { value: 'random' as const, label: 'Random' },
+                ]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setPaymentType(value)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                      paymentType === value
+                        ? value === 'potential_claim' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                        : value === 'self_pay'         ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                                       : 'bg-gray-500/20 text-gray-400 border-gray-500/40'
+                        : 'bg-transparent text-gray-600 border-white/10 hover:border-white/20 hover:text-gray-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="space-y-3">
