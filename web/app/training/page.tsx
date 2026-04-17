@@ -153,6 +153,27 @@ const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
   hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
 };
 
+type PaymentType = 'potential_claim' | 'self_pay' | 'random';
+
+const PAYMENT_MODIFIERS: Record<'potential_claim' | 'self_pay', { call: string; facetime: string }> = {
+  potential_claim: {
+    call: '[PAYMENT TYPE: POTENTIAL CLAIM] This homeowner has contacted or is seriously considering contacting their insurance company about this damage. They may ask how claims work, whether you work with adjusters, what their deductible means for them, and how billing flows through insurance. Let those topics come up naturally based on their personality — do not volunteer a claim decision they have not yet made.\n\n',
+    facetime: '[PAYMENT TYPE: POTENTIAL CLAIM] This homeowner has contacted or is seriously considering contacting their insurance company about this damage. They may ask how claims work, whether you work with adjusters, what their deductible means for them, and how billing flows through insurance. Let those topics come up naturally based on their personality — do not volunteer a claim decision they have not yet made.\n\n',
+  },
+  self_pay: {
+    call: '[PAYMENT TYPE: SELF-PAY] This homeowner is paying out of pocket and is not filing an insurance claim. They may ask how much something like this typically costs, how payment works, or whether payment plans exist. They will not demand an exact price quote over the phone, but will express genuine curiosity about overall cost.\n\n',
+    facetime: '[PAYMENT TYPE: SELF-PAY] This homeowner is paying out of pocket and is not filing an insurance claim. At a natural point in the conversation, directly ask the technician for a price or estimate. Be direct about wanting to understand the cost before committing.\n\n',
+  },
+};
+
+function getPaymentModifier(type: PaymentType, scenarioType: ScenarioType): string {
+  const resolved: 'potential_claim' | 'self_pay' = type === 'random'
+    ? (Math.random() < 0.5 ? 'potential_claim' : 'self_pay')
+    : type;
+  const channel: 'call' | 'facetime' = scenarioType === 'homeowner_facetime' ? 'facetime' : 'call';
+  return PAYMENT_MODIFIERS[resolved][channel];
+}
+
 const TIMING_INSTRUCTIONS = `
 
 TIMING: This is a training call with a strict 10-minute limit. Around the 7 to 7.5 minute mark, naturally steer the conversation toward a close or a clear next step — even if the conversation isn't fully complete. If the call is going well at that point, push for commitment: agree to sign, schedule a follow-up appointment, or lock in a concrete next action before ending. Never let the call drift past 10 minutes without a resolution.`;
