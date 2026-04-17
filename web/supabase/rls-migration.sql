@@ -41,6 +41,12 @@ DROP POLICY IF EXISTS "Technicians can create their own sessions"  ON training_s
 DROP POLICY IF EXISTS "Technicians can update their own sessions"  ON training_sessions;
 DROP POLICY IF EXISTS "Managers can update sessions in their organization" ON training_sessions;
 
+DROP POLICY IF EXISTS "training_sessions: service role bypass" ON training_sessions;
+DROP POLICY IF EXISTS "training_sessions: select"              ON training_sessions;
+DROP POLICY IF EXISTS "training_sessions: insert"              ON training_sessions;
+DROP POLICY IF EXISTS "training_sessions: update"              ON training_sessions;
+DROP POLICY IF EXISTS "training_sessions: delete"              ON training_sessions;
+
 CREATE POLICY "training_sessions: service role bypass"
   ON training_sessions FOR ALL
   USING (auth.role() = 'service_role');
@@ -93,6 +99,12 @@ DROP POLICY IF EXISTS "Managers can create playbooks"                        ON 
 DROP POLICY IF EXISTS "Managers can update playbooks in their organization"  ON playbooks;
 DROP POLICY IF EXISTS "Managers can delete playbooks in their organization"  ON playbooks;
 
+DROP POLICY IF EXISTS "playbooks: service role bypass" ON playbooks;
+DROP POLICY IF EXISTS "playbooks: select"             ON playbooks;
+DROP POLICY IF EXISTS "playbooks: insert"             ON playbooks;
+DROP POLICY IF EXISTS "playbooks: update"             ON playbooks;
+DROP POLICY IF EXISTS "playbooks: delete"             ON playbooks;
+
 CREATE POLICY "playbooks: service role bypass"
   ON playbooks FOR ALL
   USING (auth.role() = 'service_role');
@@ -131,6 +143,12 @@ CREATE POLICY "playbooks: delete"
 
 ALTER TABLE personas ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "personas: service role bypass" ON personas;
+DROP POLICY IF EXISTS "personas: select"             ON personas;
+DROP POLICY IF EXISTS "personas: insert"             ON personas;
+DROP POLICY IF EXISTS "personas: update"             ON personas;
+DROP POLICY IF EXISTS "personas: delete"             ON personas;
+
 CREATE POLICY "personas: service role bypass"
   ON personas FOR ALL
   USING (auth.role() = 'service_role');
@@ -166,6 +184,11 @@ CREATE POLICY "personas: delete"
 -- ── coach_instances ───────────────────────────────────────────────────────────
 
 ALTER TABLE coach_instances ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "coach_instances: service role bypass" ON coach_instances;
+DROP POLICY IF EXISTS "coach_instances: select"             ON coach_instances;
+DROP POLICY IF EXISTS "coach_instances: insert"             ON coach_instances;
+DROP POLICY IF EXISTS "coach_instances: update"             ON coach_instances;
 
 CREATE POLICY "coach_instances: service role bypass"
   ON coach_instances FOR ALL
