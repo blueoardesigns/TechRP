@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
     email,
     role: role === 'company_admin' ? 'admin' : 'technician',
     app_role: role,
-    status: autoApprove ? 'approved' : 'pending',
+    status: 'approved',
     scenario_access: finalScenarioAccess,
     tos_accepted_at: new Date().toISOString(),
     referral_code: newReferralCode,
@@ -257,38 +257,6 @@ export async function POST(req: NextRequest) {
         fullName,
         (refSource === 'share_page' ? 'share_page' : 'signup_link') as ReferralSource,
       );
-    }
-  }
-
-  // 4. Send approval notification (skip if auto-approved)
-  if (!autoApprove) {
-    const approveUrl = `${APP_URL}/api/auth/approve?userId=${authUserId}&key=${APPROVAL_SECRET}`;
-    const rejectUrl  = `${APP_URL}/api/auth/approve?userId=${authUserId}&key=${APPROVAL_SECRET}&action=reject`;
-    const moduleList = Array.isArray(finalScenarioAccess) ? finalScenarioAccess.join(', ') : 'all';
-
-    try {
-      await resend.emails.send({
-        from: 'TechRP <noreply@blueoardesigns.com>',
-        to: approverEmail,
-        subject: `New TechRP Signup — ${fullName}`,
-        html: `
-          <h2>New Account Request</h2>
-          <table>
-            <tr><td><strong>Name:</strong></td><td>${fullName}</td></tr>
-            <tr><td><strong>Email:</strong></td><td>${email}</td></tr>
-            <tr><td><strong>Type:</strong></td><td>${role === 'company_admin' ? `Company Admin${companyName ? ` — ${companyName}` : ''}` : 'Individual'}</td></tr>
-            <tr><td><strong>Modules:</strong></td><td>${moduleList}</td></tr>
-          </table>
-          <br/>
-          <p>
-            <a href="${approveUrl}" style="background:#2563eb;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;margin-right:12px;">✅ Approve</a>
-            <a href="${rejectUrl}" style="background:#dc2626;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:bold;">❌ Reject</a>
-          </p>
-        `,
-      });
-    } catch (emailErr) {
-      // Don't fail the signup if email fails — log and continue
-      console.error('Failed to send approval email:', emailErr);
     }
   }
 

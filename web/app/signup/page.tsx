@@ -175,11 +175,7 @@ function SignupPageInner() {
         }
       }
 
-      if (data.autoApproved) {
-        router.push('/training');
-        return;
-      }
-      setSubmitted(true);
+      router.push('/training');
     } catch {
       setError('Network error. Please try again.');
       setLoading(false);
@@ -195,25 +191,6 @@ function SignupPageInner() {
           <div className="text-3xl">⚠️</div>
           <h1 className="text-xl font-bold">Invalid Invite Link</h1>
           <p className="text-gray-400 text-sm">{candidateError}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Success state ────────────────────────────────────────────────────────────
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-6">
-        <div className="max-w-sm w-full text-center space-y-4">
-          <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto text-3xl">🎉</div>
-          <h1 className="text-2xl font-bold text-white">Request Received!</h1>
-          <p className="text-gray-400 text-sm leading-relaxed">
-            Your account is pending approval. You&apos;ll receive an email at <span className="text-white font-medium">{email}</span> once you&apos;re approved — usually within 24 hours.
-          </p>
-          <Link href="/login" className="block mt-4 text-sm text-blue-400 hover:text-blue-300 transition-colors">
-            Back to login →
-          </Link>
         </div>
       </div>
     );
