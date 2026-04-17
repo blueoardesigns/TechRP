@@ -153,6 +153,24 @@ const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
   hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
 };
 
+// ─── Payment type modifiers ───────────────────────────────────────────────────
+
+type PaymentType = 'random' | 'hourly' | 'fixed' | 'insurance';
+
+const PAYMENT_MODIFIERS: Record<PaymentType, Record<ScenarioType, string>> = {
+  random: {} as Record<ScenarioType, string>,
+  hourly: {} as Record<ScenarioType, string>,
+  fixed: {} as Record<ScenarioType, string>,
+  insurance: {} as Record<ScenarioType, string>,
+};
+
+function getPaymentModifier(paymentType: PaymentType, scenarioType: ScenarioType): string {
+  if (paymentType === 'random') {
+    return '';
+  }
+  return PAYMENT_MODIFIERS[paymentType]?.[scenarioType] ?? '';
+}
+
 const TIMING_INSTRUCTIONS = `
 
 TIMING: This is a training call with a strict 10-minute limit. Around the 7 to 7.5 minute mark, naturally steer the conversation toward a close or a clear next step — even if the conversation isn't fully complete. If the call is going well at that point, push for commitment: agree to sign, schedule a follow-up appointment, or lock in a concrete next action before ending. Never let the call drift past 10 minutes without a resolution.`;
@@ -202,6 +220,9 @@ export default function TrainingPage() {
 
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const difficultyRef = useRef<'easy' | 'medium' | 'hard'>('medium');
+
+  const [paymentType, setPaymentType] = useState<PaymentType>('random');
+  const paymentTypeRef = useRef<PaymentType>('random');
 
   const vapiRef = useRef<Vapi | null>(null);
   const callStartTimeRef = useRef<Date | null>(null);
@@ -311,6 +332,9 @@ export default function TrainingPage() {
   // Keep difficulty ref in sync
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
 
+  // Keep paymentType ref in sync
+  useEffect(() => { paymentTypeRef.current = paymentType; }, [paymentType]);
+
   // Keep user ref in sync so call-end handler always has the current user
   useEffect(() => { userRef.current = user; }, [user]);
 
@@ -357,6 +381,7 @@ export default function TrainingPage() {
       const voiceId = pickVoice(selectedPersona);
       const systemPrompt =
         DIFFICULTY_MODIFIERS[difficultyRef.current] +
+        getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType) +
         selectedPersona.systemPrompt +
         TIMING_INSTRUCTIONS +
         getInterruptInstructions(selectedPersona.personalityType);
