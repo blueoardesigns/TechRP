@@ -383,9 +383,12 @@ export default function TrainingPage() {
       setSaveStatus('idle');
 
       const voiceId = pickVoice(selectedPersona);
+      const scenarioConfig = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
       const systemPrompt =
         DIFFICULTY_MODIFIERS[difficultyRef.current] +
-        getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType) +
+        (scenarioConfig.group === 'technician'
+          ? getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType)
+          : '') +
         selectedPersona.systemPrompt +
         TIMING_INSTRUCTIONS +
         getInterruptInstructions(selectedPersona.personalityType);
