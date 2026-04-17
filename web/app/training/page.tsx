@@ -224,6 +224,9 @@ export default function TrainingPage() {
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const difficultyRef = useRef<'easy' | 'medium' | 'hard'>('medium');
 
+  const [paymentType, setPaymentType] = useState<PaymentType>('random');
+  const paymentTypeRef = useRef<PaymentType>('random');
+
   const vapiRef = useRef<Vapi | null>(null);
   const callStartTimeRef = useRef<Date | null>(null);
   const messagesRef = useRef<Message[]>([]);
@@ -332,6 +335,9 @@ export default function TrainingPage() {
   // Keep difficulty ref in sync
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
 
+  // Keep payment type ref in sync
+  useEffect(() => { paymentTypeRef.current = paymentType; }, [paymentType]);
+
   // Keep user ref in sync so call-end handler always has the current user
   useEffect(() => { userRef.current = user; }, [user]);
 
@@ -378,6 +384,7 @@ export default function TrainingPage() {
       const voiceId = pickVoice(selectedPersona);
       const systemPrompt =
         DIFFICULTY_MODIFIERS[difficultyRef.current] +
+        getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType) +
         selectedPersona.systemPrompt +
         TIMING_INSTRUCTIONS +
         getInterruptInstructions(selectedPersona.personalityType);
