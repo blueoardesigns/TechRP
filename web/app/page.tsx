@@ -19,7 +19,7 @@ export default function HomePage() {
 
         <div className="relative max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-4 py-1.5 text-xs font-semibold text-indigo-300 tracking-[2px] uppercase mb-8">
-            AI Sales Training for Restoration Teams
+            AI-Powered Sales Training for Restoration Teams
           </div>
           <h1 className="text-5xl sm:text-6xl font-extrabold leading-[1.1] mb-6 tracking-tight">
             Your team is losing deals<br />
@@ -114,7 +114,7 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto">
           <p className="text-xs font-semibold tracking-[3px] text-indigo-400 uppercase mb-4 text-center">The Platform</p>
           <h2 className="text-4xl font-extrabold text-center mb-4 leading-tight">
-            Built for restoration.<br />Not adapted from generic software.
+            Built for the restoration industry.<br />Not adapted from generic software.
           </h2>
           <p className="text-slate-400 text-center max-w-2xl mx-auto mb-16 leading-relaxed">
             Purpose-built for the conversations your team actually faces — on job sites, over the phone, and in front of skeptical homeowners.
