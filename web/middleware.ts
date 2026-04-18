@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const PUBLIC_ROUTES = ['/', '/login', '/signup', '/pending', '/pricing', '/about'];
 const PUBLIC_PREFIXES = ['/api/auth/', '/api/stripe/webhook', '/api/stripe/seed', '/_next/', '/favicon'];
+const MARKETING_ROUTES = ['/', '/pricing', '/about'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -41,18 +42,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // For marketing routes: allow public access, but redirect logged-in users to /dashboard
-  const MARKETING_ROUTES = ['/', '/pricing', '/about'];
   if (MARKETING_ROUTES.includes(pathname)) {
-    const supabaseCheck = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } }
-    );
-    const { data: { user: sbUser } } = await supabaseCheck.auth.getUser();
-    if (sbUser) {
-      const dashboardUrl = request.nextUrl.clone();
-      dashboardUrl.pathname = '/dashboard';
-      return NextResponse.redirect(dashboardUrl);
+    try {
+      const supabaseCheck = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { cookies: { getAll() { return request.cookies.getAll(); }, setAll() {} } }
+      );
+      const { data: { user: sbUser } } = await supabaseCheck.auth.getUser();
+      if (sbUser) {
+        const dashboardUrl = request.nextUrl.clone();
+        dashboardUrl.pathname = '/dashboard';
+        return NextResponse.redirect(dashboardUrl);
+      }
+    } catch {
+      // Auth failure or missing env vars — serve marketing page as public
     }
     return NextResponse.next();
   }
