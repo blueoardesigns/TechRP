@@ -558,7 +558,7 @@ export default function TrainingPage() {
     if (user?.scenarioAccess?.length && !accessibleScenarios.length) {
       return (
         <div className="min-h-screen bg-gray-950 text-white">
-          <PageHeader onBack={() => router.push('/')} title="Start Training" />
+          <PageHeader onBack={() => router.push('/dashboard')} title="Start Training" />
           <div className="py-20 text-center text-gray-500">
             <p>No training scenarios are available for your account.</p>
             <p className="text-sm mt-2">Contact your admin to get access.</p>
@@ -569,7 +569,7 @@ export default function TrainingPage() {
 
     return (
       <div className="min-h-screen bg-gray-950 text-white">
-        <PageHeader onBack={() => router.push('/')} title="Start Training" />
+        <PageHeader onBack={() => router.push('/dashboard')} title="Start Training" />
 
         <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-10">
 
@@ -912,7 +912,7 @@ export default function TrainingPage() {
               Train Again
             </button>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/dashboard')}
               className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
             >
               Back to Dashboard
