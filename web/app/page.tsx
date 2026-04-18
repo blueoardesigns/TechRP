@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing-nav';
+import { MarketingFooter } from '@/components/marketing-footer';
 
 export const metadata = {
   title: 'TechRP — AI Sales Training for Restoration Teams',
@@ -248,21 +249,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer className="py-8 px-6 border-t border-white/5">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md" />
-            <span className="font-bold text-sm">TechRP</span>
-          </div>
-          <div className="flex gap-6 text-sm text-slate-500">
-            <Link href="/pricing" className="hover:text-slate-300 transition-colors">Pricing</Link>
-            <Link href="/about"   className="hover:text-slate-300 transition-colors">About</Link>
-            <Link href="/login"   className="hover:text-slate-300 transition-colors">Log In</Link>
-          </div>
-          <p className="text-slate-600 text-sm">© {new Date().getFullYear()} TechRP</p>
-        </div>
-      </footer>
+      <MarketingFooter current="home" />
     </div>
   );
 }
