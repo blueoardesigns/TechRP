@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
 
     // ── Seed personas ──────────────────────────────────────────────────────────
     // Insert in batches of 25 to avoid request size limits
-    const personaResults = { created: 0, skipped: 0, errors: 0 };
+    const forceUpdate: boolean = body.force === true;
+    const personaResults = { created: 0, updated: 0, skipped: 0, errors: 0 };
 
     // Check how many personas already exist
     const { count } = await (supabase as any)
@@ -67,13 +68,13 @@ export async function POST(request: NextRequest) {
       .select('*', { count: 'exact', head: true })
       .eq('is_default', true);
 
-    if (!coachInstanceId && count && count >= ALL_PERSONAS.length) {
+    if (!coachInstanceId && !forceUpdate && count && count >= ALL_PERSONAS.length) {
       personaResults.skipped = ALL_PERSONAS.length;
     } else {
-      // Get existing personas by name+scenario_type to avoid duplicates
+      // Get existing personas by name+scenario_type to detect new vs existing
       let existingQuery = (supabase as any)
         .from('personas')
-        .select('name, scenario_type');
+        .select('id, name, scenario_type');
       if (coachInstanceId) {
         existingQuery = existingQuery.eq('coach_instance_id', coachInstanceId);
       } else {
@@ -81,15 +82,16 @@ export async function POST(request: NextRequest) {
       }
       const { data: existingPersonas } = await existingQuery;
 
-      const existingKeys = new Set(
-        (existingPersonas || []).map((p: any) => `${p.scenario_type}::${p.name}`)
+      const existingMap = new Map<string, string>(
+        (existingPersonas || []).map((p: any) => [`${p.scenario_type}::${p.name}`, p.id])
       );
 
-      const toInsert = ALL_PERSONAS
-        .filter(p => !existingKeys.has(`${p.scenarioType}::${p.name}`))
-        .filter(p => !scenarioTypesFilter || scenarioTypesFilter.includes(p.scenarioType))
+      const filtered = ALL_PERSONAS
+        .filter(p => !scenarioTypesFilter || scenarioTypesFilter.includes(p.scenarioType));
+
+      const toInsert = filtered
+        .filter(p => !existingMap.has(`${p.scenarioType}::${p.name}`))
         .map(p => ({
-          // omit id — let Supabase generate a UUID
           organization_id: '00000000-0000-0000-0000-000000000001',
           scenario_type: p.scenarioType,
           name: p.name,
@@ -104,7 +106,11 @@ export async function POST(request: NextRequest) {
           coach_instance_id: coachInstanceId ?? null,
         }));
 
-      // Insert in batches of 25
+      const toUpdate = forceUpdate
+        ? filtered.filter(p => existingMap.has(`${p.scenarioType}::${p.name}`))
+        : [];
+
+      // Insert new personas in batches of 25
       const BATCH = 25;
       for (let i = 0; i < toInsert.length; i += BATCH) {
         const batch = toInsert.slice(i, i + BATCH);
@@ -119,6 +125,31 @@ export async function POST(request: NextRequest) {
           personaResults.created += batch.length;
         }
       }
+
+      // Update existing personas (force mode only) in batches of 25
+      for (let i = 0; i < toUpdate.length; i += BATCH) {
+        const batch = toUpdate.slice(i, i + BATCH);
+        for (const p of batch) {
+          const id = existingMap.get(`${p.scenarioType}::${p.name}`);
+          const { error } = await (supabase as any)
+            .from('personas')
+            .update({
+              personality_type: p.personalityType,
+              brief_description: p.briefDescription,
+              first_message: p.firstMessage,
+              system_prompt: p.systemPrompt,
+            })
+            .eq('id', id);
+          if (error) {
+            personaResults.errors += 1;
+            console.error('Persona update error:', error);
+          } else {
+            personaResults.updated += 1;
+          }
+        }
+      }
+
+      personaResults.skipped = filtered.length - toInsert.length - toUpdate.length;
     }
     results.personas = personaResults;
 
