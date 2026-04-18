@@ -195,11 +195,11 @@ export async function POST(request: NextRequest) {
   if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
   const { action, reason, reasonDetail } = parsed
 
-  // 3. Fetch user record
+  // 3. Fetch user record and active subscription
   const db = createServiceRoleClient()
   const { data: userRecord, error: userErr } = await (db as any)
     .from('users')
-    .select('id, full_name, email, stripe_customer_id, stripe_subscription_id, stripe_price_id')
+    .select('id, full_name, email, stripe_customer_id')
     .eq('id', authUser.id)
     .single()
 
@@ -207,18 +207,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  const planLabel = PLAN_LABEL[userRecord.stripe_price_id] ?? userRecord.stripe_price_id ?? 'Unknown plan'
+  const { data: subscription } = await (db as any)
+    .from('subscriptions')
+    .select('stripe_subscription_id, plan_id')
+    .eq('user_id', authUser.id)
+    .in('status', ['active', 'trialing'])
+    .single()
+
+  const planLabel = PLAN_LABEL[subscription?.plan_id] ?? subscription?.plan_id ?? 'Unknown plan'
   const timestamp = new Date().toISOString()
 
   // 4. Stripe operation — must succeed before touching the DB
-  if (userRecord.stripe_subscription_id) {
+  if (subscription?.stripe_subscription_id) {
     try {
       if (action === 'suspend') {
-        await stripe.subscriptions.update(userRecord.stripe_subscription_id, {
+        await stripe.subscriptions.update(subscription.stripe_subscription_id, {
           pause_collection: { behavior: 'void' },
         })
       } else {
-        await stripe.subscriptions.cancel(userRecord.stripe_subscription_id)
+        await stripe.subscriptions.cancel(subscription.stripe_subscription_id)
       }
     } catch (err: any) {
       return NextResponse.json({ error: `Billing update failed: ${err.message}` }, { status: 502 })
