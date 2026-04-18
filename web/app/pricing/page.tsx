@@ -225,8 +225,15 @@ export default function PricingPage() {
               ))}
             </div>
           )}
+          <p className="text-center text-slate-500 text-sm mt-6">
+            Need more time?{' '}
+            <span className="text-slate-400">
+              Add-on hours available:{' '}
+              {tab === 'individual' ? '$10.99–$14.99/hr depending on plan.' : '$8.49–$10.99/hr depending on plan.'}
+            </span>
+          </p>
           {tab === 'team' && (
-            <p className="text-center text-slate-500 text-sm mt-6">
+            <p className="text-center text-slate-500 text-sm mt-2">
               Price scales with seat count — lower per-seat cost as your team grows.{' '}
               <a href="mailto:tbauertext@gmail.com" className="text-indigo-400 hover:text-indigo-300 transition-colors">
                 Contact us for 50+ seats.
