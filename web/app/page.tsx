@@ -124,9 +124,9 @@ export default function HomePage() {
               'Training session in progress — AI persona voice call',
               'Session review — transcript + AI score breakdown',
               'Manager dashboard — team performance over time',
-            ].map((caption, i) => (
+            ].map((caption) => (
               <div
-                key={i}
+                key={caption}
                 className="bg-slate-800/40 border border-white/10 rounded-2xl aspect-video flex items-center justify-center p-4"
               >
                 <p className="text-slate-600 text-xs text-center leading-relaxed">[SCREENSHOT: {caption}]</p>
@@ -192,7 +192,7 @@ export default function HomePage() {
                 className={`relative rounded-2xl p-6 border ${
                   plan.popular
                     ? 'border-indigo-500/40 bg-indigo-500/5 shadow-[0_0_40px_rgba(99,102,241,0.1)]'
-                    : 'border-white/8 bg-slate-800/30'
+                    : 'border-white/5 bg-slate-800/30'
                 }`}
               >
                 {plan.popular && (
