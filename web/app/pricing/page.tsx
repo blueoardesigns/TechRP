@@ -1,102 +1,276 @@
-'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { SeatCalculator } from '@/components/pricing/seat-calculator'
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { MarketingNav } from '@/components/marketing-nav';
 
 const INDIVIDUAL_PLANS = [
-  { key: 'individual_starter', label: 'Starter', price: '$34.99', minutes: '120 min/mo', addl: '$14.99/hr', weeklyNote: '~30 min/wk' },
-  { key: 'individual_growth', label: 'Growth', price: '$57.99', minutes: '240 min/mo', addl: '$12.99/hr', weeklyNote: '~60 min/wk', popular: true },
-  { key: 'individual_pro', label: 'Pro', price: '$89.99', minutes: '400 min/mo', addl: '$10.99/hr', weeklyNote: '~100 min/wk' },
-]
+  {
+    key: 'starter',
+    name: 'Starter',
+    price: '$34.99',
+    minutes: 120,
+    popular: false,
+    features: [
+      '120 training minutes/mo',
+      '150+ AI personas',
+      'AI-scored sessions',
+      'Session history & transcripts',
+      'Access all scenario types',
+    ],
+  },
+  {
+    key: 'growth',
+    name: 'Growth',
+    price: '$57.99',
+    minutes: 240,
+    popular: true,
+    features: [
+      '240 training minutes/mo',
+      'Everything in Starter',
+      'Custom playbook creation',
+      'PDF/Doc playbook upload',
+      'Priority support',
+    ],
+  },
+  {
+    key: 'pro',
+    name: 'Pro',
+    price: '$89.99',
+    minutes: 400,
+    popular: false,
+    features: [
+      '400 training minutes/mo',
+      'Everything in Growth',
+      'Field recording upload & scoring',
+      'Advanced analytics',
+      'Add-on hours at $10.99/hr',
+    ],
+  },
+] as const;
+
+const TEAM_PLANS = [
+  {
+    key: 'standard',
+    name: 'Company Standard',
+    priceFrom: '$27.99',
+    minutesPerSeat: 120,
+    popular: false,
+    features: [
+      '120 min/seat/mo',
+      'Manager dashboard',
+      'Team session review',
+      'Shared playbooks',
+      'All individual features',
+    ],
+  },
+  {
+    key: 'pro',
+    name: 'Company Pro',
+    priceFrom: '$44.99',
+    minutesPerSeat: 240,
+    popular: true,
+    features: [
+      '240 min/seat/mo',
+      'Everything in Standard',
+      'Advanced team analytics',
+      'Custom persona creation',
+      'Add-on hours from $8.49/hr',
+    ],
+  },
+] as const;
+
+const FAQ = [
+  {
+    q: 'What happens after the 7-day trial?',
+    a: "Your trial includes 25 minutes of practice time. After 7 days (or when you've used your trial minutes), you'll be prompted to pick a plan. You won't be charged until you choose one.",
+  },
+  {
+    q: 'What is a training minute?',
+    a: 'A training minute is one minute of active AI voice role-play. Browsing the app, reviewing sessions, and setting up playbooks do not consume minutes.',
+  },
+  {
+    q: 'Can I switch plans?',
+    a: 'Yes. You can upgrade or downgrade at any time from your account settings. Changes take effect at the next billing cycle.',
+  },
+  {
+    q: 'Does it work for BD reps, not just field techs?',
+    a: 'Absolutely. TechRP includes scenarios for both field technicians and business development reps — property managers, insurance adjusters, commercial accounts, and more.',
+  },
+  {
+    q: "Can managers review their team's sessions?",
+    a: 'Yes, on Company plans. Managers get a dashboard showing every session, full transcripts, and AI score breakdowns for each team member.',
+  },
+  {
+    q: 'What if I need more minutes mid-month?',
+    a: 'You can purchase add-on hour blocks at any time. Pricing varies by plan: $10.99–$14.99/hr for individuals, $8.49–$10.99/hr for company plans.',
+  },
+] as const;
 
 export default function PricingPage() {
-  const router = useRouter()
-  const [tab, setTab] = useState<'individual' | 'company'>('individual')
-
-  function handleIndividualSelect(planKey: string) {
-    router.push(`/signup?plan=${planKey}`)
-  }
-
-  function handleCompanySelect(planKey: string, seats: number) {
-    router.push(`/signup?plan=${planKey}&seats=${seats}&type=company`)
-  }
+  const [tab, setTab] = useState<'individual' | 'team'>('individual');
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white py-16 px-4">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-3">Simple, transparent pricing</h1>
-          <p className="text-gray-400 text-lg">7-day free trial on all plans. No charge until your trial ends.</p>
-        </div>
+    <div className="min-h-screen bg-[#0f172a] text-white">
+      <MarketingNav />
 
-        <div className="flex justify-center mb-10">
-          <div className="bg-gray-900 border border-white/10 rounded-xl p-1 flex gap-1">
-            {(['individual', 'company'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-6 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  tab === t ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                {t === 'individual' ? 'Individual' : 'Company'}
-              </button>
-            ))}
-          </div>
+      <section className="pt-24 pb-16 px-6 text-center">
+        <p className="text-xs font-semibold tracking-[3px] text-indigo-400 uppercase mb-4">Pricing</p>
+        <h1 className="text-5xl font-extrabold mb-4 leading-tight">Simple, transparent pricing</h1>
+        <p className="text-slate-400 text-lg max-w-xl mx-auto mb-10">
+          Start free. No credit card required. Upgrade when you&apos;re ready.
+        </p>
+        <div className="inline-flex bg-slate-800/60 border border-white/10 rounded-xl p-1 gap-1">
+          <button
+            onClick={() => setTab('individual')}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+              tab === 'individual' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Individual
+          </button>
+          <button
+            onClick={() => setTab('team')}
+            className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+              tab === 'team' ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            Team
+          </button>
         </div>
+      </section>
 
-        {tab === 'individual' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {INDIVIDUAL_PLANS.map(plan => (
-              <div
-                key={plan.key}
-                className={`relative bg-gray-900 rounded-2xl p-6 border flex flex-col ${
-                  (plan as any).popular ? 'border-indigo-500' : 'border-white/10'
-                }`}
-              >
-                {(plan as any).popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                    Most Popular
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold mb-1">{plan.label}</h3>
-                <div className="text-3xl font-bold text-white mb-1">
-                  {plan.price}<span className="text-base text-gray-400 font-normal">/mo</span>
-                </div>
-                <p className="text-sm text-gray-400 mb-6">
-                  {plan.minutes} <span className="text-gray-600">({plan.weeklyNote})</span>
-                </p>
-                <ul className="space-y-2 text-sm text-gray-300 mb-8 flex-1">
-                  <li>&#10003; All scenario types</li>
-                  <li>&#10003; AI scoring &amp; feedback</li>
-                  <li>&#10003; Session history</li>
-                  <li>&#10003; Additional hours: {plan.addl}</li>
-                </ul>
-                <button
-                  onClick={() => handleIndividualSelect(plan.key)}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors"
+      <section className="pb-24 px-6">
+        <div className="max-w-5xl mx-auto">
+          {tab === 'individual' ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {INDIVIDUAL_PLANS.map((plan) => (
+                <div
+                  key={plan.key}
+                  className={`relative rounded-2xl p-8 border flex flex-col ${
+                    plan.popular
+                      ? 'border-indigo-500/40 bg-indigo-500/5 shadow-[0_0_50px_rgba(99,102,241,0.12)]'
+                      : 'border-white/5 bg-slate-800/30'
+                  }`}
                 >
-                  Start Free Trial
-                </button>
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold px-4 py-1 rounded-full">
+                      Most Popular
+                    </div>
+                  )}
+                  <div className="inline-block bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold px-2 py-0.5 rounded-full mb-5">
+                    7-day free trial
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <div className="text-4xl font-extrabold mb-1">
+                    {plan.price}<span className="text-base font-normal text-slate-500">/mo</span>
+                  </div>
+                  <p className="text-slate-500 text-sm mb-6">{plan.minutes} training minutes/mo</p>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
+                        <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/signup"
+                    className="block w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-sm font-bold text-center hover:opacity-90 transition-opacity"
+                  >
+                    Start Free Trial
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+              {TEAM_PLANS.map((plan) => (
+                <div
+                  key={plan.key}
+                  className={`relative rounded-2xl p-8 border flex flex-col ${
+                    plan.popular
+                      ? 'border-indigo-500/40 bg-indigo-500/5 shadow-[0_0_50px_rgba(99,102,241,0.12)]'
+                      : 'border-white/5 bg-slate-800/30'
+                  }`}
+                >
+                  {plan.popular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold px-4 py-1 rounded-full">
+                      Most Popular
+                    </div>
+                  )}
+                  <div className="inline-block bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold px-2 py-0.5 rounded-full mb-5">
+                    7-day free trial
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
+                  <div className="text-3xl font-extrabold mb-1">
+                    From {plan.priceFrom}<span className="text-base font-normal text-slate-500">/seat/mo</span>
+                  </div>
+                  <p className="text-slate-500 text-sm mb-6">{plan.minutesPerSeat} min/seat/mo · 2+ seats</p>
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm text-slate-300">
+                        <span className="text-emerald-400 mt-0.5 flex-shrink-0">✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href="/signup"
+                    className="block w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-sm font-bold text-center hover:opacity-90 transition-opacity"
+                  >
+                    Start Free Trial
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+          {tab === 'team' && (
+            <p className="text-center text-slate-500 text-sm mt-6">
+              Price scales with seat count — lower per-seat cost as your team grows.{' '}
+              <a href="mailto:tbauertext@gmail.com" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                Contact us for 50+ seats.
+              </a>
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="py-24 px-6 bg-[#080d1a] border-t border-white/5">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-center mb-12">Frequently asked questions</h2>
+          <div className="space-y-6">
+            {FAQ.map((item) => (
+              <div key={item.q} className="border-b border-white/5 pb-6">
+                <h3 className="font-semibold text-white mb-2">{item.q}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">{item.a}</p>
               </div>
             ))}
           </div>
-        )}
+          <p className="text-center text-slate-500 mt-10 text-sm">
+            Still have questions?{' '}
+            <a href="mailto:tbauertext@gmail.com" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+              Contact us →
+            </a>
+          </p>
+        </div>
+      </section>
 
-        {tab === 'company' && (
-          <div className="max-w-xl mx-auto">
-            <SeatCalculator onSelect={handleCompanySelect} />
-            <p className="text-center text-sm text-gray-500 mt-4">
-              Minutes shared as a pool across your team. Each user capped at 150% of their plan allocation.
-            </p>
+      <footer className="py-8 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-md" />
+            <span className="font-bold text-sm">TechRP</span>
           </div>
-        )}
-
-        <p className="text-center text-sm text-gray-600 mt-12">
-          Already have an account?{' '}
-          <a href="/login" className="text-indigo-400 hover:underline">Sign in</a>
-        </p>
-      </div>
+          <div className="flex gap-6 text-sm text-slate-500">
+            <Link href="/"      className="hover:text-slate-300 transition-colors">Home</Link>
+            <Link href="/about" className="hover:text-slate-300 transition-colors">About</Link>
+            <Link href="/login" className="hover:text-slate-300 transition-colors">Log In</Link>
+          </div>
+          <p className="text-slate-600 text-sm">© {new Date().getFullYear()} TechRP</p>
+        </div>
+      </footer>
     </div>
-  )
+  );
 }
