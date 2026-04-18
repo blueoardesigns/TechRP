@@ -73,7 +73,7 @@ describe('buildAdminEmailBody', () => {
       reason: 'Price is too high',
       timestamp: '2026-04-17T12:00:00Z',
     })
-    expect(body).toContain('Action: SUSPEND')
+    expect(body).toContain('Action: SUSPENDED')
     expect(body).toContain('Jane Smith <jane@example.com>')
     expect(body).toContain('Individual Growth')
     expect(body).toContain('Price is too high')
@@ -91,7 +91,7 @@ describe('buildAdminEmailBody', () => {
       reasonDetail: 'Custom reason here',
       timestamp: '2026-04-17T12:00:00Z',
     })
-    expect(body).toContain('Action: DELETE')
+    expect(body).toContain('Action: DELETED')
     expect(body).toContain('Detail: Custom reason here')
   })
 })

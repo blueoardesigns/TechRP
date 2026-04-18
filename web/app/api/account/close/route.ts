@@ -27,7 +27,7 @@ export function buildAdminEmailBody(opts: {
   timestamp: string
 }): string {
   const lines = [
-    `Action: ${opts.action.toUpperCase()}`,
+    `Action: ${opts.action === 'suspend' ? 'SUSPENDED' : 'DELETED'}`,
     `User: ${opts.fullName} <${opts.email}>`,
     `Plan: ${opts.planLabel}`,
     `Reason: ${opts.reason}`,
@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
   const timestamp = new Date().toISOString()
 
   // 4. Stripe operation — must succeed before touching the DB
+  // If no active subscription exists (e.g. trial expired, already cancelled),
+  // skip Stripe — proceed directly to DB update. This is intentional.
   if (subscription?.stripe_subscription_id) {
     try {
       if (action === 'suspend') {
@@ -91,12 +93,18 @@ export async function POST(request: NextRequest) {
   if (action === 'suspend') {
     await db.from('users').update({ status: 'suspended' }).eq('id', authUser.id)
   } else {
-    // Delete in dependency order
-    await db.from('training_sessions').delete().eq('user_id', authUser.id)
-    await db.from('playbooks').delete().eq('created_by', authUser.id)
-    await db.from('users').delete().eq('id', authUser.id)
-    // Delete Supabase Auth user
-    await db.auth.admin.deleteUser(authUser.id)
+    // Delete in dependency order — each step must succeed before proceeding
+    const { error: sessErr } = await db.from('training_sessions').delete().eq('user_id', authUser.id)
+    if (sessErr) return NextResponse.json({ error: 'Failed to delete session data' }, { status: 500 })
+
+    const { error: playbookErr } = await db.from('playbooks').delete().eq('created_by', authUser.id)
+    if (playbookErr) return NextResponse.json({ error: 'Failed to delete playbooks' }, { status: 500 })
+
+    const { error: userRowErr } = await db.from('users').delete().eq('id', authUser.id)
+    if (userRowErr) return NextResponse.json({ error: 'Failed to delete user record' }, { status: 500 })
+
+    const { error: authErr } = await db.auth.admin.deleteUser(authUser.id)
+    if (authErr) return NextResponse.json({ error: 'Failed to delete auth account' }, { status: 500 })
   }
 
   // 6. Admin email (best-effort — don't fail the request if email fails)
@@ -117,5 +125,5 @@ export async function POST(request: NextRequest) {
     text: emailBody,
   }).catch(() => { /* email failure is non-fatal */ })
 
-  return NextResponse.json({ success: true, action })
+  return NextResponse.json({ success: true, action: action === 'suspend' ? 'suspended' : 'deleted' })
 }
