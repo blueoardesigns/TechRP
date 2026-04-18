@@ -33,7 +33,7 @@ export default function AboutPage() {
         <div className="max-w-3xl mx-auto">
           <div className="bg-slate-800/40 border border-white/5 rounded-2xl p-10 mb-10 flex flex-col sm:flex-row gap-8 items-start">
             <div className="w-24 h-24 rounded-2xl bg-slate-700/60 border border-white/10 flex-shrink-0 flex items-center justify-center">
-              <span className="text-slate-500 text-xs text-center leading-snug px-2">[PHOTO: Tim headshot]</span>
+              <span className="text-slate-500 text-xs text-center leading-snug px-2">[PHOTO: Tim headshot placeholder]</span>
             </div>
             <div>
               <h2 className="text-2xl font-bold mb-1">Tim Bauer</h2>
@@ -122,7 +122,7 @@ export default function AboutPage() {
               href="/signup"
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl font-bold shadow-[0_4px_24px_rgba(99,102,241,0.4)] hover:shadow-[0_4px_36px_rgba(99,102,241,0.6)] transition-shadow"
             >
-              Start Free Trial
+              Start your free trial
             </Link>
             <a
               href="mailto:tbauertext@gmail.com"
