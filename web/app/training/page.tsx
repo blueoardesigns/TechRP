@@ -153,22 +153,25 @@ const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
   hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
 };
 
-// ─── Payment type modifiers ───────────────────────────────────────────────────
+type PaymentType = 'potential_claim' | 'self_pay' | 'random';
 
-type PaymentType = 'random' | 'hourly' | 'fixed' | 'insurance';
-
-const PAYMENT_MODIFIERS: Record<PaymentType, Record<ScenarioType, string>> = {
-  random: {} as Record<ScenarioType, string>,
-  hourly: {} as Record<ScenarioType, string>,
-  fixed: {} as Record<ScenarioType, string>,
-  insurance: {} as Record<ScenarioType, string>,
+const PAYMENT_MODIFIERS: Record<'potential_claim' | 'self_pay', { call: string; facetime: string }> = {
+  potential_claim: {
+    call: '[PAYMENT TYPE: POTENTIAL CLAIM] This homeowner has contacted or is seriously considering contacting their insurance company about this damage. They may ask how claims work, whether you work with adjusters, what their deductible means for them, and how billing flows through insurance. Let those topics come up naturally based on their personality — do not volunteer a claim decision they have not yet made.\n\n',
+    facetime: '[PAYMENT TYPE: POTENTIAL CLAIM] This homeowner has contacted or is seriously considering contacting their insurance company about this damage. They may ask how claims work, whether you work with adjusters, what their deductible means for them, and how billing flows through insurance. Let those topics come up naturally based on their personality — do not volunteer a claim decision they have not yet made.\n\n',
+  },
+  self_pay: {
+    call: '[PAYMENT TYPE: SELF-PAY] This homeowner is paying out of pocket and is not filing an insurance claim. They may ask how much something like this typically costs, how payment works, or whether payment plans exist. They will not demand an exact price quote over the phone, but will express genuine curiosity about overall cost.\n\n',
+    facetime: '[PAYMENT TYPE: SELF-PAY] This homeowner is paying out of pocket and is not filing an insurance claim. At a natural point in the conversation, directly ask the technician for a price or estimate. Be direct about wanting to understand the cost before committing.\n\n',
+  },
 };
 
-function getPaymentModifier(paymentType: PaymentType, scenarioType: ScenarioType): string {
-  if (paymentType === 'random') {
-    return '';
-  }
-  return PAYMENT_MODIFIERS[paymentType]?.[scenarioType] ?? '';
+function getPaymentModifier(type: PaymentType, scenarioType: ScenarioType): string {
+  const resolved: 'potential_claim' | 'self_pay' = type === 'random'
+    ? (Math.random() < 0.5 ? 'potential_claim' : 'self_pay')
+    : type;
+  const channel: 'call' | 'facetime' = scenarioType === 'homeowner_facetime' ? 'facetime' : 'call';
+  return PAYMENT_MODIFIERS[resolved][channel];
 }
 
 const TIMING_INSTRUCTIONS = `
@@ -332,7 +335,7 @@ export default function TrainingPage() {
   // Keep difficulty ref in sync
   useEffect(() => { difficultyRef.current = difficulty; }, [difficulty]);
 
-  // Keep paymentType ref in sync
+  // Keep payment type ref in sync
   useEffect(() => { paymentTypeRef.current = paymentType; }, [paymentType]);
 
   // Keep user ref in sync so call-end handler always has the current user
@@ -352,6 +355,7 @@ export default function TrainingPage() {
       }
       const random = personas[Math.floor(Math.random() * personas.length)];
       setSelectedPersona(mapDBPersona(random));
+      setPaymentType('random');
       setPhase('persona-preview');
     } catch (err) {
       console.error('Failed to load personas:', err);
@@ -379,9 +383,12 @@ export default function TrainingPage() {
       setSaveStatus('idle');
 
       const voiceId = pickVoice(selectedPersona);
+      const scenarioConfig = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
       const systemPrompt =
         DIFFICULTY_MODIFIERS[difficultyRef.current] +
-        getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType) +
+        (scenarioConfig.group === 'technician'
+          ? getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType)
+          : '') +
         selectedPersona.systemPrompt +
         TIMING_INSTRUCTIONS +
         getInterruptInstructions(selectedPersona.personalityType);
@@ -710,6 +717,34 @@ export default function TrainingPage() {
               ))}
             </div>
           </div>
+
+          {/* Payment Type — technician scenarios only */}
+          {scenario.group === 'technician' && (
+            <div className="mb-8">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Payment Type</p>
+              <div className="flex gap-2">
+                {([
+                  { value: 'potential_claim' as const, label: 'Potential Claim' },
+                  { value: 'self_pay' as const, label: 'Self-Pay' },
+                  { value: 'random' as const, label: 'Random' },
+                ]).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setPaymentType(value)}
+                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors border ${
+                      paymentType === value
+                        ? value === 'potential_claim' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                        : value === 'self_pay'         ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                                       : 'bg-gray-500/20 text-gray-400 border-gray-500/40'
+                        : 'bg-transparent text-gray-600 border-white/10 hover:border-white/20 hover:text-gray-400'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="space-y-3">
