@@ -1,8 +1,9 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MarketingNav } from '@/components/marketing-nav';
 import { MarketingFooter } from '@/components/marketing-footer';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'TechRP — AI Sales Training for Restoration Teams',
   description: 'AI-powered role-play training built for restoration sales teams. Practice the conversations that close jobs before they count.',
 };
