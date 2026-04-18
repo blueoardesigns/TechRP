@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 import { sendConnectionAccepted, sendConnectionDeclined } from '@/lib/connection-emails';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -22,7 +23,7 @@ export async function GET(
     return new NextResponse('Invalid action', { status: 400 });
   }
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
 
   const { data: conn } = await (supabase as any)
     .from('company_coach_connections')

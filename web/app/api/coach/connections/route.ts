@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 
 async function getCoachProfile() {
   const supabaseAuth = createServerSupabase();
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return null;
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data } = await (supabase as any)
     .from('users')
     .select('id, app_role, coach_instance_id')
@@ -19,7 +20,7 @@ export async function GET() {
   const profile = await getCoachProfile();
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data: connections } = await (supabase as any)
     .from('company_coach_connections')
     .select('id, organization_id, permission_level, status, requested_at, accepted_at')

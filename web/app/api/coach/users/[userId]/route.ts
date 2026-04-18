@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 
 export async function PATCH(req: NextRequest, { params }: { params: { userId: string } }) {
   const supabaseAuth = createServerSupabase();
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data: coach } = await (supabase as any)
     .from('users')
     .select('coach_instance_id, app_role')

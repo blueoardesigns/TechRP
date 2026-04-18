@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 import { SCENARIOS } from '@/lib/personas';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data: coach } = await (supabase as any)
     .from('users')
     .select('coach_instance_id, app_role')

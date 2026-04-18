@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AppNav } from '@/components/nav';
+import { RoleCard } from '@/components/role-card';
 
 const CARDS = [
   {
@@ -189,6 +190,7 @@ export default function Home() {
               </span>
             </Link>
           ))}
+          <RoleCard />
         </div>
 
         {/* ── CTA banner ───────────────────────────────────────────────────── */}

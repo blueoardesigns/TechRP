@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
 
 async function getCoachInstance() {
   const supabaseAuth = createServerSupabase();
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return null;
-  const supabase = createServiceSupabase();
-  const { data } = await (supabase as any)
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
     .from('users')
     .select('id, app_role, coach_instance_id')
     .eq('auth_user_id', authUser.id)
@@ -20,7 +21,7 @@ export async function GET() {
   const profile = await getCoachInstance();
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data: orgs } = await (supabase as any)
     .from('organizations')
     .select('id, name, invite_token, created_at')
@@ -30,7 +31,7 @@ export async function GET() {
   // Get user counts per org
   const orgIds = (orgs ?? []).map((o: any) => o.id);
   const { data: users } = orgIds.length
-    ? await (supabase as any).from('users').select('id, organization_id').in('organization_id', orgIds)
+    ? await supabase.from('users').select('id, organization_id').in('organization_id', orgIds)
     : { data: [] };
 
   const countMap: Record<string, number> = {};
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
 
   const inviteToken = randomBytes(6).toString('hex');
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data, error } = await (supabase as any)
     .from('organizations')
     .insert({ name, coach_instance_id: profile.coach_instance_id, invite_token: inviteToken })

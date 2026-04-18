@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 import { sendConnectionRemoved } from '@/lib/connection-emails';
 
 export async function DELETE(
@@ -10,7 +11,7 @@ export async function DELETE(
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data: profile } = await (supabase as any)
     .from('users')
     .select('id, app_role, coach_instance_id, full_name')

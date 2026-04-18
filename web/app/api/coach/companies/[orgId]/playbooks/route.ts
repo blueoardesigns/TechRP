@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 
 async function getCoachProfile() {
   const supabaseAuth = createServerSupabase();
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return null;
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data } = await (supabase as any)
     .from('users')
     .select('id, app_role, coach_instance_id')
@@ -24,7 +25,7 @@ export async function GET(
   const profile = await getCoachProfile();
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
 
   const { data: org } = await (supabase as any)
     .from('organizations')
@@ -38,7 +39,7 @@ export async function GET(
   const { data: playbooks } = await (supabase as any)
     .from('playbooks')
     .select('id, name, scenario_type, created_at')
-    .eq('coach_instance_id', profile.coach_instance_id)
+    .or(`coach_instance_id.eq.${profile.coach_instance_id},coach_instance_id.is.null`)
     .order('created_at', { ascending: false });
 
   const { data: whitelistRows } = await (supabase as any)
@@ -66,7 +67,7 @@ export async function PUT(
   const profile = await getCoachProfile();
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
 
   const { data: org } = await (supabase as any)
     .from('organizations')

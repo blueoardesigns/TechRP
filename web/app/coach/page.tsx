@@ -223,7 +223,9 @@ export default function CoachPage() {
                   {companies.map(c => (
                     <React.Fragment key={c.id}>
                       <tr className="border-b border-white/5 hover:bg-white/5">
-                        <td className="px-5 py-3 font-medium">{c.name}</td>
+                        <td className="px-5 py-3 font-medium">
+                          <a href={`/coach/companies/${c.id}`} className="hover:text-blue-400 transition-colors">{c.name}</a>
+                        </td>
                         <td className="px-5 py-3 text-gray-400">{c.userCount}</td>
                         <td className="px-5 py-3">
                           <button

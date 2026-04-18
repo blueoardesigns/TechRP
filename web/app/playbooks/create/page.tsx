@@ -183,15 +183,38 @@ export default function CreatePlaybookPage() {
     setUploadError('');
     setUploadLoading(true);
     setUploadFileName(file.name);
-    const formData = new FormData();
-    formData.append('file', file);
+    const fd = new FormData();
+    fd.append('file', file);
     try {
-      const res = await fetch('/api/playbook/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Upload failed');
-      setUploadedText(data.extractedText);
-      setChatMessages([]);
-      await sendChatMessage(data.extractedText, [], 'Hi, please analyze this document and start building the playbook.');
+      // Step 1: extract text
+      const uploadRes = await fetch('/api/playbook/upload', { method: 'POST', body: fd });
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData.error || 'Upload failed');
+
+      // Step 2: parse into wizard fields
+      const parseRes = await fetch('/api/playbook/parse-wizard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ extractedText: uploadData.extractedText }),
+      });
+      const parseData = await parseRes.json();
+      if (!parseRes.ok) throw new Error(parseData.error || 'Parse failed');
+
+      // Step 3: pre-fill wizard and switch to manual mode
+      const w = parseData.wizardData;
+      setFormData({
+        name: w.name ?? '',
+        description: w.description ?? '',
+        openingLine: w.openingLine ?? '',
+        first30Seconds: w.first30Seconds ?? '',
+        objections: Array.isArray(w.objections) && w.objections.length ? w.objections : [{ objection: '', response: '' }],
+        mustMention: Array.isArray(w.mustMention) && w.mustMention.length ? w.mustMention : [''],
+        neverSay: Array.isArray(w.neverSay) && w.neverSay.length ? w.neverSay : [''],
+        closingAsk: w.closingAsk ?? '',
+        idealOutcome: w.idealOutcome ?? '',
+      });
+      setStep(1);
+      setCreateMode('manual');
     } catch (err: any) {
       setUploadError(err.message || 'Upload failed');
     } finally {
@@ -257,9 +280,9 @@ export default function CreatePlaybookPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-950 text-white py-8 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
 
           {/* Mode selector */}
           {createMode === 'choose' && (
@@ -291,7 +314,7 @@ export default function CreatePlaybookPage() {
               <div className="mb-4">
                 <button
                   onClick={() => setCreateMode('choose')}
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
+                  className="text-gray-500 hover:text-white transition-colors text-sm"
                 >
                   ← Back
                 </button>
@@ -304,7 +327,7 @@ export default function CreatePlaybookPage() {
                 </div>
                 <button
                   onClick={() => router.push('/playbooks')}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:underline"
+                  className="text-gray-500 hover:text-white text-sm transition-colors"
                 >
                   ← Back to Playbooks
                 </button>
@@ -319,8 +342,8 @@ export default function CreatePlaybookPage() {
                         index + 1 === step
                           ? 'bg-blue-600 text-white'
                           : index + 1 < step
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-600'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-gray-800 text-gray-500'
                       }`}
                     >
                       {index + 1}. {label}
@@ -332,7 +355,7 @@ export default function CreatePlaybookPage() {
               {step === 1 && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Playbook Name
                     </label>
                     <input
@@ -340,18 +363,18 @@ export default function CreatePlaybookPage() {
                       value={formData.name}
                       onChange={(e) => updateField('name', e.target.value)}
                       placeholder="Water Damage Equipment Drop-off"
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       Brief Description
                     </label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => updateField('description', e.target.value)}
                       placeholder="Short summary of the playbook's purpose"
-                      className="w-full px-3 py-2 border rounded-lg h-24 focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 h-24"
                     />
                   </div>
                 </div>
@@ -360,23 +383,23 @@ export default function CreatePlaybookPage() {
               {step === 2 && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       What&apos;s the ideal opening line when meeting a homeowner?
                     </label>
                     <textarea
                       value={formData.openingLine}
                       onChange={(e) => updateField('openingLine', e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg h-24 focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 h-24"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       What should techs establish in the first 30 seconds?
                     </label>
                     <textarea
                       value={formData.first30Seconds}
                       onChange={(e) => updateField('first30Seconds', e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg h-24 focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 h-24"
                     />
                   </div>
                 </div>
@@ -394,9 +417,9 @@ export default function CreatePlaybookPage() {
                     </button>
                   </div>
                   {formData.objections.map((item, index) => (
-                    <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div key={index} className="border border-white/10 rounded-xl p-4 space-y-3 bg-gray-800">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
                           Objection
                         </label>
                         <input
@@ -404,23 +427,23 @@ export default function CreatePlaybookPage() {
                           value={item.objection}
                           onChange={(e) => updateObjection(index, 'objection', e.target.value)}
                           placeholder="I need to think about it"
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-300 mb-1">
                           Best Response
                         </label>
                         <textarea
                           value={item.response}
                           onChange={(e) => updateObjection(index, 'response', e.target.value)}
-                          className="w-full px-3 py-2 border rounded-lg h-20 focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 h-20"
                         />
                       </div>
                       {formData.objections.length > 1 && (
                         <button
                           onClick={() => removeObjection(index)}
-                          className="text-sm text-red-600 hover:text-red-800"
+                          className="text-sm text-red-400 hover:text-red-300"
                         >
                           Remove
                         </button>
@@ -448,12 +471,12 @@ export default function CreatePlaybookPage() {
                           type="text"
                           value={item}
                           onChange={(e) => updateListItem('mustMention', index, e.target.value)}
-                          className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                         />
                         {formData.mustMention.length > 1 && (
                           <button
                             onClick={() => removeListItem('mustMention', index)}
-                            className="text-sm text-red-600 hover:text-red-800"
+                            className="text-sm text-red-400 hover:text-red-300"
                           >
                             Remove
                           </button>
@@ -478,12 +501,12 @@ export default function CreatePlaybookPage() {
                           type="text"
                           value={item}
                           onChange={(e) => updateListItem('neverSay', index, e.target.value)}
-                          className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
                         />
                         {formData.neverSay.length > 1 && (
                           <button
                             onClick={() => removeListItem('neverSay', index)}
-                            className="text-sm text-red-600 hover:text-red-800"
+                            className="text-sm text-red-400 hover:text-red-300"
                           >
                             Remove
                           </button>
@@ -497,23 +520,23 @@ export default function CreatePlaybookPage() {
               {step === 5 && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       How should techs ask for the commitment?
                     </label>
                     <textarea
                       value={formData.closingAsk}
                       onChange={(e) => updateField('closingAsk', e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg h-24 focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 h-24"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-300 mb-1">
                       What&apos;s the ideal outcome of the conversation?
                     </label>
                     <textarea
                       value={formData.idealOutcome}
                       onChange={(e) => updateField('idealOutcome', e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg h-24 focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-gray-800 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 h-24"
                     />
                   </div>
                 </div>
@@ -521,9 +544,9 @@ export default function CreatePlaybookPage() {
 
               {step === 6 && (
                 <div className="space-y-6">
-                  <div className="border rounded-lg p-4 bg-gray-50">
+                  <div className="border border-white/10 rounded-xl p-4 bg-gray-800">
                     <h2 className="text-xl font-semibold mb-3">Review</h2>
-                    <div className="space-y-4 text-sm text-gray-800">
+                    <div className="space-y-4 text-sm text-gray-300">
                       <div>
                         <div className="font-semibold">Playbook Name</div>
                         <div>{formData.name || '—'}</div>
@@ -578,7 +601,7 @@ export default function CreatePlaybookPage() {
                   </div>
 
                   {error && (
-                    <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded-lg">
+                    <div className="text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-lg">
                       {error}
                     </div>
                   )}
@@ -597,7 +620,7 @@ export default function CreatePlaybookPage() {
                 <button
                   onClick={() => setStep((prev) => Math.max(1, prev - 1))}
                   disabled={step === 1}
-                  className="px-4 py-2 border rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 border border-white/10 rounded-lg text-gray-300 disabled:opacity-50 hover:bg-gray-800 transition-colors"
                 >
                   Back
                 </button>
@@ -619,7 +642,7 @@ export default function CreatePlaybookPage() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => { setCreateMode('choose'); setChatMessages([]); setUploadedText(''); setUploadFileName(''); }}
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
+                  className="text-gray-500 hover:text-white transition-colors text-sm"
                 >
                   ← Back
                 </button>

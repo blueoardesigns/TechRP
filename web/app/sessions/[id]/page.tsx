@@ -1,6 +1,9 @@
 import Link from 'next/link';
-import { createServiceSupabase, createServerSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient as createServiceSupabase } from '@/lib/supabase';
 import { ShareDialog } from './share-dialog';
+import { RecordingPlayer } from './recording-player';
+import { CoachNotes } from './coach-notes';
 import { notFound } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { getDisplayScore, gradeColor, type Assessment } from '@/lib/scoring';
@@ -93,7 +96,7 @@ function ScoreBadge({ assessment }: { assessment: Assessment }) {
   );
 }
 
-export default async function SessionDetailPage({ params }: { params: { id: string } }) {
+export default async function SessionDetailPage({ params, searchParams }: { params: { id: string }; searchParams?: { back?: string } }) {
   const session = await getSession(params.id);
   if (!session) notFound();
   const playbook = await getPlaybookForScenario((session as any).persona_scenario_type ?? null);
@@ -105,14 +108,17 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
   const personaName = (session as any).persona_name;
   const scenarioType = (session as any).persona_scenario_type;
 
+  const backHref = searchParams?.back ?? '/sessions';
+  const backLabel = backHref.startsWith('/coach') ? '← Coach Hub' : '← Sessions';
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-          <Link href="/sessions" className="text-sm text-gray-400 hover:text-white transition-colors">
-            ← Sessions
+          <Link href={backHref} className="text-sm text-gray-400 hover:text-white transition-colors">
+            {backLabel}
           </Link>
           <h1 className="text-sm font-semibold text-white">Session Details</h1>
           {isOwner ? (
@@ -198,29 +204,17 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
           </div>
         )}
 
+        {/* ── Coach Notes ───────────────────────────────────────────────────── */}
+        <CoachNotes sessionId={params.id} />
+
         {/* ── Recording ─────────────────────────────────────────────────────── */}
         <div className="bg-gray-900 border border-white/10 rounded-2xl p-5">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Call Recording</p>
-          {session.recording_url ? (
-            <div className="space-y-2">
-              <audio controls className="w-full h-10 [&::-webkit-media-controls-panel]:bg-gray-800 rounded-lg">
-                <source src={session.recording_url} type="audio/mpeg" />
-                <source src={session.recording_url} type="audio/wav" />
-              </audio>
-              <a
-                href={session.recording_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Download recording →
-              </a>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-600">
-              {session.vapi_call_id ? 'Recording may still be processing.' : 'No recording available.'}
-            </p>
-          )}
+          <RecordingPlayer
+            sessionId={params.id}
+            vapiCallId={(session as any).vapi_call_id ?? null}
+            initialUrl={(session as any).recording_url ?? null}
+          />
         </div>
 
         {/* ── Transcript ────────────────────────────────────────────────────── */}
