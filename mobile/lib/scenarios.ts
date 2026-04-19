@@ -114,7 +114,7 @@ const VOICE_POOLS = {
 };
 
 export function pickVoice(persona: { id: string; gender?: 'male' | 'female' }): string {
-  const pool = persona.gender === 'male' ? VOICE_POOLS.male : VOICE_POOLS.female;
+  const pool = VOICE_POOLS[persona.gender ?? 'female'];
   let hash = 0;
   for (let i = 0; i < persona.id.length; i++) {
     hash = (hash * 31 + persona.id.charCodeAt(i)) >>> 0;

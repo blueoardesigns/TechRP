@@ -31,6 +31,11 @@ describe('pickVoice', () => {
     const b = pickVoice({ id: 'persona_123' });
     expect(a).toBe(b);
   });
+
+  it('defaults to female voice when gender is undefined', () => {
+    const voice = pickVoice({ id: 'no-gender' });
+    expect(['sarah', 'rachel', 'domi', 'bella']).toContain(voice);
+  });
 });
 
 describe('getScenarioConfig', () => {
