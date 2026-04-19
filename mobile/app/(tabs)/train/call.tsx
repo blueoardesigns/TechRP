@@ -103,31 +103,34 @@ export default function CallScreen() {
 
     // 2. Save session to Supabase
     const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id ?? null;
     const { data: profile } = await supabase
       .from('users')
       .select('organization_id')
-      .eq('auth_user_id', user?.id)
+      .eq('auth_user_id', userId ?? '')
       .single();
-    const { data: session } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const insertPayload: any = {
+      user_id: userId,
+      organization_id: (profile as any)?.organization_id ?? null,
+      persona_id: persona.id,
+      persona_name: persona.name,
+      persona_scenario_type: persona.scenario_type,
+      transcript,
+      assessment,
+      started_at: callStartRef.current.toISOString(),
+      ended_at: new Date().toISOString(),
+    };
+    const { data: sessionData } = await supabase
       .from('training_sessions')
-      .insert({
-        user_id: user?.id,
-        organization_id: profile?.organization_id,
-        persona_id: persona.id,
-        persona_name: persona.name,
-        persona_scenario_type: persona.scenario_type,
-        transcript,
-        assessment,
-        started_at: callStartRef.current.toISOString(),
-        ended_at: new Date().toISOString(),
-      })
+      .insert(insertPayload)
       .select('id')
       .single();
 
     // 3. Navigate to assessment
     router.replace({
       pathname: '/(tabs)/train/assessment',
-      params: { sessionId: session?.id ?? '' },
+      params: { sessionId: (sessionData as { id: string } | null)?.id ?? '' },
     });
   };
 

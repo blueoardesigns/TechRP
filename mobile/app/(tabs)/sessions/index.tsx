@@ -18,7 +18,7 @@ export default function SessionsListScreen() {
       const { data } = await supabase
         .from('training_sessions')
         .select('id, persona_name, persona_scenario_type, assessment, created_at')
-        .eq('user_id', user?.id)
+        .eq('user_id', user?.id ?? '')
         .order('created_at', { ascending: false });
       setSessions((data ?? []) as TrainingSession[]);
       setLoading(false);

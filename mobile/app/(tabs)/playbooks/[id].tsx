@@ -19,7 +19,7 @@ export default function PlaybookDetailScreen() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        setPlaybook(data as Playbook);
+        setPlaybook(data as Playbook | null);
         setLoading(false);
       });
   }, [id]);

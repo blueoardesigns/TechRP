@@ -20,7 +20,7 @@ export default function AssessmentScreen() {
       .eq('id', sessionId)
       .single()
       .then(({ data }) => {
-        setAssessment(data?.assessment ?? null);
+        setAssessment((data as { assessment: unknown } | null)?.assessment as Assessment | null ?? null);
         setLoading(false);
       });
   }, [sessionId]);

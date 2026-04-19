@@ -24,7 +24,7 @@ export default function SessionDetailScreen() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        setSession(data as TrainingSession);
+        setSession(data as TrainingSession | null);
         setLoading(false);
       });
   }, [id]);
@@ -37,7 +37,7 @@ export default function SessionDetailScreen() {
       .eq('scenario_type', session.persona_scenario_type)
       .eq('is_active', true);
     if (!data || data.length === 0) return;
-    const persona = data[Math.floor(Math.random() * data.length)];
+    const persona = data[Math.floor(Math.random() * data.length)] as { id: string };
     router.push({
       pathname: '/(tabs)/train/pre-call',
       params: { scenarioType: session.persona_scenario_type, personaId: persona.id },
