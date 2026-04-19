@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, radius, typography } from '../../lib/theme';
 
-const SIGNUP_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL}/signup`;
+const SIGNUP_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://techrp.com'}/signup`;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,7 +21,7 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     setLoading(false);
     if (error) {
       Alert.alert('Login Failed', error.message);
@@ -45,6 +45,7 @@ export default function LoginScreen() {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
           textContentType="emailAddress"
         />

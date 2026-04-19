@@ -19,7 +19,7 @@ export default function ForgotPasswordScreen() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
     setLoading(false);
     if (error) {
       Alert.alert('Error', error.message);
@@ -56,6 +56,7 @@ export default function ForgotPasswordScreen() {
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
+              autoCorrect={false}
               keyboardType="email-address"
               textContentType="emailAddress"
             />
