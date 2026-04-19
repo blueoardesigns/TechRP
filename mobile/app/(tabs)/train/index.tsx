@@ -1,4 +1,4 @@
-import { SectionList, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { SectionList, View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../../lib/supabase';
@@ -15,12 +15,14 @@ export default function ScenarioPickerScreen() {
     setLoading(true);
     const { data, error } = await supabase
       .from('personas')
-      .select('*')
+      .select('id, name, scenario_type, personality_type, brief_description, speaker_label, gender, system_prompt, first_message')
       .eq('scenario_type', scenario.type)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .limit(20);
 
     if (error || !data || data.length === 0) {
       setLoading(false);
+      Alert.alert('No personas available', 'No active personas are set up for this scenario. Contact your manager.');
       return;
     }
 
