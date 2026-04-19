@@ -28,7 +28,7 @@ export default function RootLayout() {
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)/train');
     }
-  }, [session, segments]);
+  }, [session, segments, router]);
 
   // Show blank dark screen while auth state resolves
   if (session === undefined) {
