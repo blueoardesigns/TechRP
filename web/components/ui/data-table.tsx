@@ -18,7 +18,7 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T>({ columns, rows, getKey, onRowClick, emptyState }: DataTableProps<T>) {
-  if (rows.length === 0 && emptyState) return <>{emptyState}</>;
+  if (rows.length === 0) return emptyState ? <>{emptyState}</> : null;
 
   return (
     <div className="overflow-x-auto">

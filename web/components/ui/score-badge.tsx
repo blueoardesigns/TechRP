@@ -1,3 +1,7 @@
+/**
+ * Score expected on a 0–100 scale.
+ * Use getDisplayScore() from @/lib/scoring to normalize raw DB values (1–10) before passing here.
+ */
 interface ScoreBadgeProps {
   score: number;
   size?: 'sm' | 'md';
