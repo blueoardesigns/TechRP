@@ -3,13 +3,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Vapi from '@vapi-ai/web';
+import { AppShell } from '@/components/app-shell';
 import { saveTrainingSession, updateSessionAssessment, updateSessionRecording } from '@/lib/training-sessions';
 import { generateAssessment } from '@/lib/assessment';
 import {
   SCENARIOS,
   type ScenarioType,
   type ScenarioGroup,
-  type ScenarioConfig,
   type Persona,
 } from '@/lib/personas';
 import { useAuth } from '@/components/auth-provider';
@@ -88,62 +88,6 @@ const GROUP_LABELS: Record<ScenarioGroup, string> = {
   technician: 'Technician Scenarios',
   bizdev: 'Business Development',
 };
-
-// ─── Scenario card ────────────────────────────────────────────────────────────
-
-function ScenarioCard({
-  scenario,
-  onSelect,
-  disabled,
-  labelOverride,
-}: {
-  scenario: ScenarioConfig;
-  onSelect: (type: ScenarioType) => void;
-  disabled: boolean;
-  labelOverride?: string;
-}) {
-  const isDiscovery = scenario.callType === 'discovery';
-  return (
-    <button
-      onClick={() => onSelect(scenario.type)}
-      disabled={disabled}
-      className="group relative text-left bg-gray-900 border border-white/10 hover:border-white/30 rounded-2xl p-6 transition-all hover:-translate-y-0.5 hover:shadow-xl disabled:opacity-50 disabled:cursor-wait"
-    >
-      {/* Hover accent bar */}
-      <div className={`absolute top-0 left-6 right-6 h-0.5 rounded-full bg-gradient-to-r ${isDiscovery ? 'from-indigo-500 to-violet-500' : 'from-blue-500 to-indigo-500'} opacity-0 group-hover:opacity-100 transition-opacity`} />
-      {/* Call type badge */}
-      <div className="absolute top-4 right-4">
-        <span className={`text-[10px] font-semibold tracking-widest uppercase px-2 py-0.5 rounded-full border ${isDiscovery ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
-          {isDiscovery ? 'Discovery' : 'Cold Call'}
-        </span>
-      </div>
-      <div className="text-3xl mb-3">{scenario.icon}</div>
-      <h3 className={`font-semibold text-white mb-1 transition-colors pr-16 ${isDiscovery ? 'group-hover:text-indigo-400' : 'group-hover:text-blue-400'}`}>
-        {labelOverride ?? scenario.label}
-      </h3>
-      <p className="text-sm text-gray-500 leading-relaxed pr-2">{scenario.description}</p>
-      <p className={`text-xs mt-3 font-medium opacity-0 group-hover:opacity-100 transition-opacity ${isDiscovery ? 'text-indigo-400' : 'text-blue-400'}`}>
-        Select →
-      </p>
-    </button>
-  );
-}
-
-// ─── Shared nav header ────────────────────────────────────────────────────────
-
-function PageHeader({ onBack, title }: { onBack: () => void; title: string }) {
-  return (
-    <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
-      <div className="max-w-5xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-        <button onClick={onBack} className="text-sm text-gray-400 hover:text-white transition-colors">
-          ← TechRP
-        </button>
-        <h1 className="text-sm font-semibold text-white">{title}</h1>
-        <div className="w-20" />
-      </div>
-    </header>
-  );
-}
 
 // ─── Difficulty modifiers ─────────────────────────────────────────────────────
 
@@ -552,323 +496,346 @@ export default function TrainingPage() {
     discovery: accessibleScenarios.find(s => s.type === g.discoveryType) ?? null,
   })).filter(g => g.cold || g.discovery);
 
-  // ── Phase: Scenario Selection ──────────────────────────────────────────────
+  // ── Phase: Setup (scenario-select + persona-preview) ──────────────────────
 
-  if (phase === 'scenario-select') {
-    if (user?.scenarioAccess?.length && !accessibleScenarios.length) {
-      return (
-        <div className="min-h-screen bg-gray-950 text-white">
-          <PageHeader onBack={() => router.push('/')} title="Start Training" />
-          <div className="py-20 text-center text-gray-500">
-            <p>No training scenarios are available for your account.</p>
-            <p className="text-sm mt-2">Contact your admin to get access.</p>
-          </div>
-        </div>
-      );
-    }
-
+  if (phase === 'scenario-select' || phase === 'persona-preview') {
     return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <PageHeader onBack={() => router.push('/')} title="Start Training" />
+      <AppShell>
+        <div className="px-6 pt-8 pb-12 max-w-3xl mx-auto">
+          <h1 className="text-xl font-bold text-white">Start a training call</h1>
+          <p className="text-sm text-slate-400 mt-1">Choose your scenario and we&apos;ll assign a matching persona</p>
 
-        <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-10">
-
-          {/* Technician Scenarios */}
-          {techScenarios.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-4">
-                Technician Scenarios
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {techScenarios.map((scenario) => (
-                  <ScenarioCard
-                    key={scenario.type}
-                    scenario={scenario}
-                    onSelect={handleSelectScenario}
-                    disabled={personasLoading}
-                  />
-                ))}
+          <div className="mt-8 space-y-8">
+            {/* Technician Scenarios */}
+            {techScenarios.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-3">
+                  Technician Scenarios
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {techScenarios.map((scenario) => (
+                    <button
+                      key={scenario.type}
+                      onClick={() => handleSelectScenario(scenario.type)}
+                      disabled={personasLoading}
+                      className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait ${
+                        selectedPersona?.scenarioType === scenario.type
+                          ? 'bg-sky-500/10 border-sky-500/40 text-white'
+                          : 'bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300'
+                      }`}
+                    >
+                      <span className="text-2xl block mb-2">{scenario.icon}</span>
+                      <span className="text-sm font-semibold block">{scenario.label}</span>
+                      <span className="text-xs text-slate-500 block mt-0.5">{scenario.description}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Business Development — grouped by company type */}
-          {BD_COMPANY_GROUPS.length > 0 && (
-            <div>
-              <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-5">
-                Business Development
-              </p>
-              <div className="space-y-6">
-                {BD_COMPANY_GROUPS.map((group) => (
-                  <div key={group.label}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="h-px flex-1 bg-white/10" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-widest">
-                        {group.icon} {group.label}
-                      </span>
-                      <div className="h-px flex-1 bg-white/10" />
+            {/* Business Development — grouped by company type */}
+            {BD_COMPANY_GROUPS.length > 0 && (
+              <div>
+                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-3">
+                  Business Development
+                </p>
+                <div className="space-y-4">
+                  {BD_COMPANY_GROUPS.map((group) => (
+                    <div key={group.label}>
+                      <p className="text-[10px] text-slate-600 mb-2">{group.icon} {group.label}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {group.cold && (
+                          <button
+                            onClick={() => handleSelectScenario(group.cold!.type)}
+                            disabled={personasLoading}
+                            className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait ${
+                              selectedPersona?.scenarioType === group.cold.type
+                                ? 'bg-sky-500/10 border-sky-500/40 text-white'
+                                : 'bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300'
+                            }`}
+                          >
+                            <span className="text-2xl block mb-2">{group.cold.icon}</span>
+                            <span className="text-sm font-semibold block">Cold Call</span>
+                            <span className="text-xs text-slate-500 block mt-0.5">{group.cold.description}</span>
+                          </button>
+                        )}
+                        {group.discovery && (
+                          <button
+                            onClick={() => handleSelectScenario(group.discovery!.type)}
+                            disabled={personasLoading}
+                            className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait ${
+                              selectedPersona?.scenarioType === group.discovery.type
+                                ? 'bg-sky-500/10 border-sky-500/40 text-white'
+                                : 'bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300'
+                            }`}
+                          >
+                            <span className="text-2xl block mb-2">{group.discovery.icon}</span>
+                            <span className="text-sm font-semibold block">Discovery Meeting</span>
+                            <span className="text-xs text-slate-500 block mt-0.5">{group.discovery.description}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {group.cold && (
-                        <ScenarioCard
-                          key={group.cold.type}
-                          scenario={group.cold}
-                          labelOverride="Cold Call"
-                          onSelect={handleSelectScenario}
-                          disabled={personasLoading}
-                        />
-                      )}
-                      {group.discovery && (
-                        <ScenarioCard
-                          key={group.discovery.type}
-                          scenario={group.discovery}
-                          labelOverride="Discovery Meeting"
-                          onSelect={handleSelectScenario}
-                          disabled={personasLoading}
-                        />
-                      )}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {personasLoading && (
+              <p className="text-sm text-slate-500 animate-pulse text-center py-2">Loading personas…</p>
+            )}
+            {personasError && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+                {personasError}
+              </p>
+            )}
+
+            {/* Setup card — only when persona-preview phase and a persona is selected */}
+            {phase === 'persona-preview' && selectedPersona && (() => {
+              const scenario = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
+              return (
+                <div className="bg-[#0f172a] border border-white/[0.08] rounded-xl p-6 max-w-md space-y-5">
+                  {/* Difficulty */}
+                  <div>
+                    <p className="text-[10px] font-semibibold text-slate-600 uppercase tracking-widest mb-2">Difficulty</p>
+                    <div className="flex gap-2">
+                      {(['easy', 'medium', 'hard'] as const).map(d => (
+                        <button
+                          key={d}
+                          onClick={() => setDifficulty(d)}
+                          className={`flex-1 py-2 rounded-lg text-xs font-semibold capitalize border transition-colors cursor-pointer ${
+                            difficulty === d
+                              ? d === 'easy'   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                              : d === 'medium' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                                               : 'bg-red-500/20 text-red-400 border-red-500/40'
+                              : 'text-slate-600 border-white/[0.08] hover:text-slate-300'
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {personasLoading && (
-            <div className="text-center py-4 text-sm text-gray-500 animate-pulse">
-              Loading personas…
-            </div>
-          )}
-          {personasError && (
-            <div className="text-center py-4 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4">
-              {personasError}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+                  {/* Payment type — technician scenarios only */}
+                  {scenario.group === 'technician' && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2">Payment Type</p>
+                      <div className="flex gap-2">
+                        {([
+                          { value: 'potential_claim' as const, label: 'Insurance' },
+                          { value: 'self_pay' as const, label: 'Self Pay' },
+                          { value: 'random' as const, label: 'Random' },
+                        ]).map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onClick={() => setPaymentType(value)}
+                            className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
+                              paymentType === value
+                                ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+                                : 'text-slate-600 border-white/[0.08] hover:text-slate-300'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-  // ── Phase: Persona Preview ─────────────────────────────────────────────────
+                  {/* Persona preview row */}
+                  <div className="flex items-center justify-between bg-slate-800/50 rounded-lg px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-sky-500/20 border border-sky-500/30 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-sky-400">
+                          {selectedPersona.name.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-white leading-none">{selectedPersona.name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{selectedPersona.speakerLabel}</p>
+                      </div>
+                    </div>
+                    {scenarioPersonas.length > 1 && (
+                      <button
+                        onClick={handlePickDifferent}
+                        className="text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                      >
+                        ↺ Randomize
+                      </button>
+                    )}
+                  </div>
 
-  if (phase === 'persona-preview' && selectedPersona) {
-    const scenario = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
-
-    return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <PageHeader onBack={() => setPhase('scenario-select')} title={scenario.label} />
-
-        <div className="max-w-xl mx-auto px-8 py-12">
-          {/* Scenario badge */}
-          <div className="flex items-center gap-2 mb-8">
-            <span className="text-2xl">{scenario.icon}</span>
-            <span className="text-sm font-medium text-gray-400">{scenario.label}</span>
-          </div>
-
-          <p className="text-xs font-semibold tracking-widest text-gray-500 uppercase mb-2">
-            You&apos;ll be speaking with
-          </p>
-          <h2 className="text-3xl font-bold text-white mb-6">
-            {selectedPersona.name}
-          </h2>
-
-          {/* Persona card */}
-          <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden mb-6">
-            <div className="px-5 py-3 border-b border-white/10">
-              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
-                {selectedPersona.speakerLabel}
-              </p>
-            </div>
-            <div className="p-5">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">They say:</p>
-              <p className="text-gray-200 text-sm italic leading-relaxed">
-                &ldquo;{selectedPersona.firstMessage}&rdquo;
-              </p>
-            </div>
-          </div>
-
-          {/* Your role */}
-          <div className="flex items-start gap-3 bg-blue-600/10 border border-blue-500/20 rounded-xl px-4 py-3 mb-8">
-            <span className="text-blue-400 text-lg mt-0.5">👤</span>
-            <div>
-              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-0.5">Your Role</p>
-              <p className="text-sm text-white font-medium">{scenario.techRole}</p>
-            </div>
-          </div>
-
-          {/* Difficulty */}
-          <div className="mb-8">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Difficulty</p>
-            <div className="flex gap-2">
-              {(['easy', 'medium', 'hard'] as const).map(d => (
-                <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium capitalize transition-colors border ${
-                    difficulty === d
-                      ? d === 'easy'   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                      : d === 'medium' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40'
-                                       : 'bg-red-500/20 text-red-400 border-red-500/40'
-                      : 'bg-transparent text-gray-600 border-white/10 hover:border-white/20 hover:text-gray-400'
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Payment Type — technician scenarios only */}
-          {scenario.group === 'technician' && (
-            <div className="mb-8">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Payment Type</p>
-              <div className="flex gap-2">
-                {([
-                  { value: 'potential_claim' as const, label: 'Potential Claim' },
-                  { value: 'self_pay' as const, label: 'Self-Pay' },
-                  { value: 'random' as const, label: 'Random' },
-                ]).map(({ value, label }) => (
+                  {/* Start Call CTA */}
                   <button
-                    key={value}
-                    onClick={() => setPaymentType(value)}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors border ${
-                      paymentType === value
-                        ? value === 'potential_claim' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
-                        : value === 'self_pay'         ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                                                       : 'bg-gray-500/20 text-gray-400 border-gray-500/40'
-                        : 'bg-transparent text-gray-600 border-white/10 hover:border-white/20 hover:text-gray-400'
-                    }`}
+                    onClick={handleStartCall}
+                    disabled={!vapi}
+                    className="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    {label}
+                    Start Call
                   </button>
-                ))}
-              </div>
-            </div>
-          )}
 
-          {/* Actions */}
-          <div className="space-y-3">
-            <button
-              onClick={handleStartCall}
-              disabled={!vapi}
-              className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Start Training Call
-            </button>
-            {scenarioPersonas.length > 1 && (
-              <button
-                onClick={handlePickDifferent}
-                className="w-full py-2.5 text-sm text-gray-400 hover:text-white border border-white/10 hover:border-white/25 rounded-xl transition-colors"
-              >
-                Try a Different Person →
-              </button>
-            )}
-            <button
-              onClick={() => setPhase('scenario-select')}
-              className="w-full py-2 text-sm text-gray-600 hover:text-gray-400 transition-colors"
-            >
-              ← Change Scenario
-            </button>
+                  {/* Change scenario */}
+                  <button
+                    onClick={() => { setPhase('scenario-select'); setSelectedPersona(null); }}
+                    className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                  >
+                    ← Change Scenario
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   // ── Phase: Calling ─────────────────────────────────────────────────────────
 
   if (phase === 'calling' && selectedPersona) {
-    const scenario = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
     const isConnecting = callStatus === 'connecting';
     const isConnected = callStatus === 'connected';
+    const waveHeights = [6, 14, 22, 18, 28, 20, 26, 14, 22, 10, 18, 28, 16, 8];
 
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-        {/* Call header */}
-        <header className="border-b border-white/10 bg-gray-950/90 backdrop-blur shrink-0">
-          <div className="max-w-3xl mx-auto px-8 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-xl">{scenario.icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-white">{selectedPersona.name}</p>
-                <p className="text-xs text-gray-500">{scenario.label}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Status indicator */}
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${
-                  isConnected ? 'bg-emerald-400 animate-pulse' :
-                  isConnecting ? 'bg-yellow-400 animate-pulse' : 'bg-gray-500'
-                }`} />
-                <span className={`text-xs font-medium ${
-                  isConnected ? 'text-emerald-400' :
-                  isConnecting ? 'text-yellow-400' : 'text-gray-500'
-                }`}>
-                  {isConnected ? 'Live' : isConnecting ? 'Connecting…' : 'Ended'}
-                </span>
-                {/* Difficulty badge */}
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${
-                  difficulty === 'easy'   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' :
-                  difficulty === 'hard'   ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                                         : 'bg-yellow-500/15 text-yellow-400 border-yellow-500/30'
-                } capitalize`}>
-                  {difficulty}
-                </span>
-              </div>
-              {/* Save status */}
-              {saveStatus === 'saving' && <span className="text-xs text-yellow-400">Saving…</span>}
-              {saveStatus === 'assessing' && <span className="text-xs text-blue-400">Analyzing…</span>}
-              {saveStatus === 'error' && <span className="text-xs text-red-400">Save failed</span>}
-            </div>
+      <div
+        className="flex flex-col h-screen bg-[#020617] text-white"
+        style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+      >
+        {/* Top bar */}
+        <div className="h-11 bg-[#020617] border-b border-white/[0.06] flex items-center justify-between px-5 shrink-0">
+          {/* Left: logo */}
+          <div className="flex items-center gap-2">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="logoGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#0ea5e9" />
+                  <stop offset="100%" stopColor="#6366f1" />
+                </linearGradient>
+              </defs>
+              <rect width="18" height="18" rx="5" fill="url(#logoGrad)" />
+            </svg>
+            <span className="text-xs font-bold text-white">TechRP</span>
           </div>
-        </header>
 
-        {/* Transcript */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-3xl mx-auto px-8 py-6 space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center py-20 text-gray-600">
-                {isConnecting ? (
-                  <p className="animate-pulse text-sm">Connecting to {selectedPersona.name}…</p>
-                ) : (
-                  <p className="text-sm">Waiting for the conversation to begin…</p>
-                )}
-              </div>
-            ) : (
-              messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[78%] rounded-2xl px-4 py-3 ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-sm'
-                      : 'bg-gray-800 text-gray-100 rounded-bl-sm'
-                  }`}>
-                    <p className="text-xs font-semibold mb-1 opacity-60">
-                      {msg.role === 'user' ? scenario.techRole : selectedPersona.speakerLabel}
-                    </p>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                </div>
-              ))
-            )}
-            <div ref={transcriptEndRef} />
+          {/* Center: status pill */}
+          <div className={`flex items-center gap-1.5 rounded-full px-3 py-1 border ${
+            isConnected
+              ? 'bg-emerald-500/15 border-emerald-500/25'
+              : isConnecting
+              ? 'bg-amber-500/15 border-amber-500/25'
+              : 'bg-slate-800/50 border-white/[0.06]'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              isConnected ? 'bg-emerald-400 animate-pulse' :
+              isConnecting ? 'bg-amber-400 animate-pulse' : 'bg-slate-500'
+            }`} />
+            <span className={`text-[10px] font-semibold ${
+              isConnected ? 'text-emerald-400' :
+              isConnecting ? 'text-amber-400' : 'text-slate-500'
+            }`}>
+              {isConnected ? 'Connected' : isConnecting ? 'Connecting…' : 'Idle'}
+            </span>
           </div>
+
+          {/* Right: back link */}
+          <button
+            onClick={() => { setPhase('scenario-select'); setSelectedPersona(null); }}
+            className="text-[10px] text-slate-500 hover:text-white transition-colors cursor-pointer"
+          >
+            ← Back to dashboard
+          </button>
         </div>
 
-        {/* End call footer */}
-        <div className="shrink-0 border-t border-white/10 bg-gray-950/90 backdrop-blur">
-          <div className="max-w-3xl mx-auto px-8 py-4 flex items-center justify-center gap-4">
-            {callStatus !== 'idle' ? (
-              <button
-                onClick={handleEndCall}
-                className="flex items-center gap-2 px-8 py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition-colors text-sm"
-              >
-                <span className="w-2 h-2 bg-white rounded-full" />
-                End Call
-              </button>
-            ) : (
-              <p className="text-sm text-gray-500">Call ended — saving your session…</p>
-            )}
+        {/* Body */}
+        <div className="flex flex-1 min-h-0">
+          {/* Left panel */}
+          <div className="w-[42%] shrink-0 border-r border-white/[0.08] flex flex-col items-center justify-center gap-5 p-6 bg-[#020617]">
+            {/* Persona avatar */}
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-sky-500/25 to-indigo-500/25 border-2 border-sky-500/40 flex items-center justify-center">
+                <span className="text-2xl font-extrabold text-white">
+                  {selectedPersona.name.charAt(0)}
+                </span>
+              </div>
+              <span className="absolute bottom-0.5 right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#020617]" />
+            </div>
+
+            <div className="text-center">
+              <p className="text-sm font-semibold text-white">{selectedPersona.name}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{selectedPersona.speakerLabel}</p>
+            </div>
+
+            {/* Waveform */}
+            <div className="flex items-end gap-[3px] h-8">
+              {waveHeights.map((h, i) => (
+                <div
+                  key={i}
+                  className="w-1 rounded-sm bg-sky-500 transition-opacity"
+                  style={{
+                    height: `${h}px`,
+                    opacity: isConnected ? (i % 3 === 0 ? 0.9 : i % 3 === 1 ? 0.7 : 0.6) : 0.2,
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Status pill */}
+            <span className="text-[10px] text-slate-500 bg-slate-800 px-3 py-1.5 rounded-full">
+              {isConnecting
+                ? 'Connecting…'
+                : isConnected
+                ? `${selectedPersona.name} is speaking…`
+                : 'Call ended'}
+            </span>
+
+            {/* End Call button */}
+            <button
+              onClick={handleEndCall}
+              disabled={callStatus === 'idle'}
+              className="w-full max-w-[200px] py-2.5 bg-red-500/10 border border-red-500/25 text-red-400 rounded-lg text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer hover:bg-red-500/20"
+            >
+              End Call
+            </button>
+          </div>
+
+          {/* Right panel — transcript */}
+          <div className="flex-1 flex flex-col min-h-0 bg-[#0a1628]">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between shrink-0">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Live Transcript</span>
+              <span className="text-[10px] text-slate-600">Auto-scrolling</span>
+            </div>
+
+            {/* Bubble feed */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+              {messages.length === 0 ? (
+                <p className="text-xs text-slate-600 text-center mt-8 animate-pulse">
+                  {isConnecting
+                    ? `Connecting to ${selectedPersona.name}…`
+                    : 'Waiting for the conversation to begin…'}
+                </p>
+              ) : (
+                messages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[78%] px-3 py-2 ${
+                      msg.role === 'user'
+                        ? 'bg-sky-500/15 border border-sky-500/20 rounded-xl rounded-br-none'
+                        : 'bg-slate-800 border border-white/[0.06] rounded-xl rounded-bl-none'
+                    }`}>
+                      <p className={`text-[9px] font-semibold mb-1 ${
+                        msg.role === 'user' ? 'text-emerald-400' : 'text-sky-400'
+                      }`}>
+                        {msg.role === 'user' ? 'You' : selectedPersona.name}
+                      </p>
+                      <p className="text-xs text-slate-300 leading-relaxed">{msg.content}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={transcriptEndRef} />
+            </div>
           </div>
         </div>
       </div>
@@ -879,47 +846,46 @@ export default function TrainingPage() {
 
   if (phase === 'post-call') {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-8">
-        <div className="max-w-sm w-full text-center space-y-6">
-          <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto">
-            <span className="text-3xl">✓</span>
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white mb-2">Session Complete</h2>
-            <p className="text-gray-400 text-sm">Your session has been saved and assessed by AI.</p>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            {lastSessionId && (
+      <AppShell>
+        <div className="px-6 pt-8 pb-12 max-w-lg mx-auto">
+          <div className="bg-[#0f172a] border border-white/[0.08] rounded-xl p-8 text-center space-y-5">
+            {/* Score ring placeholder */}
+            <div className="mx-auto w-20 h-20 rounded-full bg-sky-500/10 border-2 border-sky-500/30 flex items-center justify-center">
+              <span className="text-2xl">✓</span>
+            </div>
+            {saveStatus === 'saving'    && <p className="text-sm text-amber-400 animate-pulse">Saving session…</p>}
+            {saveStatus === 'assessing' && <p className="text-sm text-sky-400 animate-pulse">Analyzing your session…</p>}
+            {saveStatus === 'error'     && <p className="text-sm text-red-400">Save failed. Check console.</p>}
+            <div>
+              <h2 className="text-xl font-bold text-white">Session Complete</h2>
+              <p className="text-sm text-slate-400 mt-1">Your session has been saved and assessed by AI.</p>
+            </div>
+            <div className="space-y-3 pt-2">
+              {lastSessionId && (
+                <a
+                  href={`/sessions/${lastSessionId}`}
+                  className="block w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-semibold rounded-lg text-sm transition-colors"
+                >
+                  View full session →
+                </a>
+              )}
               <button
-                onClick={() => router.push(`/sessions/${lastSessionId}`)}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                onClick={() => {
+                  setPhase('scenario-select');
+                  setSelectedPersona(null);
+                  setMessages([]);
+                  messagesRef.current = [];
+                  setSaveStatus('idle');
+                  setLastSessionId(null);
+                }}
+                className="w-full py-3 bg-transparent border border-white/[0.08] text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
               >
-                View Assessment →
+                Start another
               </button>
-            )}
-            <button
-              onClick={() => {
-                setPhase('scenario-select');
-                setSelectedPersona(null);
-                setMessages([]);
-                messagesRef.current = [];
-                setSaveStatus('idle');
-                setLastSessionId(null);
-              }}
-              className="w-full py-3 bg-gray-900 hover:bg-gray-800 border border-white/10 text-white font-medium rounded-xl transition-colors"
-            >
-              Train Again
-            </button>
-            <button
-              onClick={() => router.push('/')}
-              className="w-full py-2.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              Back to Dashboard
-            </button>
+            </div>
           </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
