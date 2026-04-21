@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AppShell } from '@/components/app-shell';
 
 const SECTIONS = [
   {
@@ -19,7 +20,7 @@ const SECTIONS = [
 
 export default function AdminHubPage() {
   return (
-    <div className="min-h-screen bg-gray-950 text-white px-6 py-10">
+    <AppShell>
       <div className="max-w-2xl mx-auto space-y-8">
         <h1 className="text-2xl font-bold">Superadmin</h1>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -36,6 +37,6 @@ export default function AdminHubPage() {
           ))}
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
-import { AppNav } from '@/components/nav';
+import { AppShell } from '@/components/app-shell';
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth();
@@ -52,8 +52,7 @@ export default function AccountPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <AppNav />
+    <AppShell>
       <div className="max-w-xl mx-auto px-6 sm:px-10 py-12">
         <h1 className="text-2xl font-bold text-white mb-1">Account Settings</h1>
         <p className="text-sm text-gray-500 mb-8">
@@ -133,6 +132,6 @@ export default function AccountPage() {
           ← Back
         </button>
       </div>
-    </div>
+    </AppShell>
   );
 }

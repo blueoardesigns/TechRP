@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
+import { AppShell } from '@/components/app-shell';
 
 interface BroadcastRow {
   id: string;
@@ -63,11 +64,11 @@ export default function BroadcastPage() {
   };
 
   if (!user || user.role !== 'superuser') {
-    return <div className="min-h-screen bg-gray-950 text-white p-10">Loading…</div>;
+    return <AppShell><div className="p-10">Loading…</div></AppShell>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <AppShell>
       <div className="max-w-3xl mx-auto px-6 py-10 space-y-8">
         <header>
           <h1 className="text-2xl font-bold">Global Broadcast</h1>
@@ -139,6 +140,6 @@ export default function BroadcastPage() {
           )}
         </section>
       </div>
-    </div>
+    </AppShell>
   );
 }

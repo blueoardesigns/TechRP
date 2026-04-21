@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppShell } from '@/components/app-shell';
 import { SCENARIOS, type ScenarioType } from '@/lib/personas';
 import { SkeletonPlaybookCard } from '@/components/skeleton';
 import type { Database } from '../../../shared/types/database';
@@ -123,7 +124,7 @@ export default function PlaybooksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <AppShell>
 
       {/* Header */}
       <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
@@ -166,6 +167,6 @@ export default function PlaybooksPage() {
           </>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

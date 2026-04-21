@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth-provider'
+import { AppShell } from '@/components/app-shell'
 
 type Referral = {
   id: string
@@ -46,7 +47,7 @@ export default function CoachReferralsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white py-10 px-4">
+    <AppShell>
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">My Referrals</h1>
@@ -131,6 +132,6 @@ export default function CoachReferralsPage() {
           ))}
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

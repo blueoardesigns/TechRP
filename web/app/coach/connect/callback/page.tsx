@@ -1,6 +1,7 @@
 'use client'
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { AppShell } from '@/components/app-shell'
 
 function CallbackInner() {
   const params = useSearchParams()
@@ -30,7 +31,8 @@ function CallbackInner() {
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+    <AppShell>
+      <div className="flex items-center justify-center min-h-[60vh]">
       <div className="text-center space-y-3">
         {status === 'loading' && <p className="text-gray-400">Connecting your Stripe account...</p>}
         {status === 'success' && (
@@ -46,7 +48,8 @@ function CallbackInner() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   )
 }
 

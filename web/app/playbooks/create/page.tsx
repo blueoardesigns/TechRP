@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/auth-provider';
+import { AppShell } from '@/components/app-shell';
 
 type ObjectionItem = {
   objection: string;
@@ -280,7 +281,7 @@ export default function CreatePlaybookPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white py-8 px-4">
+    <AppShell>
       <div className="max-w-4xl mx-auto">
         <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
 
@@ -762,6 +763,6 @@ export default function CreatePlaybookPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

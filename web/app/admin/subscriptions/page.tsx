@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase'
 import { PLAN_LABEL } from '@/lib/plans'
+import { AppShell } from '@/components/app-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,7 +26,7 @@ export default async function AdminSubscriptionsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white py-10 px-4">
+    <AppShell>
       <div className="max-w-6xl mx-auto space-y-8">
         <h1 className="text-2xl font-bold">Subscriptions</h1>
 
@@ -93,6 +94,6 @@ export default async function AdminSubscriptionsPage() {
           </table>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

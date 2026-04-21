@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/components/auth-provider';
-import { AppNav } from '@/components/nav';
+import { AppShell } from '@/components/app-shell';
 import { useRouter } from 'next/navigation';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -225,8 +225,7 @@ export default function TeamPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <AppNav />
+    <AppShell>
       <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-2xl font-bold">My Team</h1>
@@ -669,6 +668,6 @@ export default function TeamPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

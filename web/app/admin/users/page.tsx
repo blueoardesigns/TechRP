@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
+import { AppShell } from '@/components/app-shell';
 import { SkeletonRow } from '@/components/skeleton';
 
 interface AdminUser {
@@ -202,7 +203,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <AppShell>
       <div className="max-w-7xl mx-auto px-4 sm:px-8 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -432,6 +433,6 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

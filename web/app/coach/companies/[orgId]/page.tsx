@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { AppNav } from '@/components/nav';
+import { AppShell } from '@/components/app-shell';
 import { getDisplayScore } from '@/lib/scoring';
 
 const SCENARIO_LABELS: Record<string, string> = {
@@ -101,16 +101,14 @@ export default function CompanySessionsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white">
-        <AppNav />
+      <AppShell>
         <div className="max-w-5xl mx-auto px-6 py-16 text-center text-gray-500">Loading…</div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <AppNav />
+    <AppShell>
       <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-8">
 
         {/* Header */}
@@ -227,6 +225,6 @@ export default function CompanySessionsPage() {
         </div>
 
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AppNav } from '@/components/nav';
+import { AppShell } from '@/components/app-shell';
 
 interface Metrics {
   totalSessions: number;
@@ -41,8 +41,7 @@ export default function InsightsPage() {
   const maxCount = scenarioEntries.length ? Math.max(...scenarioEntries.map(([, c]) => c)) : 1;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <AppNav />
+    <AppShell>
       <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-8">
         <h1 className="text-2xl font-bold">Analytics</h1>
 
@@ -83,6 +82,6 @@ export default function InsightsPage() {
           </>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

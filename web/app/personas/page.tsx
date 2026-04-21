@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
+import { AppShell } from '@/components/app-shell';
 import { SCENARIOS, type ScenarioGroup, type ScenarioType } from '@/lib/personas';
 
 interface DBPersona {
@@ -265,7 +266,7 @@ export default function PersonasPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <AppShell>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
@@ -536,6 +537,6 @@ export default function PersonasPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

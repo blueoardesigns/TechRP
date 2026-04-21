@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
+import { AppShell } from '@/components/app-shell';
 
 function UpgradeInner() {
   const searchParams = useSearchParams();
@@ -37,7 +38,8 @@ function UpgradeInner() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-6">
+    <AppShell>
+      <div className="flex items-center justify-center min-h-[60vh] px-6">
       <div className="max-w-sm w-full text-center space-y-6">
         <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto text-3xl">🚀</div>
         <h1 className="text-2xl font-bold">Activate Full Account</h1>
@@ -61,7 +63,8 @@ function UpgradeInner() {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </AppShell>
   );
 }
 

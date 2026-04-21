@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import * as React from 'react';
 import { useAuth } from '@/components/auth-provider';
-import { AppNav } from '@/components/nav';
+import { AppShell } from '@/components/app-shell';
 import { useRouter } from 'next/navigation';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -153,8 +153,7 @@ export default function CoachPage() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <AppNav />
+    <AppShell>
       <div className="max-w-5xl mx-auto px-6 sm:px-10 py-10 space-y-8">
 
         {/* Header + invite link */}
@@ -444,6 +443,6 @@ export default function CoachPage() {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

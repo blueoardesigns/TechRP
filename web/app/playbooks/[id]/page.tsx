@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { AppShell } from '@/components/app-shell';
 import ReactMarkdown from 'react-markdown';
 import type { Database } from '../../../../shared/types/database';
 
@@ -225,27 +226,31 @@ export default function PlaybookDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center text-gray-500 text-sm">
-        Loading…
-      </div>
+      <AppShell>
+        <div className="flex items-center justify-center min-h-[60vh] text-gray-500 text-sm">
+          Loading…
+        </div>
+      </AppShell>
     );
   }
 
   if (!playbook) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-400 mb-4">{error || 'Playbook not found'}</p>
-          <button onClick={() => router.push('/playbooks')} className="text-sm text-blue-400 hover:text-blue-300">
-            ← Back to Playbooks
-          </button>
+      <AppShell>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <p className="text-gray-400 mb-4">{error || 'Playbook not found'}</p>
+            <button onClick={() => router.push('/playbooks')} className="text-sm text-blue-400 hover:text-blue-300">
+              ← Back to Playbooks
+            </button>
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <AppShell>
 
       {/* ── Sticky header ──────────────────────────────────────────────────────── */}
       <header className="border-b border-white/10 bg-gray-950/90 backdrop-blur sticky top-0 z-10 shrink-0">
@@ -388,6 +393,6 @@ export default function PlaybookDetailPage() {
         </div>
       )}
 
-    </div>
+    </AppShell>
   );
 }

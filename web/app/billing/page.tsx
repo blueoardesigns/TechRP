@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/auth-provider'
+import { AppShell } from '@/components/app-shell'
 import { UsageBar } from '@/components/billing/usage-bar'
 import { getPlanMinutes, PLAN_LABEL } from '@/lib/plans'
 
@@ -45,7 +46,7 @@ export default function BillingPage() {
   const trialEnd = billing?.trialEnd as string | undefined
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white py-10 px-4">
+    <AppShell>
       <div className="max-w-2xl mx-auto space-y-6">
         <h1 className="text-2xl font-bold">Billing &amp; Usage</h1>
 
@@ -118,6 +119,6 @@ export default function BillingPage() {
           </button>
         </div>
       </div>
-    </div>
+    </AppShell>
   )
 }

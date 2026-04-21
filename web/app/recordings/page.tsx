@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AppShell } from '@/components/app-shell';
 import { getDisplayScore } from '@/lib/scoring';
 
 type Stage = 'idle' | 'uploading' | 'transcribing' | 'assessing' | 'done' | 'error';
@@ -89,7 +90,7 @@ export default function RecordingsPage() {
   const fileSizeMB = file ? (file.size / 1024 / 1024).toFixed(1) : null;
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <AppShell>
 
       {/* Header */}
       <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
@@ -285,6 +286,6 @@ export default function RecordingsPage() {
         )}
 
       </div>
-    </div>
+    </AppShell>
   );
 }
