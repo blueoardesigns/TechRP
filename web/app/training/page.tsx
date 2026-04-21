@@ -84,11 +84,6 @@ interface Message {
   timestamp: Date;
 }
 
-const GROUP_LABELS: Record<ScenarioGroup, string> = {
-  technician: 'Technician Scenarios',
-  bizdev: 'Business Development',
-};
-
 // ─── Difficulty modifiers ─────────────────────────────────────────────────────
 
 const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
@@ -499,6 +494,18 @@ export default function TrainingPage() {
   // ── Phase: Setup (scenario-select + persona-preview) ──────────────────────
 
   if (phase === 'scenario-select' || phase === 'persona-preview') {
+    // Guard: user has explicit scenarioAccess configured but none are accessible
+    if (user?.scenarioAccess?.length && !accessibleScenarios.length) {
+      return (
+        <AppShell>
+          <div className="px-6 pt-20 text-center text-slate-500">
+            <p>No training scenarios are available for your account.</p>
+            <p className="text-sm mt-2">Contact your admin to get access.</p>
+          </div>
+        </AppShell>
+      );
+    }
+
     return (
       <AppShell>
         <div className="px-6 pt-8 pb-12 max-w-3xl mx-auto">
