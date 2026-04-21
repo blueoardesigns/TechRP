@@ -69,6 +69,7 @@ function LogoMark({ size = 28 }: { size?: number }) {
   );
 }
 
+/** @deprecated Use AppShell from @/components/app-shell instead */
 export function AppNav() {
   const { user, signOut } = useAuth();
   const router = useRouter();

@@ -9,6 +9,8 @@ export default function SessionsLayout() {
         headerTintColor: colors.text,
         contentStyle: { backgroundColor: colors.bg },
       }}
-    />
+    >
+      <Stack.Screen name="index" options={{ title: 'Review Past Sessions' }} />
+    </Stack>
   );
 }

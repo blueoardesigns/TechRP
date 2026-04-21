@@ -14,9 +14,10 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.tabInactive,
       }}
     >
-      <Tabs.Screen name="train" options={{ title: 'Train', tabBarIcon: () => null, tabBarLabel: '🎙️  Train' }} />
-      <Tabs.Screen name="sessions" options={{ title: 'Sessions', tabBarIcon: () => null, tabBarLabel: '📋  Sessions' }} />
+      <Tabs.Screen name="train"     options={{ title: 'Train',     tabBarIcon: () => null, tabBarLabel: '🎙️  Train'     }} />
+      <Tabs.Screen name="sessions"  options={{ title: 'Sessions',  tabBarIcon: () => null, tabBarLabel: '📋  Sessions'  }} />
       <Tabs.Screen name="playbooks" options={{ title: 'Playbooks', tabBarIcon: () => null, tabBarLabel: '📖  Playbooks' }} />
+      <Tabs.Screen name="profile"   options={{ title: 'Account',   tabBarIcon: () => null, tabBarLabel: '👤  Account'   }} />
     </Tabs>
   );
 }

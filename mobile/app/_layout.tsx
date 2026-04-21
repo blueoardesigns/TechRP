@@ -1,39 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
-import { Session } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
-import { colors } from '../lib/theme';
 import { View } from 'react-native';
+import { AuthProvider, useAuth } from '../context/AuthContext';
+import { colors } from '../lib/theme';
 
-export default function RootLayout() {
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+function AuthGate() {
+  const { session, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (session === undefined) return; // still loading
+    if (session === undefined || loading) return; // still resolving
     const inAuthGroup = segments[0] === '(auth)';
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)/train');
     }
-  }, [session, segments, router]);
+  }, [session, loading, segments, router]);
 
-  // Show blank dark screen while auth state resolves
+  // Blank dark screen while auth state resolves
   if (session === undefined) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
 
   return <Slot />;
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  );
 }

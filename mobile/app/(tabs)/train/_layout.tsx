@@ -9,6 +9,8 @@ export default function TrainLayout() {
         headerTintColor: colors.text,
         contentStyle: { backgroundColor: colors.bg },
       }}
-    />
+    >
+      <Stack.Screen name="index" options={{ title: 'Pick a Session Type Below' }} />
+    </Stack>
   );
 }

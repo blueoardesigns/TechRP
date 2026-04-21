@@ -9,6 +9,8 @@ export default function PlaybooksLayout() {
         headerTintColor: colors.text,
         contentStyle: { backgroundColor: colors.bg },
       }}
-    />
+    >
+      <Stack.Screen name="index" options={{ title: 'Playbooks & Training Materials' }} />
+    </Stack>
   );
 }
