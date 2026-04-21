@@ -597,7 +597,7 @@ export default function TrainingPage() {
                 <div className="bg-[#0f172a] border border-white/[0.08] rounded-xl p-6 max-w-md space-y-5">
                   {/* Difficulty */}
                   <div>
-                    <p className="text-[10px] font-semibibold text-slate-600 uppercase tracking-widest mb-2">Difficulty</p>
+                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2">Difficulty</p>
                     <div className="flex gap-2">
                       {(['easy', 'medium', 'hard'] as const).map(d => (
                         <button
