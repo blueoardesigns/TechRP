@@ -5,8 +5,10 @@ import { ShareDialog } from './share-dialog';
 import { RecordingPlayer } from './recording-player';
 import { CoachNotes } from './coach-notes';
 import { notFound } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
-import { getDisplayScore, gradeColor, type Assessment } from '@/lib/scoring';
+import { getDisplayScore, type Assessment } from '@/lib/scoring';
+import { AppShell } from '@/components/app-shell';
+import { SectionCard } from '@/components/ui/section-card';
+import { ScoreBadge } from '@/components/ui/score-badge';
 
 async function getSession(id: string) {
   try {
@@ -84,18 +86,6 @@ function parseTranscript(t: string | null): Message[] {
   } catch { return []; }
 }
 
-function ScoreBadge({ assessment }: { assessment: Assessment }) {
-  const { score, letter } = getDisplayScore(assessment);
-  const { text, ring } = gradeColor(letter);
-  return (
-    <div className={`w-24 h-24 rounded-full border-2 ${ring} flex flex-col items-center justify-center`}>
-      <span className={`text-3xl font-bold ${text} leading-none`}>{score}</span>
-      <span className="text-[10px] text-gray-600 mt-0.5">/ 100</span>
-      <span className={`text-xs font-bold ${text} mt-0.5`}>{letter}</span>
-    </div>
-  );
-}
-
 export default async function SessionDetailPage({ params, searchParams }: { params: { id: string }; searchParams?: { back?: string } }) {
   const session = await getSession(params.id);
   if (!session) notFound();
@@ -111,164 +101,200 @@ export default async function SessionDetailPage({ params, searchParams }: { para
   const backHref = searchParams?.back ?? '/sessions';
   const backLabel = backHref.startsWith('/coach') ? '← Coach Hub' : '← Sessions';
 
+  const displayScore = assessment ? getDisplayScore(assessment).score : 0;
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-          <Link href={backHref} className="text-sm text-gray-400 hover:text-white transition-colors">
-            {backLabel}
-          </Link>
-          <h1 className="text-sm font-semibold text-white">Session Details</h1>
-          {isOwner ? (
-            <ShareDialog sessionId={params.id} initialToken={(session as any).share_token ?? null} />
-          ) : (
-            <div className="w-20" />
+    <AppShell>
+      {/* Back nav + title */}
+      <div className="px-6 pt-6 pb-4 border-b border-white/[0.06]">
+        <Link href={backHref} className="text-xs text-slate-500 hover:text-white transition-colors">
+          {backLabel}
+        </Link>
+        <h1 className="text-xl font-bold text-white mt-2">
+          {personaName ?? 'Session'}
+          {scenarioType && (
+            <span className="ml-2 text-sm font-normal text-slate-500">— {scenarioType.replace(/_/g, ' ')}</span>
           )}
-        </div>
-      </header>
+        </h1>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-6 sm:px-10 py-8 space-y-5">
+      <div className="px-6 py-6 grid grid-cols-1 lg:grid-cols-[3fr_1.5fr] gap-6">
 
-        {/* ── Meta row ──────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: 'Date', value: formatDateTime(session.started_at) },
-            { label: 'Duration', value: formatDuration(session.started_at, session.ended_at) },
-            { label: 'Status', value: session.ended_at ? 'Completed' : 'In Progress' },
-            { label: 'Persona', value: personaName || scenarioType || '—' },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-900 border border-white/10 rounded-xl px-4 py-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{label}</p>
-              <p className="text-sm font-semibold text-white leading-snug">{value}</p>
-            </div>
-          ))}
-        </div>
+        {/* LEFT COLUMN */}
+        <div className="space-y-6">
 
-        {/* ── Assessment ────────────────────────────────────────────────────── */}
-        {assessment && (
-          <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Performance Assessment</p>
-            <div className="flex items-start gap-6 mb-5">
-              <ScoreBadge assessment={assessment} />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Coaching Summary</p>
-                <p className="text-sm text-gray-300 leading-relaxed">{assessment.summary}</p>
+          {/* Assessment card */}
+          {assessment && (
+            <SectionCard title="Assessment">
+              {/* Score ring + summary */}
+              <div className="flex items-center gap-4 mb-5">
+                <div className="relative w-14 h-14 shrink-0">
+                  <svg viewBox="0 0 56 56" className="w-14 h-14 -rotate-90">
+                    <circle cx="28" cy="28" r="22" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5" />
+                    <circle
+                      cx="28" cy="28" r="22" fill="none"
+                      stroke={displayScore >= 80 ? '#34d399' : displayScore >= 60 ? '#f59e0b' : '#f87171'}
+                      strokeWidth="5"
+                      strokeDasharray={`${(displayScore / 100) * 138} 138`}
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white">
+                    {displayScore}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-bold text-white">Score: {displayScore}/100</p>
+                  <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{assessment.summary}</p>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-4">
-                <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wide mb-3">Strengths</p>
-                <ul className="space-y-2">
-                  {assessment.strengths.map((s, i) => (
-                    <li key={i} className="text-sm text-gray-300 flex gap-2">
-                      <span className="text-emerald-400 shrink-0">✓</span>{s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="border border-yellow-500/20 bg-yellow-500/5 rounded-xl p-4">
-                <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide mb-3">Focus Areas</p>
-                <ul className="space-y-2">
-                  {assessment.improvements.map((s, i) => (
-                    <li key={i} className="text-sm text-gray-300 flex gap-2">
-                      <span className="text-yellow-400 shrink-0">↑</span>{s}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
 
-            {assessment.actions_to_take && assessment.actions_to_take.length > 0 && (
-              <div className="mt-5 border border-blue-500/20 bg-blue-500/5 rounded-xl p-4">
-                <p className="text-xs font-semibold text-blue-400 uppercase tracking-wide mb-3">Actions to Take</p>
-                <ol className="space-y-4">
-                  {assessment.actions_to_take.map((a, i) => (
-                    <li key={i} className="text-sm text-gray-300">
-                      <p className="text-xs text-gray-500 mb-1">
-                        {i + 1}. When <span className="font-semibold text-white">{personaName || 'they'}</span> said:
+              {/* Strengths */}
+              {assessment.strengths?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Strengths</p>
+                  <ul className="space-y-1.5">
+                    {assessment.strengths.map((s: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Improvements */}
+              {assessment.improvements?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Improvements</p>
+                  <ul className="space-y-1.5">
+                    {assessment.improvements.map((s: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-300">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Actions to take */}
+              {assessment.actions_to_take && assessment.actions_to_take.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Actions to Take</p>
+                  <ol className="space-y-4">
+                    {assessment.actions_to_take.map((a: any, i: number) => (
+                      <li key={i} className="text-sm text-slate-300">
+                        <p className="text-[10px] text-slate-500 mb-1">
+                          {i + 1}. When <span className="font-semibold text-white">{personaName || 'they'}</span> said:
+                        </p>
+                        <p className="italic text-slate-400 border-l-2 border-slate-700 pl-3 mb-2">&ldquo;{a.ai_said}&rdquo;</p>
+                        <p className="text-slate-300">
+                          <span className="text-sky-400 font-semibold">You could have said:</span> &ldquo;{a.suggested_response}&rdquo;
+                        </p>
+                        {a.technique && (
+                          <p className="text-[10px] uppercase tracking-wide text-sky-400/70 mt-1">{a.technique}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* Transcript */}
+          <SectionCard title={`Transcript${messages.length > 0 ? ` · ${messages.length} messages` : ''}`}>
+            {messages.length === 0 ? (
+              <p className="text-center py-8 text-slate-600 text-sm">No transcript available.</p>
+            ) : (
+              <div className="max-h-[480px] overflow-y-auto flex flex-col gap-3 pr-1">
+                {messages.map((msg, i) => (
+                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={[
+                      'max-w-[85%] rounded-xl px-3 py-2',
+                      msg.role === 'user'
+                        ? 'bg-sky-500/15 border border-sky-500/20 rounded-br-none'
+                        : 'bg-slate-800 border border-white/[0.06] rounded-bl-none',
+                    ].join(' ')}>
+                      <p className={`text-[9px] font-semibold mb-1 ${msg.role === 'user' ? 'text-emerald-400' : 'text-sky-400'}`}>
+                        {msg.role === 'user' ? 'You' : (personaName || 'Contact')}
                       </p>
-                      <p className="italic text-gray-400 border-l-2 border-gray-700 pl-3 mb-2">&ldquo;{a.ai_said}&rdquo;</p>
-                      <p className="text-gray-300">
-                        <span className="text-blue-300 font-semibold">You could have said:</span> &ldquo;{a.suggested_response}&rdquo;
-                      </p>
-                      {a.technique && (
-                        <p className="text-[10px] uppercase tracking-wide text-blue-400/70 mt-1">{a.technique}</p>
-                      )}
-                    </li>
-                  ))}
-                </ol>
+                      <p className="text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── Coach Notes ───────────────────────────────────────────────────── */}
-        <CoachNotes sessionId={params.id} />
-
-        {/* ── Recording ─────────────────────────────────────────────────────── */}
-        <div className="bg-gray-900 border border-white/10 rounded-2xl p-5">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-4">Call Recording</p>
-          <RecordingPlayer
-            sessionId={params.id}
-            vapiCallId={(session as any).vapi_call_id ?? null}
-            initialUrl={(session as any).recording_url ?? null}
-          />
+          </SectionCard>
         </div>
 
-        {/* ── Transcript ────────────────────────────────────────────────────── */}
-        <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Transcript</p>
-            <span className="text-xs text-gray-600">{messages.length} messages</span>
-          </div>
-          {messages.length === 0 ? (
-            <p className="text-center py-10 text-gray-600 text-sm">No transcript available.</p>
-          ) : (
-            <div className="p-5 space-y-3 max-h-[500px] overflow-y-auto">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[78%] rounded-2xl px-4 py-3 ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-sm'
-                      : 'bg-gray-800 text-gray-100 rounded-bl-sm'
-                  }`}>
-                    <p className="text-xs font-semibold mb-1 opacity-60">
-                      {msg.role === 'user' ? 'Technician' : (personaName || 'Contact')}
-                    </p>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  </div>
+        {/* RIGHT COLUMN */}
+        <div className="space-y-4">
+
+          {/* Metadata card */}
+          <SectionCard>
+            <div className="space-y-3">
+              {personaName && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">Persona</span>
+                  <span className="text-sm text-white font-medium">{personaName}</span>
                 </div>
-              ))}
+              )}
+              {scenarioType && (
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-xs text-slate-500 shrink-0">Scenario</span>
+                  <span className="text-xs text-slate-300 text-right">{scenarioType.replace(/_/g, ' ')}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Date</span>
+                <span className="text-xs text-slate-400">{formatDateTime(session.started_at)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">Duration</span>
+                <span className="text-xs font-mono text-slate-400">{formatDuration(session.started_at, session.ended_at)}</span>
+              </div>
+              {displayScore > 0 && (
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-slate-500">Score</span>
+                  <ScoreBadge score={displayScore} size="md" />
+                </div>
+              )}
+              {isOwner && (
+                <div className="pt-2 border-t border-white/[0.06]">
+                  <ShareDialog sessionId={params.id} initialToken={(session as any).share_token ?? null} />
+                </div>
+              )}
             </div>
+          </SectionCard>
+
+          {/* Playbook card */}
+          {playbook && (
+            <SectionCard title="Playbook">
+              <p className="text-sm text-white font-medium">{playbook.name}</p>
+              <Link href="/playbooks" className="text-xs text-sky-400 hover:text-sky-300 transition-colors mt-1 block">
+                View playbooks →
+              </Link>
+            </SectionCard>
           )}
+
+          {/* Recording */}
+          <SectionCard title="Recording">
+            <RecordingPlayer
+              sessionId={params.id}
+              vapiCallId={(session as any).vapi_call_id ?? null}
+              initialUrl={(session as any).recording_url ?? null}
+            />
+          </SectionCard>
+
+          {/* Coach notes */}
+          <SectionCard title="Coach Notes">
+            <CoachNotes sessionId={params.id} />
+          </SectionCard>
         </div>
-
-        {/* ── Playbook ──────────────────────────────────────────────────────── */}
-        {playbook && (
-          <details className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden group">
-            <summary className="px-5 py-4 cursor-pointer flex items-center justify-between select-none hover:bg-white/5 transition-colors">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-0.5">Playbook Used</p>
-                <p className="text-sm font-semibold text-white">{playbook.name}</p>
-              </div>
-              <svg
-                className="w-4 h-4 text-gray-500 transition-transform group-open:rotate-180"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </summary>
-            <div className="px-8 py-6 border-t border-white/10">
-              <div className="dark-prose">
-                <ReactMarkdown>{playbook.content}</ReactMarkdown>
-              </div>
-            </div>
-          </details>
-        )}
-
       </div>
-    </div>
+    </AppShell>
   );
 }
