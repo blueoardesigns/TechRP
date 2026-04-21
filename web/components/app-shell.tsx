@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 
 type NavSection = {
@@ -65,11 +65,9 @@ function LogoMark() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const pathname = usePathname();
-  const router = useRouter();
 
   const handleSignOut = async () => {
     await signOut();
-    router.push('/login');
   };
 
   const initial = (user?.fullName || user?.email || '?')[0].toUpperCase();
