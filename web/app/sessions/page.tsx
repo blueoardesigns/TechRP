@@ -2,9 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import type { Database } from '../../../shared/types/database';
 import { SkeletonRow } from '@/components/skeleton';
 import { getDisplayScore } from '@/lib/scoring';
+import { AppShell } from '@/components/app-shell';
+import { PageHeader } from '@/components/ui/page-header';
+import { StatCard, StatStrip } from '@/components/ui/stat-card';
+import { ScoreBadge } from '@/components/ui/score-badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { DataTable, Column } from '@/components/ui/data-table';
 
 type TrainingSession = Database['public']['Tables']['training_sessions']['Row'];
 
@@ -207,260 +214,124 @@ export default function SessionsPage() {
   }, [insightsOpen, selectedPeriod, loadInsights]);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-          <button onClick={() => router.push('/')} className="text-sm text-gray-400 hover:text-white transition-colors">
-            ← TechRP
-          </button>
-          <h1 className="text-sm font-semibold text-white">Training Sessions</h1>
-          <div className="w-20" />
-        </div>
-      </header>
-
-      <div className="max-w-5xl mx-auto px-6 sm:px-10 py-8 space-y-6">
-
-        {/* ── Score chart ─────────────────────────────────────────────────────── */}
-        {!loading && <ScoreChart sessions={sessions} />}
-
-        {/* ── Insights panel ──────────────────────────────────────────────────── */}
-        <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-          <button
-            onClick={() => setInsightsOpen(o => !o)}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-white/5 transition-colors"
+    <AppShell>
+      <PageHeader
+        title="Sessions"
+        action={
+          <Link
+            href="/training"
+            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold rounded-lg transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xl">🧠</span>
-              <div className="text-left">
-                <p className="text-sm font-semibold text-white">AI Training Insights</p>
-                <p className="text-xs text-gray-500">Patterns across your sessions, analyzed by AI</p>
-              </div>
-            </div>
-            <span className="text-xs text-gray-500">{insightsOpen ? '▲ Hide' : '▼ Show'}</span>
+            Start Training
+          </Link>
+        }
+      />
+
+      <StatStrip>
+        <StatCard
+          label="Total Sessions"
+          value={insights?.sessionCount ?? sessions.length}
+        />
+        <StatCard
+          label="Avg Score"
+          value={insights?.avgScore != null ? `${insights.avgScore}` : '—'}
+          color={
+            insights?.avgScore == null ? 'default' :
+            insights.avgScore >= 80 ? 'emerald' :
+            insights.avgScore >= 60 ? 'amber' : 'red'
+          }
+        />
+        <StatCard
+          label="This Month"
+          value={sessions.filter(s => {
+            const d = new Date(s.started_at);
+            const now = new Date();
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          }).length}
+        />
+      </StatStrip>
+
+      {/* Period filter */}
+      <div className="px-6 py-3 flex gap-2 flex-wrap border-b border-white/[0.06]">
+        {PERIOD_OPTIONS.map((opt) => (
+          <button
+            key={opt.label}
+            onClick={() => setSelectedPeriod(opt)}
+            className={[
+              'px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer',
+              selectedPeriod.label === opt.label
+                ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
+                : 'text-slate-500 hover:text-white border border-transparent',
+            ].join(' ')}
+          >
+            {opt.label}
           </button>
-
-          {insightsOpen && (
-            <div className="border-t border-white/10 px-6 pb-6">
-              {/* Period picker */}
-              <div className="flex items-center gap-2 pt-4 pb-4 flex-wrap">
-                {PERIOD_OPTIONS.map(opt => (
-                  <button
-                    key={opt.label}
-                    onClick={() => setSelectedPeriod(opt)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      selectedPeriod.label === opt.label
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white/10 text-gray-400 hover:bg-white/20'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-
-              {insightsLoading ? (
-                <div className="text-center py-8 text-gray-500 text-sm">
-                  Analyzing your training history…
-                </div>
-              ) : insights ? (
-                insights.sessionCount === 0 ? (
-                  <p className="text-center py-8 text-gray-500 text-sm">No assessed sessions in this period.</p>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-6 py-3 px-4 bg-blue-600/10 border border-blue-500/20 rounded-xl">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-blue-400">{insights.sessionCount}</div>
-                        <div className="text-xs text-blue-500">Sessions</div>
-                      </div>
-                      {insights.avgScore !== null && (
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-400">{insights.avgScore}<span className="text-xs font-normal text-blue-500">/100</span></div>
-                          <div className="text-xs text-blue-500">Avg Score</div>
-                        </div>
-                      )}
-                      <div className="ml-auto text-xs text-gray-500">{insights.period}</div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-4">
-                        <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wide mb-3">Consistent Strengths</p>
-                        <ul className="space-y-2">
-                          {insights.topStrengths.map((s, i) => (
-                            <li key={i} className="text-sm text-gray-300 flex gap-2">
-                              <span className="text-emerald-500 font-semibold shrink-0">{i + 1}.</span>
-                              <span>{s}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="border border-yellow-500/20 bg-yellow-500/5 rounded-xl p-4">
-                        <p className="text-xs font-semibold text-yellow-400 uppercase tracking-wide mb-3">Focus Areas</p>
-                        <ul className="space-y-2">
-                          {insights.topImprovements.map((s, i) => (
-                            <li key={i} className="text-sm text-gray-300 flex gap-2">
-                              <span className="text-yellow-500 font-semibold shrink-0">{i + 1}.</span>
-                              <span>{s}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-
-                    {insights.summary && (
-                      <div className="border border-white/10 rounded-xl p-4 bg-white/5">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Coaching Note</p>
-                        <p className="text-sm text-gray-300 leading-relaxed italic">&quot;{insights.summary}&quot;</p>
-                      </div>
-                    )}
-                  </div>
-                )
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {/* ── Sessions list ────────────────────────────────────────────────────── */}
-        <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-          <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
-            <p className="text-sm font-semibold text-white">All Sessions</p>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push('/recordings')}
-                className="text-xs bg-white/10 hover:bg-white/20 text-gray-300 font-medium px-3 py-1.5 rounded-lg transition-colors"
-              >
-                ↑ Upload Recording
-              </button>
-              <button
-                onClick={() => router.push('/training')}
-                className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 py-1.5 rounded-lg transition-colors"
-              >
-                + New Session
-              </button>
-            </div>
-          </div>
-
-          {/* ── Filters ── */}
-          {!loading && sessions.length > 0 && (() => {
-            const presentTypes = Array.from(new Set(sessions.map(s => (s as any).persona_scenario_type).filter(Boolean))) as string[];
-            return (
-              <div className="px-6 py-3 border-b border-white/5 space-y-2">
-                {/* Scenario type filter */}
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setScenarioFilter('all')}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                      scenarioFilter === 'all' ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300'
-                    }`}
-                  >
-                    All Types
-                  </button>
-                  {presentTypes.map(type => {
-                    const meta = SCENARIO_LABELS[type];
-                    if (!meta) return null;
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => setScenarioFilter(scenarioFilter === type ? 'all' : type)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                          scenarioFilter === type ? meta.color + ' ring-1 ring-inset ring-current/30' : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300'
-                        }`}
-                      >
-                        {meta.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Date filter */}
-                <div className="flex gap-1.5">
-                  {(['all', '7d', '30d', '90d'] as const).map(f => (
-                    <button
-                      key={f}
-                      onClick={() => setDateFilter(f)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        dateFilter === f ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300'
-                      }`}
-                    >
-                      {f === 'all' ? 'All Time' : f === '7d' ? 'Last 7 Days' : f === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })()}
-
-          {loading ? (
-            <div className="bg-gray-900 border border-white/10 rounded-2xl overflow-hidden">
-              {[...Array(5)].map((_, i) => <SkeletonRow key={i} />)}
-            </div>
-          ) : sessions.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500 text-sm mb-4">No training sessions yet.</p>
-              <button
-                onClick={() => router.push('/training')}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-xl transition-colors"
-              >
-                Start your first session
-              </button>
-            </div>
-          ) : (() => {
-            // Apply filters
-            const now = Date.now();
-            const dayMs = 86400000;
-            const filtered = sessions.filter(s => {
-              if (scenarioFilter !== 'all' && (s as any).persona_scenario_type !== scenarioFilter) return false;
-              if (dateFilter !== 'all') {
-                const days = dateFilter === '7d' ? 7 : dateFilter === '30d' ? 30 : 90;
-                if (now - new Date(s.started_at).getTime() > days * dayMs) return false;
-              }
-              return true;
-            });
-
-            return (
-              <div className="divide-y divide-white/5">
-                {filtered.length === 0 ? (
-                  <div className="text-center py-10 text-gray-600 text-sm">No sessions match the selected filters.</div>
-                ) : filtered.map(session => {
-                  const score = getScore(session);
-                  const scenarioType = (session as any).persona_scenario_type as string | undefined;
-                  const scenarioMeta = scenarioType ? SCENARIO_LABELS[scenarioType] : undefined;
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => router.push(`/sessions/${session.id}`)}
-                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 px-5 py-4 border-b border-white/5 hover:bg-white/5 cursor-pointer transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {scenarioMeta && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${scenarioMeta.color}`}>
-                              {scenarioMeta.label}
-                            </span>
-                          )}
-                          {score !== null && (
-                            <span className={`text-xs font-bold ${score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
-                              {score}/100
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-gray-500 text-xs mt-1">{formatDate(session.started_at)}</p>
-                        {(session as any).persona_name && (
-                          <p className="text-xs text-gray-600 mt-0.5">{(session as any).persona_name}</p>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-500 sm:ml-4 sm:text-right">
-                        {formatDuration(session.started_at, session.ended_at)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </div>
-
+        ))}
       </div>
-    </div>
+
+      {loading ? (
+        <div className="px-6 py-12 text-center text-slate-500 text-sm animate-pulse">Loading sessions…</div>
+      ) : (
+        <DataTable
+          columns={[
+            {
+              key: 'scenario',
+              header: 'Scenario',
+              render: (s) => {
+                const meta = SCENARIO_LABELS[s.persona_scenario_type ?? ''] ?? { label: s.persona_scenario_type ?? '—', color: 'bg-slate-800 text-slate-400' };
+                return (
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${meta.color}`}>
+                    {meta.label}
+                  </span>
+                );
+              },
+            },
+            {
+              key: 'persona',
+              header: 'Persona',
+              render: (s) => <span className="text-slate-300">{s.persona_name ?? '—'}</span>,
+            },
+            {
+              key: 'date',
+              header: 'Date',
+              render: (s) => <span className="text-slate-400 text-xs">{formatDate(s.started_at)}</span>,
+            },
+            {
+              key: 'duration',
+              header: 'Duration',
+              render: (s) => <span className="text-slate-400 text-xs font-mono">{formatDuration(s.started_at, s.ended_at)}</span>,
+            },
+            {
+              key: 'score',
+              header: 'Score',
+              render: (s) => {
+                const score = getScore(s);
+                return score != null ? <ScoreBadge score={score} /> : <span className="text-slate-600 text-xs">—</span>;
+              },
+            },
+            {
+              key: 'arrow',
+              header: '',
+              width: '32px',
+              render: () => <span className="text-slate-600">›</span>,
+            },
+          ] as Column<TrainingSession>[]}
+          rows={sessions}
+          getKey={(s) => s.id}
+          onRowClick={(s) => router.push(`/sessions/${s.id}`)}
+          emptyState={
+            <EmptyState
+              title="No sessions yet"
+              description="Start your first training call to see results here."
+              action={
+                <Link href="/training" className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold rounded-lg transition-colors">
+                  Start Training
+                </Link>
+              }
+            />
+          }
+        />
+      )}
+    </AppShell>
   );
 }
