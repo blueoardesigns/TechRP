@@ -63,19 +63,22 @@ const inputCls = "w-full bg-gray-800 border border-white/10 rounded-xl px-3.5 py
 // ─── AI Rewrite Panel ─────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
-  'Add bullet points',
-  'Summarize',
+  'Make more detailed',
   'Make more concise',
-  'Expand with examples',
-  'Add objection handling',
+  'Add more objections',
+  'Make personality stronger',
+  'Add realistic speech patterns',
 ] as const;
 
 function AIRewritePanel({ content, onRewrite }: { content: string; onRewrite: (c: string) => void }) {
   const [customPrompt, setCustomPrompt] = useState('');
   const [rewriting, setRewriting] = useState(false);
+  const [proposal, setProposal] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const runRewrite = async (prompt: string) => {
     if (!prompt.trim() || rewriting) return;
+    setError('');
     setRewriting(true);
     try {
       const res = await fetch('/api/ai/rewrite-content', {
@@ -84,50 +87,97 @@ function AIRewritePanel({ content, onRewrite }: { content: string; onRewrite: (c
         body: JSON.stringify({ content, prompt }),
       });
       const data = await res.json();
-      if (data.content) onRewrite(data.content);
-      else console.error('AI rewrite error:', data.error);
-    } catch (e) {
-      console.error('AI rewrite failed:', e);
+      if (!res.ok || !data.content) throw new Error(data.error || 'Rewrite failed');
+      setProposal(data.content);
+    } catch (e: any) {
+      setError(e.message || 'AI rewrite failed');
     } finally {
       setRewriting(false);
     }
   };
 
+  const handleAccept = () => {
+    if (proposal) { onRewrite(proposal); setProposal(null); }
+  };
+
+  const handleReject = () => setProposal(null);
+
   return (
-    <div className="border border-white/10 rounded-xl p-4 bg-gray-900/50 space-y-3 mt-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">AI Rewrite</p>
-      <div className="flex flex-wrap gap-2">
-        {QUICK_ACTIONS.map(action => (
-          <button
-            key={action}
-            type="button"
-            onClick={() => runRewrite(action)}
+    <div className="border border-white/10 rounded-xl bg-slate-900/50 overflow-hidden mt-3">
+      {/* Header + quick actions */}
+      <div className="px-4 py-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1.5">
+            <span>✦</span> AI Rewrite System Prompt
+          </p>
+          {rewriting && <span className="text-xs text-sky-400 animate-pulse">Generating…</span>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_ACTIONS.map(action => (
+            <button
+              key={action}
+              type="button"
+              onClick={() => runRewrite(action)}
+              disabled={rewriting}
+              className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-slate-300 hover:border-sky-500/40 hover:text-sky-400 transition-colors disabled:opacity-40"
+            >
+              {action}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customPrompt}
+            onChange={e => setCustomPrompt(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { runRewrite(customPrompt); setCustomPrompt(''); } }}
+            placeholder="Custom instruction… (e.g. make her more hesitant about cost)"
             disabled={rewriting}
-            className="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-300 hover:border-blue-500/50 hover:text-blue-400 transition-colors disabled:opacity-40"
+            className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 outline-none focus:border-sky-500/60 disabled:opacity-40"
+          />
+          <button
+            type="button"
+            onClick={() => { runRewrite(customPrompt); setCustomPrompt(''); }}
+            disabled={rewriting || !customPrompt.trim()}
+            className="px-3 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
           >
-            {rewriting ? '…' : action}
+            {rewriting ? '…' : 'Rewrite'}
           </button>
-        ))}
+        </div>
+        {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={customPrompt}
-          onChange={e => setCustomPrompt(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { runRewrite(customPrompt); setCustomPrompt(''); } }}
-          placeholder="Custom instruction… (e.g. make more aggressive)"
-          disabled={rewriting}
-          className="flex-1 bg-gray-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 outline-none focus:border-blue-500/60 disabled:opacity-40"
-        />
-        <button
-          type="button"
-          onClick={() => { runRewrite(customPrompt); setCustomPrompt(''); }}
-          disabled={rewriting || !customPrompt.trim()}
-          className="px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-40"
-        >
-          {rewriting ? '…' : 'Rewrite'}
-        </button>
-      </div>
+
+      {/* Side-by-side proposal */}
+      {proposal !== null && (
+        <div className="border-t border-white/10">
+          <div className="grid grid-cols-2 divide-x divide-white/10 max-h-[260px] overflow-hidden">
+            <div className="p-3 overflow-y-auto">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Current</p>
+              <pre className="text-xs text-slate-400 whitespace-pre-wrap leading-relaxed font-mono">{content}</pre>
+            </div>
+            <div className="p-3 overflow-y-auto bg-sky-500/5">
+              <p className="text-[10px] font-semibold text-sky-500 uppercase tracking-widest mb-2">AI Proposal</p>
+              <pre className="text-xs text-slate-200 whitespace-pre-wrap leading-relaxed font-mono">{proposal}</pre>
+            </div>
+          </div>
+          <div className="px-4 py-3 border-t border-white/10 flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={handleReject}
+              className="px-3 py-1.5 text-xs text-slate-400 hover:text-white border border-white/10 rounded-lg transition-colors"
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={handleAccept}
+              className="px-3 py-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-white font-medium rounded-lg transition-colors"
+            >
+              Accept
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

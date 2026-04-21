@@ -135,15 +135,38 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
   "summary": "<2-3 sentence overall coaching observation — what this rep consistently does well, and the #1 thing to focus on to level up>"
 }`;
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: insightPrompt }],
-    });
+    // Fallback: frequency-ranked raw items in case AI call fails
+    const strengthFreq: Record<string, number> = {};
+    allStrengths.forEach((s: string) => { strengthFreq[s] = (strengthFreq[s] ?? 0) + 1; });
+    const topRawStrengths = Object.entries(strengthFreq)
+      .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s]) => s);
 
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-    const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const insights = JSON.parse(cleaned);
+    const improvFreq: Record<string, number> = {};
+    allImprovements.forEach((s: string) => { improvFreq[s] = (improvFreq[s] ?? 0) + 1; });
+    const topRawImprovements = Object.entries(improvFreq)
+      .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s]) => s);
+
+    let insights: { topStrengths: string[]; topImprovements: string[]; summary: string } = {
+      topStrengths: topRawStrengths,
+      topImprovements: topRawImprovements,
+      summary: '',
+    };
+
+    try {
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 800,
+        messages: [{ role: 'user', content: insightPrompt }],
+      });
+
+      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const aiInsights = JSON.parse(cleaned);
+      insights = aiInsights;
+    } catch (aiError) {
+      console.error('AI insights synthesis failed, returning raw aggregated data:', aiError);
+      // insights already has fallback values from above
+    }
 
     // Aggregate org/coach metrics
     let orgSessionsQuery = (supabase as any)

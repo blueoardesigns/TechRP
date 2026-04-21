@@ -116,6 +116,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, router]);
 
   useEffect(() => {
+    // Session persistence check: if the user chose "don't stay logged in", sign them
+    // out when the browser is reopened (sessionStorage is cleared on browser close,
+    // but localStorage persists — so we detect the browser restart here).
+    if (typeof window !== 'undefined') {
+      const persistPref = localStorage.getItem('session_persist');
+      if (persistPref === '0') {
+        const sessionActive = sessionStorage.getItem('session_active');
+        if (!sessionActive) {
+          // Browser was closed and reopened — honour the "don't stay logged in" choice
+          supabase.auth.signOut().catch(() => {});
+          setLoading(false);
+          return;
+        }
+        // Still within the same browser session — keep the tab alive
+        sessionStorage.setItem('session_active', '1');
+      }
+    }
+
     loadUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {

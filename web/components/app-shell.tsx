@@ -92,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             if (section.roles && !section.roles.includes(user?.role ?? '')) return null;
             return (
               <div key={section.label} className="mb-1">
-                <p className="px-3 pt-3 pb-1 text-[10px] font-semibold text-slate-600 uppercase tracking-widest">
+                <p className="px-3 pt-3 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
                   {section.label}
                 </p>
                 {section.items.map((item) => {
@@ -106,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       href={item.href}
                       className={[
                         'block mx-1 px-2 py-1.5 rounded text-[11px] font-medium transition-colors',
-                        active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-500 hover:text-white',
+                        active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white',
                       ].join(' ')}
                     >
                       {item.label}
@@ -137,7 +137,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-x-hidden" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <main className="flex-1 min-w-0 overflow-x-hidden text-white" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         {children}
       </main>
     </div>

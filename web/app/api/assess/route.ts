@@ -137,8 +137,13 @@ export async function POST(request: NextRequest) {
 - Did they handle pushback (existing vendor, no time) without damaging the relationship?
 - Did they land a concrete next step (lunch, follow-up, intro) that keeps the door open?`;
 
-    const playbookSection = resolvedPlaybookContent
-      ? `\n\nPLAYBOOK FOR THIS SCENARIO (use as a secondary reference — see scoring weights below):\n${resolvedPlaybookContent}\n`
+    // Strip HTML tags from playbook content in case it was saved as HTML by the rich-text editor
+    const playbookText = resolvedPlaybookContent
+      ? resolvedPlaybookContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      : null;
+
+    const playbookSection = playbookText
+      ? `\n\nPLAYBOOK FOR THIS SCENARIO (use as a secondary reference — see scoring weights below):\n${playbookText}\n`
       : '';
 
     // Create the assessment prompt

@@ -510,101 +510,30 @@ export default function TrainingPage() {
       <AppShell>
         <div className="px-6 pt-8 pb-12 max-w-3xl mx-auto">
           <h1 className="text-xl font-bold text-white">Start a training call</h1>
-          <p className="text-sm text-slate-400 mt-1">Choose your scenario and we&apos;ll assign a matching persona</p>
+          <p className="text-sm text-slate-400 mt-1">
+            {phase === 'persona-preview' && selectedPersona
+              ? 'Configure your session settings below'
+              : 'Choose your scenario and we\'ll assign a matching persona'}
+          </p>
 
           <div className="mt-8 space-y-8">
-            {/* Technician Scenarios */}
-            {techScenarios.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-3">
-                  Technician Scenarios
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {techScenarios.map((scenario) => (
-                    <button
-                      key={scenario.type}
-                      onClick={() => handleSelectScenario(scenario.type)}
-                      disabled={personasLoading}
-                      className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait ${
-                        selectedPersona?.scenarioType === scenario.type
-                          ? 'bg-sky-500/10 border-sky-500/40 text-white'
-                          : 'bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300'
-                      }`}
-                    >
-                      <span className="text-2xl block mb-2">{scenario.icon}</span>
-                      <span className="text-sm font-semibold block">{scenario.label}</span>
-                      <span className="text-xs text-slate-500 block mt-0.5">{scenario.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Business Development — grouped by company type */}
-            {BD_COMPANY_GROUPS.length > 0 && (
-              <div>
-                <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-3">
-                  Business Development
-                </p>
-                <div className="space-y-4">
-                  {BD_COMPANY_GROUPS.map((group) => (
-                    <div key={group.label}>
-                      <p className="text-[10px] text-slate-600 mb-2">{group.icon} {group.label}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {group.cold && (
-                          <button
-                            onClick={() => handleSelectScenario(group.cold!.type)}
-                            disabled={personasLoading}
-                            className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait ${
-                              selectedPersona?.scenarioType === group.cold.type
-                                ? 'bg-sky-500/10 border-sky-500/40 text-white'
-                                : 'bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300'
-                            }`}
-                          >
-                            <span className="text-2xl block mb-2">{group.cold.icon}</span>
-                            <span className="text-sm font-semibold block">Cold Call</span>
-                            <span className="text-xs text-slate-500 block mt-0.5">{group.cold.description}</span>
-                          </button>
-                        )}
-                        {group.discovery && (
-                          <button
-                            onClick={() => handleSelectScenario(group.discovery!.type)}
-                            disabled={personasLoading}
-                            className={`text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait ${
-                              selectedPersona?.scenarioType === group.discovery.type
-                                ? 'bg-sky-500/10 border-sky-500/40 text-white'
-                                : 'bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300'
-                            }`}
-                          >
-                            <span className="text-2xl block mb-2">{group.discovery.icon}</span>
-                            <span className="text-sm font-semibold block">Discovery Meeting</span>
-                            <span className="text-xs text-slate-500 block mt-0.5">{group.discovery.description}</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {personasLoading && (
-              <p className="text-sm text-slate-500 animate-pulse text-center py-2">Loading personas…</p>
-            )}
-            {personasError && (
-              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
-                {personasError}
-              </p>
-            )}
-
-            {/* Setup card — only when persona-preview phase and a persona is selected */}
+            {/* ── Persona-preview phase: show ONLY the setup card ── */}
             {phase === 'persona-preview' && selectedPersona && (() => {
               const scenario = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
               return (
                 <div className="bg-[#0f172a] border border-white/[0.08] rounded-xl p-6 max-w-md space-y-5">
+                  {/* Scenario label */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{scenario.icon}</span>
+                    <div>
+                      <p className="text-sm font-semibold text-white">{scenario.label}</p>
+                      <p className="text-xs text-slate-500">{scenario.description}</p>
+                    </div>
+                  </div>
+
                   {/* Difficulty */}
                   <div>
-                    <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2">Difficulty</p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Difficulty</p>
                     <div className="flex gap-2">
                       {(['easy', 'medium', 'hard'] as const).map(d => (
                         <button
@@ -615,7 +544,7 @@ export default function TrainingPage() {
                               ? d === 'easy'   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                               : d === 'medium' ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
                                                : 'bg-red-500/20 text-red-400 border-red-500/40'
-                              : 'text-slate-600 border-white/[0.08] hover:text-slate-300'
+                              : 'text-slate-500 border-white/[0.08] hover:text-slate-300'
                           }`}
                         >
                           {d}
@@ -627,7 +556,7 @@ export default function TrainingPage() {
                   {/* Payment type — technician scenarios only */}
                   {scenario.group === 'technician' && (
                     <div>
-                      <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest mb-2">Payment Type</p>
+                      <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-2">Payment Type</p>
                       <div className="flex gap-2">
                         {([
                           { value: 'potential_claim' as const, label: 'Insurance' },
@@ -640,7 +569,7 @@ export default function TrainingPage() {
                             className={`flex-1 py-2 rounded-lg text-xs font-semibold border transition-colors cursor-pointer ${
                               paymentType === value
                                 ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
-                                : 'text-slate-600 border-white/[0.08] hover:text-slate-300'
+                                : 'text-slate-500 border-white/[0.08] hover:text-slate-300'
                             }`}
                           >
                             {label}
@@ -666,7 +595,7 @@ export default function TrainingPage() {
                     {scenarioPersonas.length > 1 && (
                       <button
                         onClick={handlePickDifferent}
-                        className="text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                        className="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                       >
                         ↺ Randomize
                       </button>
@@ -679,19 +608,96 @@ export default function TrainingPage() {
                     disabled={!vapi}
                     className="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    Start Call
+                    {!vapi ? 'Vapi not configured' : 'Start Call'}
                   </button>
 
                   {/* Change scenario */}
                   <button
                     onClick={() => { setPhase('scenario-select'); setSelectedPersona(null); }}
-                    className="w-full text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                    className="w-full text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   >
                     ← Change Scenario
                   </button>
                 </div>
               );
             })()}
+
+            {/* ── Scenario-select phase: show scenario grid ── */}
+            {phase === 'scenario-select' && (
+              <>
+                {/* Technician Scenarios */}
+                {techScenarios.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-slate-300 uppercase tracking-widest mb-3">
+                      Technician Scenarios
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {techScenarios.map((scenario) => (
+                        <button
+                          key={scenario.type}
+                          onClick={() => handleSelectScenario(scenario.type)}
+                          disabled={personasLoading}
+                          className="text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white"
+                        >
+                          <span className="text-2xl block mb-2">{scenario.icon}</span>
+                          <span className="text-sm font-semibold block">{scenario.label}</span>
+                          <span className="text-xs text-slate-500 block mt-0.5">{scenario.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Business Development — grouped by company type */}
+                {BD_COMPANY_GROUPS.length > 0 && (
+                  <div>
+                    <p className="text-sm font-semibold text-slate-300 uppercase tracking-widest mb-3">
+                      Business Development
+                    </p>
+                    <div className="space-y-4">
+                      {BD_COMPANY_GROUPS.map((group) => (
+                        <div key={group.label}>
+                          <p className="text-xs text-slate-400 mb-2">{group.icon} {group.label}</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {group.cold && (
+                              <button
+                                onClick={() => handleSelectScenario(group.cold!.type)}
+                                disabled={personasLoading}
+                                className="text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white"
+                              >
+                                <span className="text-2xl block mb-2">{group.cold.icon}</span>
+                                <span className="text-sm font-semibold block">Cold Call</span>
+                                <span className="text-xs text-slate-500 block mt-0.5">{group.cold.description}</span>
+                              </button>
+                            )}
+                            {group.discovery && (
+                              <button
+                                onClick={() => handleSelectScenario(group.discovery!.type)}
+                                disabled={personasLoading}
+                                className="text-left rounded-xl border p-4 transition-colors disabled:opacity-50 disabled:cursor-wait bg-[#0f172a] border-white/[0.08] hover:border-white/20 text-slate-300 hover:text-white"
+                              >
+                                <span className="text-2xl block mb-2">{group.discovery.icon}</span>
+                                <span className="text-sm font-semibold block">Discovery Meeting</span>
+                                <span className="text-xs text-slate-500 block mt-0.5">{group.discovery.description}</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {personasLoading && (
+                  <p className="text-sm text-slate-400 animate-pulse text-center py-2">Loading personas…</p>
+                )}
+                {personasError && (
+                  <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+                    {personasError}
+                  </p>
+                )}
+              </>
+            )}
           </div>
         </div>
       </AppShell>

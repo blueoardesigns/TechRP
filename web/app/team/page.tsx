@@ -74,7 +74,8 @@ export default function TeamPage() {
 
   useEffect(() => {
     if (!user) return;
-    if (user.role !== 'company_admin' || !user.coachInstanceId) {
+    const managementRoles = ['company_admin', 'coach', 'superuser'];
+    if (!managementRoles.includes(user.role)) {
       router.replace('/');
     }
   }, [user, router]);

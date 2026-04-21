@@ -47,14 +47,14 @@ export default function BillingPage() {
 
   return (
     <AppShell>
-      <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-2xl font-bold">Billing &amp; Usage</h1>
+      <div className="max-w-2xl mx-auto px-6 py-10 space-y-6">
+        <h1 className="text-2xl font-bold text-white">Billing &amp; Usage</h1>
 
-        <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 space-y-4">
+        <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 space-y-4">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm text-gray-400">Current plan</p>
-              <p className="text-xl font-semibold">{planLabel}</p>
+              <p className="text-sm text-slate-400">Current plan</p>
+              <p className="text-xl font-semibold text-white">{planLabel}</p>
             </div>
             <span className={`text-xs px-2 py-1 rounded-full font-medium ${
               status === 'active' ? 'bg-green-500/20 text-green-400' :
@@ -81,28 +81,28 @@ export default function BillingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <a
             href="/billing/add-hours"
-            className="bg-gray-900 border border-white/10 rounded-2xl p-5 hover:border-indigo-500/50 transition-colors group"
+            className="bg-slate-900 border border-white/10 rounded-2xl p-5 hover:border-indigo-500/50 transition-colors group"
           >
-            <p className="font-semibold group-hover:text-indigo-400 transition-colors">Add Training Hours</p>
-            <p className="text-sm text-gray-400 mt-1">Purchase extra minutes that never expire</p>
+            <p className="font-semibold text-white group-hover:text-indigo-400 transition-colors">Add Training Hours</p>
+            <p className="text-sm text-slate-400 mt-1">Purchase extra minutes that never expire</p>
           </a>
 
           <button
             onClick={openPortal}
             disabled={portalLoading}
-            className="bg-gray-900 border border-white/10 rounded-2xl p-5 text-left hover:border-indigo-500/50 transition-colors group disabled:opacity-50"
+            className="bg-slate-900 border border-white/10 rounded-2xl p-5 text-left hover:border-indigo-500/50 transition-colors group disabled:opacity-50"
           >
-            <p className="font-semibold group-hover:text-indigo-400 transition-colors">
+            <p className="font-semibold text-white group-hover:text-indigo-400 transition-colors">
               {portalLoading ? 'Redirecting...' : 'Manage Subscription'}
             </p>
-            <p className="text-sm text-gray-400 mt-1">Change plan, view invoices, update payment</p>
+            <p className="text-sm text-slate-400 mt-1">Change plan, view invoices, update payment</p>
           </button>
         </div>
 
-        <div className="bg-gray-900 border border-white/10 rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-slate-900 border border-white/10 rounded-2xl p-5 flex items-center justify-between">
           <div>
-            <p className="font-medium">Auto-refill</p>
-            <p className="text-sm text-gray-400">Automatically buy 1 hour when minutes run out</p>
+            <p className="font-medium text-white">Auto-refill</p>
+            <p className="text-sm text-slate-400">Automatically buy 1 hour when minutes run out</p>
           </div>
           <button
             onClick={async () => {

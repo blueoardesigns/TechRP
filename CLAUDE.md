@@ -15,6 +15,8 @@ TechRP is a voice AI roleplay training platform for field technicians selling dr
 
 Do not make any changes until you have 95% confidence in what you need to build. Ask me follow up questions until you reach that confidence.
 
+Structure your entire response exactly like this and nothing else. 1. One-sentence summary. 2. Bullet points (max 3). 3. One clear next action. Use markdown. No extra text.
+
 ## Commands
 ```bash
 # Web

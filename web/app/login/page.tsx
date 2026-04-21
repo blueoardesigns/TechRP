@@ -12,6 +12,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [stayLoggedIn, setStayLoggedIn] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +28,17 @@ function LoginForm() {
       setError('Invalid email or password.');
       setLoading(false);
       return;
+    }
+
+    // Track session persistence preference:
+    // When "stay logged in" is unchecked, mark localStorage so AuthProvider can
+    // sign the user out if the browser is closed and reopened (sessionStorage is cleared).
+    if (stayLoggedIn) {
+      localStorage.removeItem('session_persist');
+      sessionStorage.removeItem('session_active');
+    } else {
+      localStorage.setItem('session_persist', '0');
+      sessionStorage.setItem('session_active', '1');
     }
 
     // AuthProvider will check status and redirect to /pending if needed
@@ -83,7 +95,16 @@ function LoginForm() {
               />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={stayLoggedIn}
+                  onChange={e => setStayLoggedIn(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded accent-blue-500 cursor-pointer"
+                />
+                <span className="text-xs text-gray-400">Stay logged in</span>
+              </label>
               <Link
                 href="/forgot-password"
                 className="text-xs text-gray-500 hover:text-gray-300 transition-colors"

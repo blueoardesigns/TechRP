@@ -37,18 +37,26 @@ export function RecordingPlayer({ sessionId, vapiCallId, initialUrl }: {
   }, [sessionId, vapiCallId, initialUrl]);
 
   if (loading) {
-    return <p className="text-sm text-gray-500 animate-pulse">Fetching recording…</p>;
+    return <p className="text-sm text-slate-500 animate-pulse">Fetching recording…</p>;
   }
 
   if (url) {
     return (
-      <div className="space-y-2">
-        <audio controls className="w-full h-10 [&::-webkit-media-controls-panel]:bg-gray-800 rounded-lg">
+      <div className="space-y-3">
+        <audio
+          controls
+          className="w-full rounded-lg [color-scheme:dark]"
+          style={{ colorScheme: 'dark' }}
+        >
           <source src={url} type="audio/mpeg" />
           <source src={url} type="audio/wav" />
         </audio>
-        <a href={url} target="_blank" rel="noopener noreferrer"
-          className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-sky-400 hover:text-sky-300 transition-colors"
+        >
           Download recording →
         </a>
       </div>
@@ -56,8 +64,8 @@ export function RecordingPlayer({ sessionId, vapiCallId, initialUrl }: {
   }
 
   return (
-    <p className="text-sm text-gray-600">
-      {error ? 'Recording unavailable (may have expired).' : vapiCallId ? 'No recording available.' : 'No recording available.'}
+    <p className="text-sm text-slate-500">
+      {error ? 'Recording unavailable (may have expired).' : 'No recording available.'}
     </p>
   );
 }
