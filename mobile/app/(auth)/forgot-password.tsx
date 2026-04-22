@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, radius, typography } from '../../lib/theme';
+import { colors, spacing, radius } from '../../lib/theme';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -41,18 +41,22 @@ export default function ForgotPasswordScreen() {
         <Text style={styles.title}>Reset Password</Text>
 
         {sent ? (
-          <Text style={styles.confirmation}>
-            Check your email for a password reset link.
-          </Text>
+          <View style={styles.confirmCard}>
+            <Text style={styles.confirmIcon}>✉️</Text>
+            <Text style={styles.confirmation}>
+              Check your email for a password reset link.
+            </Text>
+          </View>
         ) : (
           <>
             <Text style={styles.description}>
               Enter your email and we'll send you a reset link.
             </Text>
+            <Text style={styles.fieldLabel}>Email</Text>
             <TextInput
               style={styles.input}
-              placeholder="Email"
-              placeholderTextColor={colors.textMuted}
+              placeholder="you@example.com"
+              placeholderTextColor={colors.textDim}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -60,9 +64,14 @@ export default function ForgotPasswordScreen() {
               keyboardType="email-address"
               textContentType="emailAddress"
             />
-            <TouchableOpacity style={styles.button} onPress={handleReset} disabled={loading}>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleReset}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
               <Text style={styles.buttonText}>
-                {loading ? 'Sending...' : 'Send Reset Link'}
+                {loading ? 'Sending…' : 'Send Reset Link'}
               </Text>
             </TouchableOpacity>
           </>
@@ -78,38 +87,57 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
   },
-  back: { position: 'absolute', top: spacing.xl * 2, left: spacing.xl },
-  backText: { color: colors.accent, fontSize: 16 },
-  title: { ...typography.title, marginBottom: spacing.sm },
+  back: { position: 'absolute', top: spacing.xxl, left: spacing.xl },
+  backText: { color: colors.accentLight, fontSize: 16, fontWeight: '500' },
+
+  title: { fontSize: 26, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
   description: {
     color: colors.textMuted,
     fontSize: 14,
-    marginBottom: spacing.xl,
-    lineHeight: 20,
+    marginBottom: spacing.md,
+    lineHeight: 22,
   },
-  confirmation: {
-    color: colors.text,
-    fontSize: 16,
-    textAlign: 'center',
-    lineHeight: 24,
-  },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 2 },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     color: colors.text,
     fontSize: 16,
-    marginBottom: spacing.md,
+    minHeight: 52,
+    marginBottom: spacing.sm,
   },
   button: {
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
-    marginTop: spacing.sm,
+    minHeight: 52,
+    justifyContent: 'center',
+    marginTop: spacing.xs,
   },
+  buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+  confirmCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  confirmIcon: { fontSize: 40 },
+  confirmation: {
+    color: colors.text,
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 23,
+  },
 });

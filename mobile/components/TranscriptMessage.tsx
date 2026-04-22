@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing } from '../lib/theme';
+import { colors, spacing, radius } from '../lib/theme';
 
 interface Props {
   role: 'user' | 'assistant';
@@ -12,9 +12,11 @@ export default function TranscriptMessage({ role, content, speakerLabel }: Props
   const isUser = role === 'user';
   return (
     <View style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}>
-      <Text style={styles.label}>{isUser ? 'You' : speakerLabel}</Text>
+      <Text style={[styles.label, isUser ? styles.userLabel : styles.assistantLabel]}>
+        {isUser ? 'You' : speakerLabel}
+      </Text>
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-        <Text style={styles.text}>{content}</Text>
+        <Text style={[styles.text, isUser && styles.userText]}>{content}</Text>
       </View>
     </View>
   );
@@ -23,7 +25,7 @@ export default function TranscriptMessage({ role, content, speakerLabel }: Props
 const styles = StyleSheet.create({
   container: {
     marginBottom: spacing.sm,
-    maxWidth: '85%',
+    maxWidth: '86%',
   },
   userContainer: {
     alignSelf: 'flex-end',
@@ -35,13 +37,16 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: colors.textMuted,
-    marginBottom: 2,
+    marginBottom: 3,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
+    fontWeight: '600',
   },
+  userLabel: { color: colors.accentLight },
+  assistantLabel: { color: colors.textMuted },
+
   bubble: {
-    borderRadius: 12,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -56,6 +61,9 @@ const styles = StyleSheet.create({
   text: {
     color: colors.text,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
+  },
+  userText: {
+    color: '#fff',
   },
 });

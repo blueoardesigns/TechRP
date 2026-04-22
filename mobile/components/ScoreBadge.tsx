@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../lib/theme';
+import { colors, radius } from '../lib/theme';
 
 interface Props {
   score: number;
@@ -15,34 +15,42 @@ function badgeColor(score: number): string {
 
 export default function ScoreBadge({ score, size = 'sm' }: Props) {
   const isLarge = size === 'lg';
+  const bg = badgeColor(score);
   return (
     <View
       testID="score-badge"
-      style={[styles.badge, { backgroundColor: badgeColor(score) }, isLarge && styles.large]}
+      style={[
+        styles.badge,
+        { backgroundColor: bg + '22', borderColor: bg + '55' },
+        isLarge && styles.large,
+      ]}
     >
-      <Text style={[styles.text, isLarge && styles.textLarge]}>{score}</Text>
+      <Text style={[styles.text, { color: bg }, isLarge && styles.textLarge]}>
+        {score}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   badge: {
-    borderRadius: 4,
+    borderRadius: radius.sm,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     alignSelf: 'flex-start',
+    borderWidth: 1,
   },
   large: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    borderRadius: radius.md,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
   text: {
-    color: colors.text,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
   },
   textLarge: {
-    fontSize: 32,
+    fontSize: 36,
+    fontWeight: '900',
   },
 });

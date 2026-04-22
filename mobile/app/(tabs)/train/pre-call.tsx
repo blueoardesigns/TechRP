@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '../../../lib/supabase';
 import { Persona } from '../../../lib/types';
 import PersonaCard from '../../../components/PersonaCard';
-import { colors, spacing, radius, typography } from '../../../lib/theme';
+import { colors, spacing, radius } from '../../../lib/theme';
 import { getScenarioConfig } from '../../../lib/scenarios';
 
 export default function PreCallScreen() {
@@ -38,6 +38,7 @@ export default function PreCallScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.accent} size="large" />
+        <Text style={styles.loadingText}>Loading scenario…</Text>
       </View>
     );
   }
@@ -46,15 +47,34 @@ export default function PreCallScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.scenarioLabel}>{scenario?.label}</Text>
+      {/* Scenario label */}
+      <View style={styles.scenarioPill}>
+        <Text style={styles.scenarioPillText}>{scenario?.label ?? persona.scenario_type}</Text>
+      </View>
+
+      {/* Persona info */}
       <PersonaCard persona={persona} />
 
-      <View style={styles.roleRow}>
-        <Text style={styles.roleLabel}>Your role:</Text>
+      {/* Role context */}
+      <View style={styles.roleCard}>
+        <Text style={styles.roleLabel}>Your role</Text>
         <Text style={styles.roleValue}>{scenario?.techRole ?? 'Technician'}</Text>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleStartCall}>
+      {/* Tips */}
+      <View style={styles.tipsCard}>
+        <Text style={styles.tipsTitle}>Before you call</Text>
+        <Text style={styles.tipLine}>• Speak naturally — the AI will respond in real time</Text>
+        <Text style={styles.tipLine}>• Try to handle objections and close</Text>
+        <Text style={styles.tipLine}>• You'll get scored when the call ends</Text>
+      </View>
+
+      {/* CTA */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleStartCall}
+        activeOpacity={0.85}
+      >
         <Text style={styles.buttonText}>🎙️  Start Call</Text>
       </TouchableOpacity>
     </View>
@@ -62,30 +82,76 @@ export default function PreCallScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  center: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  loadingText: { color: colors.textMuted, fontSize: 14 },
+
   container: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
-  scenarioLabel: {
-    color: colors.accent,
+
+  scenarioPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(2,132,199,0.15)',
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.25)',
+  },
+  scenarioPillText: {
+    color: colors.accentLight,
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: spacing.md,
   },
-  roleRow: {
+
+  roleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  roleLabel: { color: colors.textMuted, fontSize: 14, marginRight: spacing.sm },
+  roleLabel: { color: colors.textMuted, fontSize: 13 },
   roleValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
+
+  tipsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.xs,
+  },
+  tipsTitle: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.xs },
+  tipLine: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
+
   button: {
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    padding: spacing.lg,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
     marginTop: 'auto',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
+    minHeight: 58,
+    justifyContent: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: 0.2 },
 });

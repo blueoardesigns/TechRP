@@ -14,6 +14,7 @@ export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [session, setSession] = useState<TrainingSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showTranscript, setShowTranscript] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,7 +46,11 @@ export default function SessionDetailScreen() {
   };
 
   if (loading || !session) {
-    return <View style={styles.center}><ActivityIndicator color={colors.accent} size="large" /></View>;
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.accent} size="large" />
+      </View>
+    );
   }
 
   const { assessment, transcript, persona_name, persona_scenario_type } = session;
@@ -54,46 +59,66 @@ export default function SessionDetailScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-      <Text style={styles.scenarioLabel}>{scenario?.label ?? persona_scenario_type}</Text>
+      {/* Header */}
+      <View style={styles.scenarioPill}>
+        <Text style={styles.scenarioPillText}>{scenario?.label ?? persona_scenario_type}</Text>
+      </View>
       <Text style={styles.personaName}>{persona_name}</Text>
 
-      <View style={styles.scoreRow}>
-        <ScoreBadge score={assessment?.score ?? 0} size="lg" />
-        {assessment?.letter_grade && <Text style={styles.grade}>{assessment.letter_grade}</Text>}
+      {/* Score */}
+      <View style={styles.heroCard}>
+        <View style={styles.scoreRow}>
+          <ScoreBadge score={assessment?.score ?? 0} size="lg" />
+          {assessment?.letter_grade && <Text style={styles.grade}>{assessment.letter_grade}</Text>}
+        </View>
+        {assessment?.summary && (
+          <Text style={styles.summary}>{assessment.summary}</Text>
+        )}
       </View>
 
-      {assessment?.summary && (
-        <Text style={styles.summary}>{assessment.summary}</Text>
-      )}
-
+      {/* Strengths */}
       {assessment?.strengths?.length > 0 && (
         <>
           <Text style={styles.sectionTitle}>Strengths</Text>
           {assessment.strengths.map((s: string, i: number) => (
             <View key={i} style={styles.bullet}>
-              <Text style={styles.bulletDot}>✓</Text>
+              <View style={[styles.bulletIcon, styles.strengthIcon]}>
+                <Text style={styles.bulletIconText}>✓</Text>
+              </View>
               <Text style={styles.bulletText}>{s}</Text>
             </View>
           ))}
         </>
       )}
 
+      {/* Improvements */}
       {assessment?.improvements?.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Improvements</Text>
+          <Text style={styles.sectionTitle}>Areas to Improve</Text>
           {assessment.improvements.map((s: string, i: number) => (
             <View key={i} style={styles.bullet}>
-              <Text style={[styles.bulletDot, { color: colors.accent }]}>→</Text>
+              <View style={[styles.bulletIcon, styles.improvIcon]}>
+                <Text style={styles.bulletIconText}>→</Text>
+              </View>
               <Text style={styles.bulletText}>{s}</Text>
             </View>
           ))}
         </>
       )}
 
+      {/* Transcript (collapsible) */}
       {transcript?.length > 0 && (
         <>
-          <Text style={styles.sectionTitle}>Transcript</Text>
-          {transcript.map((msg: any, i: number) => (
+          <TouchableOpacity
+            style={styles.transcriptToggle}
+            onPress={() => setShowTranscript(v => !v)}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.sectionTitle} onPress={() => setShowTranscript(v => !v)}>
+              {showTranscript ? '▾' : '▸'}  Transcript ({transcript.length} messages)
+            </Text>
+          </TouchableOpacity>
+          {showTranscript && transcript.map((msg: any, i: number) => (
             <TranscriptMessage
               key={i}
               role={msg.role}
@@ -104,8 +129,9 @@ export default function SessionDetailScreen() {
         </>
       )}
 
-      <TouchableOpacity style={styles.trainAgainButton} onPress={handleTrainAgain}>
-        <Text style={styles.trainAgainText}>▶  Train on Same Scenario</Text>
+      {/* Train again */}
+      <TouchableOpacity style={styles.trainButton} onPress={handleTrainAgain} activeOpacity={0.85}>
+        <Text style={styles.trainButtonText}>▶  Train on Same Scenario</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -115,36 +141,68 @@ const styles = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl * 2 },
-  scenarioLabel: {
-    color: colors.accent,
+
+  scenarioPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(2,132,199,0.12)',
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+  },
+  scenarioPillText: {
+    color: colors.accentLight,
     fontSize: 11,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
-    marginBottom: 4,
   },
-  personaName: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: spacing.md },
-  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
-  grade: { fontSize: 36, fontWeight: '900', color: colors.text },
-  summary: { color: colors.textMuted, fontSize: 15, lineHeight: 22, marginBottom: spacing.lg },
+  personaName: { color: colors.text, fontSize: 22, fontWeight: '700', marginBottom: spacing.md },
+
+  heroCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
+  grade: { fontSize: 42, fontWeight: '900', color: colors.text },
+  summary: { color: colors.textMuted, fontSize: 15, lineHeight: 23 },
+
   sectionTitle: {
-    color: colors.accent,
-    fontSize: 11,
+    color: colors.accentLight,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: spacing.sm,
     marginTop: spacing.lg,
   },
-  bullet: { flexDirection: 'row', marginBottom: spacing.sm, gap: spacing.sm },
-  bulletDot: { color: colors.scoreGreen, fontSize: 14, fontWeight: '700', width: 18 },
-  bulletText: { flex: 1, color: colors.text, fontSize: 14, lineHeight: 20 },
-  trainAgainButton: {
+  bullet: { flexDirection: 'row', marginBottom: spacing.sm, gap: spacing.sm, alignItems: 'flex-start' },
+  bulletIcon: {
+    width: 24, height: 24, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+    marginTop: 1, flexShrink: 0,
+  },
+  strengthIcon: { backgroundColor: 'rgba(34,197,94,0.15)' },
+  improvIcon:   { backgroundColor: 'rgba(2,132,199,0.12)' },
+  bulletIconText: { fontSize: 12, fontWeight: '700', color: colors.text },
+  bulletText: { flex: 1, color: colors.text, fontSize: 14, lineHeight: 22 },
+
+  transcriptToggle: { marginTop: spacing.lg },
+
+  trainButton: {
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    padding: spacing.lg,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
     marginTop: spacing.xl,
+    minHeight: 56,
+    justifyContent: 'center',
   },
-  trainAgainText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  trainButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

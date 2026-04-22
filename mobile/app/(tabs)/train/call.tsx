@@ -78,7 +78,6 @@ export default function CallScreen() {
     if (!persona) return;
     const transcript = messagesRef.current;
 
-    // 1. POST to /api/assess
     const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
     let assessment = null;
     try {
@@ -101,7 +100,6 @@ export default function CallScreen() {
       console.error('Assessment failed:', e);
     }
 
-    // 2. Save session to Supabase
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id ?? null;
     const { data: profile } = await supabase
@@ -127,7 +125,6 @@ export default function CallScreen() {
       .select('id')
       .single();
 
-    // 3. Navigate to assessment
     router.replace({
       pathname: '/(tabs)/train/assessment',
       params: { sessionId: (sessionData as { id: string } | null)?.id ?? '' },
@@ -138,27 +135,34 @@ export default function CallScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Status bar */}
       <View style={styles.statusBar}>
         {callStatus === 'connecting' && (
           <>
-            <ActivityIndicator color={colors.accent} size="small" />
-            <Text style={styles.statusText}>Connecting...</Text>
+            <ActivityIndicator color={colors.accentLight} size="small" />
+            <Text style={styles.statusText}>Connecting…</Text>
           </>
         )}
         {callStatus === 'connected' && (
           <>
             <View style={[styles.dot, isSpeaking && styles.dotActive]} />
-            <Text style={styles.statusText}>{isSpeaking ? `${speakerLabel} is speaking` : 'Listening...'}</Text>
+            <Text style={styles.statusText}>
+              {isSpeaking ? `${speakerLabel} is speaking` : 'Your turn — say something'}
+            </Text>
           </>
         )}
         {callStatus === 'ending' && (
           <>
             <ActivityIndicator color={colors.textMuted} size="small" />
-            <Text style={styles.statusText}>Saving session...</Text>
+            <Text style={styles.statusText}>Grading your call…</Text>
           </>
+        )}
+        {persona && (
+          <Text style={styles.personaChip} numberOfLines={1}>{persona.name}</Text>
         )}
       </View>
 
+      {/* Live transcript */}
       <FlatList
         ref={listRef}
         data={messages}
@@ -169,16 +173,22 @@ export default function CallScreen() {
         contentContainerStyle={styles.transcript}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Conversation will appear here as you speak...</Text>
+          <View style={styles.emptyWrap}>
+            <Text style={styles.emptyText}>Conversation will appear here as you speak…</Text>
+          </View>
         }
       />
 
+      {/* End call button */}
       <TouchableOpacity
-        style={[styles.endButton, callStatus === 'ending' && styles.endButtonDisabled]}
+        style={[styles.endButton, callStatus !== 'connected' && styles.endButtonDisabled]}
         onPress={handleEndCall}
         disabled={callStatus !== 'connected'}
+        activeOpacity={0.85}
       >
-        <Text style={styles.endButtonText}>End Call</Text>
+        <Text style={styles.endButtonText}>
+          {callStatus === 'ending' ? 'Saving…' : '📵  End Call'}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -186,37 +196,63 @@ export default function CallScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+
   statusBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     backgroundColor: colors.surfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
     gap: spacing.sm,
+    minHeight: 52,
   },
-  statusText: { color: colors.textMuted, fontSize: 13 },
+  statusText: { color: colors.textMuted, fontSize: 13, flex: 1 },
   dot: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: colors.textMuted,
+    width: 9, height: 9, borderRadius: 5,
+    backgroundColor: colors.textDim,
   },
   dotActive: { backgroundColor: colors.scoreGreen },
+  personaChip: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+    maxWidth: 120,
+  },
+
   transcript: {
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  emptyWrap: { alignItems: 'center', marginTop: 80 },
   emptyText: {
     color: colors.textDim,
     textAlign: 'center',
-    marginTop: spacing.xxl * 2,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 22,
+    maxWidth: 260,
   },
+
   endButton: {
     margin: spacing.lg,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.danger,
     borderRadius: radius.md,
-    padding: spacing.lg,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
+    minHeight: 58,
+    justifyContent: 'center',
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  endButtonDisabled: { opacity: 0.5 },
-  endButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  endButtonDisabled: { opacity: 0.45 },
+  endButtonText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
 });

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, radius, typography } from '../../lib/theme';
+import { colors, spacing, radius } from '../../lib/theme';
 
 const SIGNUP_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://techrp.com'}/signup`;
 
@@ -35,45 +35,63 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
-        <Text style={styles.title}>TechRP</Text>
-        <Text style={styles.subtitle}>Voice AI Training</Text>
+        {/* Logo / wordmark */}
+        <View style={styles.logoBlock}>
+          <Text style={styles.logoIcon}>🎙️</Text>
+          <Text style={styles.title}>TechRP</Text>
+          <Text style={styles.subtitle}>Voice AI Training Platform</Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.textMuted}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          textContentType="emailAddress"
-        />
+        {/* Form */}
+        <View style={styles.form}>
+          <Text style={styles.fieldLabel}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="you@example.com"
+            placeholderTextColor={colors.textDim}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.textMuted}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          textContentType="password"
-        />
+          <Text style={styles.fieldLabel}>Password</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="••••••••"
+            placeholderTextColor={colors.textDim}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            textContentType="password"
+          />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Signing In...' : 'Sign In'}</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, loading && styles.buttonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.buttonText}>{loading ? 'Signing In…' : 'Sign In'}</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')}>
-          <Text style={styles.link}>Forgot password?</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.forgotButton}
+            onPress={() => router.push('/(auth)/forgot-password')}
+          >
+            <Text style={styles.link}>Forgot password?</Text>
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity onPress={() => Linking.openURL(SIGNUP_URL)}>
-          <Text style={styles.signupText}>
-            Don't have an account?{' '}
+        {/* Sign up CTA */}
+        <View style={styles.signupRow}>
+          <Text style={styles.signupText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => Linking.openURL(SIGNUP_URL)}>
             <Text style={styles.link}>Sign up at techrp.com</Text>
-          </Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -85,45 +103,66 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
+    gap: spacing.xl,
   },
+
+  // Logo
+  logoBlock: { alignItems: 'center', gap: spacing.sm },
+  logoIcon: { fontSize: 48, marginBottom: spacing.xs },
   title: {
-    ...typography.title,
     fontSize: 36,
     fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: spacing.xs,
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    ...typography.caption,
-    textAlign: 'center',
-    marginBottom: spacing.xxl * 1.5,
+    fontSize: 13,
+    color: colors.textMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+
+  // Form
+  form: { gap: spacing.sm },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+    marginBottom: 2,
+    marginTop: spacing.xs,
   },
   input: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     color: colors.text,
     fontSize: 16,
-    marginBottom: spacing.md,
+    minHeight: 52,
   },
   button: {
     backgroundColor: colors.accent,
     borderRadius: radius.md,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  link: { color: colors.accent, fontSize: 14, textAlign: 'center' },
-  signupText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: spacing.lg,
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },
+
+  forgotButton: { alignSelf: 'center', paddingVertical: spacing.sm },
+  link: { color: colors.accentLight, fontSize: 14, fontWeight: '500' },
+
+  // Sign up row
+  signupRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 2,
   },
+  signupText: { color: colors.textMuted, fontSize: 14 },
 });

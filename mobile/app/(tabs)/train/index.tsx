@@ -1,4 +1,4 @@
-import { SectionList, View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { SectionList, View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../../lib/supabase';
@@ -19,8 +19,6 @@ export default function ScenarioPickerScreen() {
   const handleSelectScenario = async (scenario: ScenarioConfig) => {
     setLoading(true);
 
-    // Use the user's own org; fall back to the global seed org so default
-    // personas are always visible even if RLS isn't yet narrowed by coach instance.
     const orgId = profile?.organization_id ?? DEFAULT_ORG_ID;
 
     const { data, error } = await supabase
@@ -36,7 +34,6 @@ export default function ScenarioPickerScreen() {
     }
 
     if (error || !data || data.length === 0) {
-      // If org-scoped query returns nothing, try the global default org as a fallback
       if (orgId !== DEFAULT_ORG_ID) {
         const { data: fallback, error: fallbackErr } = await supabase
           .from('personas')
@@ -76,38 +73,60 @@ export default function ScenarioPickerScreen() {
       sections={sections}
       keyExtractor={(item) => item.type}
       renderSectionHeader={({ section }) => (
-        <Text style={styles.sectionHeader}>{section.title}</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        </View>
       )}
       renderItem={({ item }) => (
         <TouchableOpacity
           style={styles.row}
           onPress={() => handleSelectScenario(item)}
           disabled={loading}
+          activeOpacity={0.75}
         >
-          <Text style={styles.icon}>{item.icon}</Text>
+          <View style={styles.iconWrap}>
+            <Text style={styles.icon}>{item.icon}</Text>
+          </View>
           <View style={styles.rowText}>
             <Text style={styles.label}>{item.label}</Text>
             <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
           </View>
-          <Text style={styles.chevron}>›</Text>
+          {loading
+            ? <ActivityIndicator color={colors.accentLight} size="small" />
+            : <Text style={styles.chevron}>›</Text>
+          }
         </TouchableOpacity>
       )}
+      ListHeaderComponent={
+        <View style={styles.header}>
+          <Text style={styles.screenTitle}>Choose a Scenario</Text>
+          <Text style={styles.screenSubtitle}>Pick a training situation to practice</Text>
+        </View>
+      }
     />
   );
 }
 
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg },
-  sectionHeader: {
-    color: colors.accent,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
+
+  header: { marginBottom: spacing.sm },
+  screenTitle: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: colors.textMuted },
+
+  sectionHeaderRow: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
   },
+  sectionHeader: {
+    color: colors.accentLight,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -117,10 +136,20 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 72,
   },
-  icon: { fontSize: 24, marginRight: spacing.md },
-  rowText: { flex: 1 },
-  label: { color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  description: { color: colors.textMuted, fontSize: 12, lineHeight: 16 },
-  chevron: { color: colors.textMuted, fontSize: 20, marginLeft: spacing.sm },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(2,132,199,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  icon: { fontSize: 22 },
+  rowText: { flex: 1, gap: 4 },
+  label: { color: colors.text, fontSize: 15, fontWeight: '600' },
+  description: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
+  chevron: { color: colors.textDim, fontSize: 22, marginLeft: spacing.sm },
 });

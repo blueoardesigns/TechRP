@@ -16,8 +16,7 @@ export default function PlaybooksListScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!profile) return; // wait for profile
-
+    if (!profile) return;
     const orgId = profile.organization_id ?? DEFAULT_ORG_ID;
 
     const load = async () => {
@@ -33,7 +32,6 @@ export default function PlaybooksListScreen() {
 
       let playbooks = (data ?? []) as Playbook[];
 
-      // If org query returns nothing, fall back to global defaults
       if (playbooks.length === 0 && orgId !== DEFAULT_ORG_ID) {
         const { data: fallback, error: fallbackErr } = await supabase
           .from('playbooks')
@@ -44,7 +42,6 @@ export default function PlaybooksListScreen() {
         playbooks = (fallback ?? []) as Playbook[];
       }
 
-      // Group by scenario_type, preserving scenario display order
       const map = new Map<string, Playbook[]>();
       playbooks.forEach(p => {
         const key = p.scenario_type ?? 'other';
@@ -72,11 +69,25 @@ export default function PlaybooksListScreen() {
       contentContainerStyle={sections.length === 0 ? styles.empty : styles.content}
       sections={sections}
       keyExtractor={(item) => item.id}
+      ListHeaderComponent={
+        sections.length > 0 ? (
+          <View style={styles.header}>
+            <Text style={styles.screenTitle}>Playbooks</Text>
+            <Text style={styles.screenSubtitle}>Your scenario guides and best practices</Text>
+          </View>
+        ) : null
+      }
       renderSectionHeader={({ section }) => (
-        <Text style={styles.sectionHeader}>{section.title}</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>{section.title}</Text>
+        </View>
       )}
       ListEmptyComponent={
-        <Text style={styles.emptyText}>No playbooks available yet.</Text>
+        <View style={styles.emptyContent}>
+          <Text style={styles.emptyIcon}>📖</Text>
+          <Text style={styles.emptyTitle}>No playbooks yet</Text>
+          <Text style={styles.emptyText}>Playbooks will appear here once your manager adds them.</Text>
+        </View>
       }
       renderItem={({ item }) => {
         const scenario = getScenarioConfig(item.scenario_type ?? '');
@@ -84,8 +95,11 @@ export default function PlaybooksListScreen() {
           <TouchableOpacity
             style={styles.row}
             onPress={() => router.push({ pathname: '/(tabs)/playbooks/[id]', params: { id: item.id } })}
+            activeOpacity={0.75}
           >
-            <Text style={styles.icon}>{scenario?.icon ?? '📖'}</Text>
+            <View style={styles.iconWrap}>
+              <Text style={styles.icon}>{scenario?.icon ?? '📖'}</Text>
+            </View>
             <Text style={styles.label}>{item.name ?? scenario?.label ?? item.scenario_type}</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
@@ -97,19 +111,37 @@ export default function PlaybooksListScreen() {
 
 const styles = StyleSheet.create({
   list: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   center: { flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  emptyText: { color: colors.textMuted, fontSize: 14, textAlign: 'center' },
-  sectionHeader: {
-    color: colors.accent,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginTop: spacing.xl,
-    marginBottom: spacing.sm,
+  empty: { flex: 1 },
+
+  header: { marginBottom: spacing.sm },
+  screenTitle: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  screenSubtitle: { fontSize: 13, color: colors.textMuted },
+
+  emptyContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xxl,
+    gap: spacing.sm,
   },
+  emptyIcon: { fontSize: 48, marginBottom: spacing.sm },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  emptyText: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 21 },
+
+  sectionHeaderRow: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  sectionHeader: {
+    color: colors.accentLight,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -119,8 +151,18 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
+    minHeight: 60,
   },
-  icon: { fontSize: 20, marginRight: spacing.md },
+  iconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  icon: { fontSize: 18 },
   label: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' },
-  chevron: { color: colors.textMuted, fontSize: 20 },
+  chevron: { color: colors.textDim, fontSize: 22 },
 });

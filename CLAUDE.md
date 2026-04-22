@@ -58,7 +58,7 @@ EXPO_PUBLIC_VAPI_API_KEY=
 4. Manager reviews scores in web dashboard at `/sessions`
 
 ### Database (Supabase)
-Multi-tenant: `organizations` → `users`, `playbooks`, `personas`, `training_sessions`. RLS enabled on most tables (see Known Issues).
+Multi-tenant: `organizations` → `users`, `playbooks`, `personas`, `training_sessions`. RLS enabled on all tables.
 
 Key relationships:
 - `training_sessions` links to `persona_id`, stores `transcript`, `assessment` (JSON), `vapi_call_id`
@@ -110,7 +110,6 @@ Role-based auth is live. Roles: `individual`, `company_admin`, `coach`, `superus
 Password reset uses Supabase native email flow (`/forgot-password` → `/reset-password`). Email verification skipped by default; set `SKIP_EMAIL_CONFIRM=false` in production to require it.
 
 ## Known Issues
-- RLS disabled on `playbooks` and `training_sessions` (pending — blocked on auth, which is now complete)
 - Mobile Vapi integration not yet working (needs Expo dev build)
 - Field recording upload not yet built
 
