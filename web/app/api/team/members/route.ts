@@ -13,8 +13,13 @@ export async function GET() {
     .eq('auth_user_id', authUser.id)
     .single();
 
-  if (!admin || (admin as any).app_role !== 'company_admin' || !(admin as any).organization_id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const allowedRoles = ['company_admin', 'superuser'];
+  if (!admin || !allowedRoles.includes((admin as any).app_role) || !(admin as any).organization_id) {
+    if (!admin || !allowedRoles.includes((admin as any).app_role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // Allowed role but no org yet — return empty
+    return NextResponse.json({ members: [], inviteToken: '' });
   }
 
   const orgId = (admin as any).organization_id;

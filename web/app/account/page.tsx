@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { AppShell } from '@/components/app-shell';
+import { supabase } from '@/lib/supabase';
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth();
@@ -22,6 +23,27 @@ export default function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwError, setPwError] = useState('');
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError('');
+    setPwSuccess(false);
+    if (newPassword.length < 8) { setPwError('Password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setPwError('Passwords do not match.'); return; }
+    setPwSaving(true);
+    const { error: err } = await supabase.auth.updateUser({ password: newPassword });
+    setPwSaving(false);
+    if (err) { setPwError(err.message); return; }
+    setPwSuccess(true);
+    setNewPassword('');
+    setConfirmPassword('');
+  };
 
   const isIndividual = user?.role === 'individual';
 
@@ -123,6 +145,48 @@ export default function AccountPage() {
               </div>
             </div>
           )}
+        </div>
+
+        <div className="bg-gray-900 border border-white/10 rounded-2xl p-8 mt-6">
+          <h2 className="text-base font-semibold text-white mb-5">Change Password</h2>
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">New password</label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="Minimum 8 characters"
+                className="w-full bg-gray-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Confirm new password</label>
+              <input
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full bg-gray-800 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+              />
+            </div>
+            {pwError && (
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{pwError}</p>
+            )}
+            {pwSuccess && (
+              <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">Password updated.</p>
+            )}
+            <button
+              type="submit"
+              disabled={pwSaving}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+            >
+              {pwSaving ? 'Updating…' : 'Update password'}
+            </button>
+          </form>
         </div>
 
         <button

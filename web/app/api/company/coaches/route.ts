@@ -12,7 +12,8 @@ async function getCompanyAdminProfile() {
     .select('id, app_role, organization_id, full_name, email')
     .eq('auth_user_id', authUser.id)
     .single();
-  if (!data || (data as any).app_role !== 'company_admin') return null;
+  const allowedRoles = ['company_admin', 'superuser'];
+  if (!data || !allowedRoles.includes((data as any).app_role)) return null;
   return data as any;
 }
 

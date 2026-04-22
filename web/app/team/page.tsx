@@ -81,7 +81,12 @@ export default function TeamPage() {
   }, [user, router]);
 
   useEffect(() => {
-    if (!user?.organizationId) return;
+    if (!user) return;
+    if (!user.organizationId) {
+      setLoading(false);
+      loadCoachConnections();
+      return;
+    }
     Promise.all([
       fetch('/api/team/members').then(r => r.json()),
       fetch('/api/team/candidates').then(r => r.json()),

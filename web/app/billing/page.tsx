@@ -113,9 +113,9 @@ export default function BillingPage() {
               })
               setBilling(b => b ? { ...b, autoRefill: !b.autoRefill } : b)
             }}
-            className={`relative w-12 h-6 rounded-full transition-colors ${autoRefill ? 'bg-indigo-600' : 'bg-white/20'}`}
+            className={`relative inline-flex w-11 h-6 shrink-0 rounded-full overflow-hidden transition-colors ${autoRefill ? 'bg-indigo-600' : 'bg-gray-600'}`}
           >
-            <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${autoRefill ? 'translate-x-7' : 'translate-x-1'}`} />
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${autoRefill ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
           </button>
         </div>
       </div>

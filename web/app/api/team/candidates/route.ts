@@ -11,7 +11,8 @@ async function getAdminContext(authUserId: string) {
     .select('id, organization_id, coach_instance_id, app_role')
     .eq('auth_user_id', authUserId)
     .single();
-  if (!admin || (admin as any).app_role !== 'company_admin' || !(admin as any).organization_id) {
+  const allowedRoles = ['company_admin', 'superuser'];
+  if (!admin || !allowedRoles.includes((admin as any).app_role) || !(admin as any).organization_id) {
     return null;
   }
   return admin as { id: string; organization_id: string; coach_instance_id: string | null; app_role: string };

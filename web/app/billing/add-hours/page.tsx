@@ -81,6 +81,12 @@ export default function AddHoursPage() {
           >
             {loading ? 'Redirecting...' : `Buy ${qty} hour${qty !== 1 ? 's' : ''} — $${total.toFixed(2)}`}
           </button>
+          {!planId && (
+            <p className="text-sm text-amber-400 text-center">
+              An active subscription is required to purchase extra hours.{' '}
+              <a href="/pricing" className="underline hover:text-amber-300">View plans →</a>
+            </p>
+          )}
         </div>
       </div>
     </AppShell>
