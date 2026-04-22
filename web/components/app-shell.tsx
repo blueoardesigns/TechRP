@@ -85,6 +85,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   const [pinned, setPinned] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const expanded = pinned || hovered;
 
   useEffect(() => {
     const stored = localStorage.getItem('sidebar-pinned');
@@ -103,27 +105,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-[#020617]">
       <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         className={[
-          'shrink-0 sticky top-0 h-screen flex flex-col bg-[#020617] border-r border-white/[0.06] overflow-y-auto transition-all duration-200',
-          pinned ? 'w-52' : 'w-[52px]',
+          'shrink-0 sticky top-0 h-screen flex flex-col bg-[#020617] border-r border-white/[0.06] overflow-y-auto transition-all duration-200 z-40',
+          expanded ? 'w-52' : 'w-[52px]',
         ].join(' ')}
         style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
       >
-        {/* Logo + pin */}
-        <div className="px-3 py-4 border-b border-white/[0.06] flex items-center justify-between min-h-[52px]">
+        {/* Logo */}
+        <div className="px-3 py-4 border-b border-white/[0.06] flex items-center min-h-[52px]">
           <Link href="/training" className="flex items-center gap-2 min-w-0">
             <LogoMark />
-            {pinned && (
+            {expanded && (
               <span className="text-xs font-bold text-white tracking-tight truncate">TechRP</span>
             )}
           </Link>
-          <button
-            onClick={togglePin}
-            title={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
-            className="text-slate-500 hover:text-white transition-colors shrink-0"
-          >
-            {pinned ? <Pin size={14} /> : <PinOff size={14} />}
-          </button>
         </div>
 
         {/* Nav */}
@@ -132,12 +129,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             if (section.roles && !section.roles.includes(user?.role ?? '')) return null;
             return (
               <div key={section.label} className="mb-1">
-                {pinned && (
+                {expanded ? (
                   <p className="px-3 pt-3 pb-1 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
                     {section.label}
                   </p>
+                ) : (
+                  <div className="pt-3" />
                 )}
-                {!pinned && <div className="pt-3" />}
                 {section.items.map((item) => {
                   const active =
                     item.href === '/admin'
@@ -147,15 +145,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.href}
                       href={item.href}
-                      title={!pinned ? item.label : undefined}
+                      title={!expanded ? item.label : undefined}
                       className={[
                         'flex items-center gap-2.5 mx-1 px-2 py-1.5 rounded text-sm font-medium transition-colors',
-                        !pinned && 'justify-center',
+                        !expanded && 'justify-center',
                         active ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white',
                       ].filter(Boolean).join(' ')}
                     >
                       <item.Icon size={16} className="shrink-0" />
-                      {pinned && <span className="truncate">{item.label}</span>}
+                      {expanded && <span className="truncate">{item.label}</span>}
                     </Link>
                   );
                 })}
@@ -166,7 +164,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* User footer */}
         <div className="border-t border-white/[0.06] p-2 space-y-1">
-          {pinned ? (
+          {expanded ? (
             <>
               <Link
                 href="/account"
@@ -192,6 +190,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <LogOut size={16} className="shrink-0" />
                 <span>Sign out</span>
+              </button>
+              <button
+                onClick={togglePin}
+                title={pinned ? 'Unpin sidebar' : 'Keep sidebar open'}
+                className={[
+                  'flex items-center gap-2.5 w-full px-2 py-1.5 rounded text-sm transition-colors',
+                  pinned ? 'text-sky-400 hover:text-sky-300' : 'text-slate-600 hover:text-slate-300',
+                ].join(' ')}
+              >
+                {pinned ? <Pin size={14} className="shrink-0" /> : <PinOff size={14} className="shrink-0" />}
+                <span>{pinned ? 'Pinned open' : 'Pin open'}</span>
               </button>
             </>
           ) : (
