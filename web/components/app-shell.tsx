@@ -12,6 +12,7 @@ import {
   Users2,
   BarChart2,
   UsersRound,
+  Building2,
   CreditCard,
   ShieldCheck,
   UserCog,
@@ -48,9 +49,10 @@ const NAV_SECTIONS: NavSection[] = [
     label: 'MANAGE',
     roles: ['company_admin', 'coach', 'superuser'],
     items: [
-      { href: '/insights', label: 'Insights', Icon: BarChart2   },
-      { href: '/team',     label: 'Team',     Icon: UsersRound  },
-      { href: '/billing',  label: 'Billing',  Icon: CreditCard  },
+      { href: '/insights',       label: 'Insights',      Icon: BarChart2  },
+      { href: '/team',           label: 'Team',          Icon: UsersRound },
+      { href: '/coached-teams',  label: 'Coached Teams', Icon: Building2  },
+      { href: '/billing',        label: 'Billing',       Icon: CreditCard },
     ],
   },
   {

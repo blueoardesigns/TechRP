@@ -14,39 +14,76 @@ export async function GET() {
     .single();
 
   const allowedRoles = ['company_admin', 'superuser'];
-  if (!admin || !allowedRoles.includes((admin as any).app_role) || !(admin as any).organization_id) {
-    if (!admin || !allowedRoles.includes((admin as any).app_role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    // Allowed role but no org yet — return empty
-    return NextResponse.json({ members: [], inviteToken: '' });
+  if (!admin || !allowedRoles.includes((admin as any).app_role)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  if (!(admin as any).organization_id) {
+    return NextResponse.json({ members: [], inviteToken: '', seatLimit: 0, activeCount: 0 });
   }
 
   const orgId = (admin as any).organization_id;
 
-  const { data: org } = await (supabase as any)
-    .from('organizations')
-    .select('invite_token')
-    .eq('id', orgId)
-    .single();
+  const [orgRes, membersRes] = await Promise.all([
+    (supabase as any).from('organizations').select('invite_token, seat_limit').eq('id', orgId).single(),
+    (supabase as any)
+      .from('users')
+      .select('id, full_name, email, status, created_at, scenario_access')
+      .eq('organization_id', orgId)
+      .eq('app_role', 'individual')
+      .order('created_at', { ascending: false }),
+  ]);
 
-  const { data: members } = await (supabase as any)
-    .from('users')
-    .select('id, full_name, email, status, created_at')
-    .eq('organization_id', orgId)
-    .eq('app_role', 'individual')
-    .order('created_at', { ascending: false });
+  const members: any[] = membersRes.data ?? [];
+  const memberIds = members.map((m: any) => m.id);
 
-  const memberIds = (members ?? []).map((m: any) => m.id);
+  // Fetch all sessions for org members
   const { data: sessions } = memberIds.length
-    ? await (supabase as any).from('training_sessions').select('user_id').in('user_id', memberIds)
+    ? await (supabase as any)
+        .from('training_sessions')
+        .select('id, user_id, started_at, assessment')
+        .in('user_id', memberIds)
     : { data: [] };
 
-  const sessionMap: Record<string, number> = {};
-  (sessions ?? []).forEach((s: any) => { sessionMap[s.user_id] = (sessionMap[s.user_id] ?? 0) + 1; });
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
+
+  // Build per-member stats
+  const statsMap: Record<string, {
+    sessionCount: number;
+    sessions30d: number;
+    lastSessionAt: string | null;
+    avgScore: number | null;
+  }> = {};
+
+  for (const s of (sessions ?? []) as any[]) {
+    if (!statsMap[s.user_id]) {
+      statsMap[s.user_id] = { sessionCount: 0, sessions30d: 0, lastSessionAt: null, avgScore: null };
+    }
+    const st = statsMap[s.user_id];
+    st.sessionCount += 1;
+    if (s.started_at > thirtyDaysAgo) st.sessions30d += 1;
+    if (!st.lastSessionAt || s.started_at > st.lastSessionAt) st.lastSessionAt = s.started_at;
+
+    // Parse score
+    const raw = s.assessment as any;
+    if (raw) {
+      const score = typeof raw === 'string' ? JSON.parse(raw).score : raw.score;
+      if (typeof score === 'number') {
+        const display = score <= 10 ? Math.round(score * 10) : Math.round(score);
+        if (st.avgScore === null) st.avgScore = display;
+        else st.avgScore = Math.round((st.avgScore + display) / 2);
+      }
+    }
+  }
+
+  const activeCount = members.filter((m: any) => m.status === 'approved').length;
 
   return NextResponse.json({
-    members: (members ?? []).map((m: any) => ({ ...m, sessionCount: sessionMap[m.id] ?? 0 })),
-    inviteToken: (org as any)?.invite_token ?? '',
+    members: members.map((m: any) => ({
+      ...m,
+      ...(statsMap[m.id] ?? { sessionCount: 0, sessions30d: 0, lastSessionAt: null, avgScore: null }),
+    })),
+    inviteToken: (orgRes.data as any)?.invite_token ?? '',
+    seatLimit: (orgRes.data as any)?.seat_limit ?? 0,
+    activeCount,
   });
 }

@@ -41,17 +41,33 @@ export async function GET() {
     .filter(Boolean);
 
   let sessionsByUser: Record<string, Record<string, number>> = {};
+  let scoresByUser: Record<string, number[]> = {};
+  let lastSessionAt: Record<string, string> = {};
+
   if (signedUpIds.length > 0) {
     const { data: sessions } = await (supabase as any)
       .from('training_sessions')
-      .select('user_id, persona_scenario_type')
+      .select('user_id, persona_scenario_type, assessment, started_at')
       .in('user_id', signedUpIds);
 
     ((sessions ?? []) as any[]).forEach((s) => {
-      if (!s.persona_scenario_type) return;
-      if (!sessionsByUser[s.user_id]) sessionsByUser[s.user_id] = {};
-      sessionsByUser[s.user_id][s.persona_scenario_type] =
-        (sessionsByUser[s.user_id][s.persona_scenario_type] ?? 0) + 1;
+      if (s.persona_scenario_type) {
+        if (!sessionsByUser[s.user_id]) sessionsByUser[s.user_id] = {};
+        sessionsByUser[s.user_id][s.persona_scenario_type] =
+          (sessionsByUser[s.user_id][s.persona_scenario_type] ?? 0) + 1;
+      }
+      const raw = s.assessment;
+      if (raw) {
+        const a = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (typeof a.score === 'number') {
+          const display = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
+          if (!scoresByUser[s.user_id]) scoresByUser[s.user_id] = [];
+          scoresByUser[s.user_id].push(display);
+        }
+      }
+      if (!lastSessionAt[s.user_id] || s.started_at > lastSessionAt[s.user_id]) {
+        lastSessionAt[s.user_id] = s.started_at;
+      }
     });
   }
 
@@ -61,10 +77,24 @@ export async function GET() {
     const sessionsComplete = assigned.reduce((sum, s) =>
       sum + Math.min(userSessions[s.scenario_type] ?? 0, s.count), 0);
     const sessionsTotal = assigned.reduce((sum, s) => sum + s.count, 0);
+
+    // Avg score for this candidate
+    const allScores = invite.signed_up_user_id ? (scoresByUser[invite.signed_up_user_id] ?? []) : [];
+    const avgScore = allScores.length
+      ? Math.round(allScores.reduce((a: number, b: number) => a + b, 0) / allScores.length)
+      : null;
+
+    // Completed date = date of last session once all assigned scenarios satisfied
+    const completedAt = sessionsComplete >= sessionsTotal && sessionsTotal > 0 && invite.signed_up_user_id
+      ? (lastSessionAt[invite.signed_up_user_id] ?? null)
+      : null;
+
     return {
       ...invite,
       invite_url: `${APP_URL}/signup?candidate=${invite.personal_token}`,
       progress: { sessionsComplete, sessionsTotal },
+      avgScore,
+      completedAt,
     };
   });
 
