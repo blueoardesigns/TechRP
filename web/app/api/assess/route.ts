@@ -137,6 +137,19 @@ export async function POST(request: NextRequest) {
 - Did they handle pushback (existing vendor, no time) without damaging the relationship?
 - Did they land a concrete next step (lunch, follow-up, intro) that keeps the door open?`;
 
+    const isDiscovery = persona?.scenarioType?.endsWith('_discovery') ?? false;
+
+    const discoveryRubric = isDiscovery ? `
+
+DISCOVERY MEETING GRADING RUBRIC (overrides standard BD criteria for this session type):
+- Weight question quality heavily: did the rep ask about volume, current process, pain, ideal outcome, and decision criteria?
+- Penalize one-way pitching: if the rep spent more than 30% of the call presenting without asking questions, score drops significantly
+- Reward agenda-setting at the open (e.g., framing the meeting purpose before diving in)
+- Reward a specific, committed next step at the close — not vague follow-up like "I'll reach out," but a defined action (tour, intro call, trial job, referral agreement draft)
+- Penalize re-pitching content from a cold call without digging deeper into the prospect's situation
+- A great discovery score (85+) requires demonstrated curiosity and listening, not just rapport or likability
+` : '';
+
     // Strip HTML tags from playbook content in case it was saved as HTML by the rich-text editor
     const playbookText = resolvedPlaybookContent
       ? resolvedPlaybookContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
@@ -147,7 +160,7 @@ export async function POST(request: NextRequest) {
       : '';
 
     // Create the assessment prompt
-    const assessmentPrompt = `You are an experienced sales manager grading a training call for a water damage restoration company. ${scenarioContext}${playbookSection}
+    const assessmentPrompt = `You are an experienced sales manager grading a training call for a water damage restoration company. ${scenarioContext}${playbookSection}${discoveryRubric}
 
 Here is the conversation transcript:
 
