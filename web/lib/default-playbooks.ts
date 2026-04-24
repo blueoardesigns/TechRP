@@ -369,7 +369,38 @@ A win is a face-to-face meeting — a lunch, an office visit, or an agency prese
 - Top BD reps speak the language of insurance — they understand documentation, claims integrity, and carrier relationships
 - They position themselves as a resource for the agent's clients, not a vendor looking for leads
 - They follow up with a handwritten note or personalized email after every meeting
-- They track when an agent sends their first referral and call to thank them personally`,
+- They track when an agent sends their first referral and call to thank them personally
+
+## The Retention Argument — Claim-Control Positioning
+
+Most insurance agents don't think about who handles a client's restoration. They either let the carrier assign a vendor, or they refer a company they've used before without thinking about why. This section gives you the language to change that mindset.
+
+### Why Broker-Directed Claims Reduce Client Churn
+
+When a policyholder has a bad restoration experience — poor communication, slow drying, contractor disputes, extended displacement — they don't just blame the restoration company. They blame their entire insurance situation. They feel like their agent didn't protect them. That dissatisfaction often leads to a policy review, a competitor quote, and eventually a lost client.
+
+The broker who recommended (or failed to recommend) a great restoration company owns part of that outcome.
+
+**The frame:** You're not asking them to interfere with a claim. You're asking them to advocate for their client's experience — which is squarely in their lane as a trusted advisor.
+
+### Language That Works
+
+When the agent says they "let the carrier handle it":
+> "When your client calls you in a panic because their basement is flooded, they don't want a Google search — they want you to tell them who to call. The carrier will assign whoever is available in their network. That's not advocacy. That's abdication. You have the ability to control that experience."
+
+When they say "that's the carrier's job":
+> "The carrier assigns a vendor to minimize their cost — not to maximize your client's experience. Those two things are not the same. When your client has a bad restoration experience, they blame the whole situation — including their agent. You have the ability to control that."
+
+### Objection Handling — Claim Control Edition
+
+**"I don't want to get involved in claims."**
+> "Recommending a contractor isn't 'getting involved in a claim' — it's the same as recommending a roofer or a plumber. You're advocating for your client's experience. There's no liability in that."
+
+**"The carrier has preferred vendors for a reason."**
+> "They do — and the reason is cost efficiency for the carrier. That's a different goal than client satisfaction for you. Those vendors are fine. But 'fine' is not the same as 'someone I personally vetted and trust with my client.'"
+
+**"My clients are capable of choosing their own vendor."**
+> "They are — but a lot of them are standing in four inches of water at 11 PM, and they want to know who to call. That moment is a service opportunity. If you can say 'call these guys and tell them I sent you,' that's worth something."`,
   },
   {
     scenarioType: 'plumber_bd',
@@ -487,7 +518,36 @@ If they want to know more before committing to a meeting:
 - They never lead with money — they ask what the plumber wants first
 - They make the referral process invisible for the tech — one text, no friction
 - They treat the first referral like an audition — they personally debrief with the plumber after every first job
-- They build separate relationships with the owner and the techs — same company, different motivations`,
+- They build separate relationships with the owner and the techs — same company, different motivations
+
+## Handling the "We Don't Do Referrals" Objection
+
+When a plumber says "we don't do referrals" or "we handle everything ourselves," they're expressing one of three things: a bad past experience, a philosophical stance, or financial skepticism.
+
+### The Three Resistance Types
+
+**1. Hostile / Territorial**
+Start by acknowledging: > "That makes sense — a lot of plumbers feel the same way. Especially if you've had a bad experience with a restoration company. Has that happened to you?"
+
+If no: > "I'm not asking you to change your model. But when you've fixed the pipe and left, there's still wet drywall and a homeowner who doesn't know what to do next. We want to be the company that makes your visit look even better — not just the pipe fix, but the whole problem solved."
+
+**2. Burned by a Bad Restorer**
+Lead with: > "That's fair — and I'm not going to tell you that wasn't a real problem. What happened, if you don't mind me asking?"
+
+Then: > "Everything you just described is the exact opposite of how we operate. I'm not asking you to take my word for it. I'm asking you to give us one job. If we don't deliver, you don't have to call us again. Simple as that."
+
+**3. Financially Skeptical**
+Don't dodge it: > "Fair question. Let me be specific."
+
+Give them specifics: per-referral payout, lead-back model, warranty assist, or exclusivity offer. For the tech crew separately: > "Your guys in the field are the ones making the call. We have a recognition program for techs who refer jobs — fast and small. They don't have to wait 30 days."
+
+### The Financial Frame
+
+> "If your business sends us an average of 3 jobs per month — that's 36 referrals a year. Let's say half convert. That's 18 jobs a year — additional revenue without adding a single truck or employee."
+
+### The Relationship Frame
+
+> "The plumbers who work with us best aren't thinking about the per-job payout. They're thinking about their reputation with their customers. When a plumber calls us in, the homeowner knows their plumber took care of them from start to finish. That's a referral generator on its own."`,
   },
 
   // ── DISCOVERY MEETING PLAYBOOKS ───────────────────────────────────────────
@@ -598,6 +658,36 @@ Options for next step:
 - Follow-up meeting after the next BOD vote on vendors
 - Trial job on the next eligible event
 
+## Discovery Meeting Framework
+
+Use this structure for every discovery meeting.
+
+### 1. Open with Agenda-Setting (30 sec)
+> "I want to make sure I use your time well — I'd love to spend most of this understanding your current situation and what you'd want from a partner. Sound good?"
+
+### 2. Current State Questions (5 min)
+- What's your volume of water/fire events per year?
+- Who handles them currently — is there a process, or is it whoever answers the phone?
+- How does a referral or vendor call happen? Who makes it?
+
+### 3. Pain / Friction (5 min)
+- What's been frustrating about your current process or vendor?
+- Has there been a situation that didn't go the way you wanted it to?
+- What's the cost of that — in time, in tenant/client complaints, in repeat calls?
+
+### 4. Ideal Outcome (3 min)
+- "What would a great partnership look like for you specifically?"
+- "If you could change one thing about how this works right now, what would it be?"
+
+### 5. Decision Process (2 min)
+- Who else is involved in a decision like this?
+- What does a "yes" look like from your side?
+
+### 6. Close with a Specific Next Step
+Never end a discovery meeting with "I'll follow up." Agree on a defined action before you leave. Examples: property walk, loop in portfolio manager, trial job on next event.
+
+Weak close (never use): "I'll be in touch" / "I'll send you some information"
+
 ## Assessment Rubric — How Claude Scores This Session
 The following 8 criteria are used to evaluate the BD rep's performance in a discovery meeting:
 
@@ -702,6 +792,33 @@ Educate: "We've handled losses as large as [$X million, X square feet, X-buildin
 ## Closing for a Next Step
 > "I appreciate the time today — this has been incredibly helpful. Based on what you've shared about [specific pain point or event they mentioned], I think there's a real opportunity for us to be a resource for you. Here's what I'd like to suggest: would you be open to a property walk? I'd like to walk your buildings with your maintenance supervisor, document shutoffs and access points, and have a reference sheet ready before you ever need us. That's at no cost to you. And if it makes sense, I'd also love to meet [asset manager/ownership group]. What would be the most useful next step?"
 
+## Discovery Meeting Framework
+
+Use this structure for every commercial PM discovery meeting.
+
+### 1. Open with Agenda-Setting (30 sec)
+> "I want to make sure I use your time well — I'd love to spend most of this understanding your current situation and what you'd want from a vendor partner. Sound good?"
+
+### 2. Current State Questions (5 min)
+- Portfolio size and event volume per year
+- Current vendor process — contracted, informal, carrier-assigned?
+- Who makes the call when an event happens — PM, regional, facilities?
+
+### 3. Pain / Friction (5 min)
+- What's been frustrating about the current process or vendor?
+- Most recent event that didn't go well?
+- Cost of the gap: tenant complaints, downtime, claim delays?
+
+### 4. Ideal Outcome (3 min)
+- "What would a great vendor relationship look like for your portfolio?"
+
+### 5. Decision Process (2 min)
+- Who else approves vendor relationships?
+- Is there a master services agreement or preferred vendor list?
+
+### 6. Close with a Specific Next Step
+Portfolio walk, intro call with regional director, non-binding vendor agreement, or trial authorization on next loss. Never leave with "I'll follow up."
+
 ## Assessment Rubric — How Claude Scores This Session
 The following 8 criteria are used to evaluate the BD rep's performance in a discovery meeting:
 
@@ -792,6 +909,25 @@ Educate: "Making a referral from a list of vetted vendors you trust is not steer
 
 ## Closing for a Next Step
 > "This has been really helpful — thank you. Based on what you've shared about [specific pain point], I think we can genuinely add value for your clients. Here's what I'd like to suggest: can we agree to a trial? The next eligible property loss where you'd normally make a referral — send it to us. I'll personally make sure you're kept in the loop from the minute we get on-site to the day the job is complete. If it's not a great experience for your client, you owe me nothing and we go our separate ways. Does that seem fair?"
+
+## Discovery Meeting Framework
+
+A strong discovery meeting with an insurance agent follows this five-part structure. The rep who sells the most restoration work is rarely the one with the best pitch — it's the one who asked the best questions and actually remembered the answers.
+
+**1. Open with Agenda (2 min)**
+Before any questions, frame the meeting: *"Here's what I want to do today — I want to understand your book, how your clients experience property losses, and what's working or not with your current restoration vendor situation. I'm not here to pitch anything. I just want to ask good questions and see if there's a fit. Does that work?"*
+
+**2. Light Rapport and Context (3–5 min)**
+Before diving into referrals, ask about their agency: how long they've been there, what lines they write most, any recent changes. Listen for signals — a growing commercial book, a recent bad experience with a vendor, a new office manager who handles referrals. These details become anchors for your close.
+
+**3. Probe Questions (15–20 min)**
+Move through the question categories above in a natural, conversational order. Don't interrogate — ask, listen, and follow up. The best follow-up is simply "tell me more about that." Specifically focus on: current vendor rating, what they'd want improved, FNOL process, how many events per year, and who in the agency actually makes the referral call.
+
+**4. Reflect Back What You Heard (2–3 min)**
+Before closing, summarize in their language: *"Based on what you've shared — your current vendor is about a 3 out of 5, the main frustration is communication lag, you see roughly 15–20 restoration events per year, and the referral usually goes through your assistant when you're unavailable. Is that right?"* This earns trust and positions you as someone who listens — which is genuinely rare.
+
+**5. Close on a Trial (2–3 min)**
+Only after demonstrating you understand their world do you make an ask. The close isn't a pitch — it's a logical next step based on what they told you: *"Given what you said about [specific pain point], I think the only way to know if we're the right fit is one job. The next eligible loss — let us take it. I'll personally make sure you're informed from start to finish."*
 
 ## Assessment Rubric — How Claude Scores This Session
 The following 8 criteria are used to evaluate the BD rep's performance in a discovery meeting:
@@ -934,6 +1070,25 @@ After the first referral, call the owner and ask:
 > "What made you decide to send that job to us?"
 
 The answer tells you exactly what's working and how to lock in the relationship long-term. Build on whatever they say.
+
+## Discovery Meeting Framework
+
+A great discovery meeting with a plumbing company follows this five-part structure. The rep who wins the most plumber referrals is almost never the one who talked the most — it's the one who understood the plumber's world and made doing business together feel easy.
+
+**1. Open with Agenda (2 min)**
+Frame the meeting before you ask a single question: *"Here's what I want to accomplish today — I want to understand your operation, what happens when your guys run into water damage on a job, and what you'd actually want from a restoration partner. I'm not here to pitch you on anything. Just ask some questions and see if there's a natural fit. Sound good?"*
+
+**2. Light Rapport and Business Context (3–5 min)**
+Before getting into referrals, learn about the company. How long they've been running it, where they came up, what their split looks like between residential and commercial. Listen for signals: an owner who came up as a tech will think differently than one who bought the business. A shop heavy on new construction may not generate many referrals. Set your expectations based on what you learn.
+
+**3. Probe Questions (15–20 min)**
+Work through the question categories above — business structure, referral process, current vendor, what they actually want, and referral volume. Don't rush it. Ask one question, listen fully, follow up before moving on. The most important question in any discovery meeting with a plumber: *"What would you actually want from a restoration company — not what you think you're supposed to say, but what would actually make this worth your time?"*
+
+**4. Reflect Back What You Heard (2–3 min)**
+Before any close, summarize in their language: *"Let me make sure I got this right — you've got 8 guys running service calls, your current restoration company is maybe a 3 out of 5, main issue is they're slow to pay, and the referral call usually comes from your dispatcher, not the tech in the field. Did I get that right?"* This alone separates you from every other rep who walked through their door.
+
+**5. Close on a Trial Referral (2–3 min)**
+Don't close until you've reflected back what they told you. Then make a single specific ask based on what they valued most: *"Here's what I want to leave you with — no paperwork, no commitments. The next time one of your guys has standing water at a job site, have them text me directly. I'll have a crew out fast, your customer gets a great experience, and I'll call you personally to debrief. First job is the tryout. If you like what you see, we build from there. Fair?"*
 
 ## Assessment Rubric — How Claude Scores This Session
 The following 8 criteria are used to evaluate the BD rep's performance in a discovery meeting:
