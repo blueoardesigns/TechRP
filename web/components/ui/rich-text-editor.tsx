@@ -40,6 +40,7 @@ const ToolbarButton = ({
 
 export function RichTextEditor({ content, onChange, placeholder, minHeight = '400px' }: RichTextEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
