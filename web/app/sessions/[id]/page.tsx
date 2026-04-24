@@ -56,6 +56,20 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 }
 
+async function getSessionUser(userId: string): Promise<{ full_name: string; email: string; app_role: string } | null> {
+  try {
+    const svc = createServiceSupabase();
+    const { data } = await (svc as any)
+      .from('users')
+      .select('full_name, email, app_role')
+      .eq('id', userId)
+      .single();
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function formatDuration(startedAt: string, endedAt: string | null): string {
   if (!endedAt) return 'Ongoing';
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
@@ -92,6 +106,9 @@ export default async function SessionDetailPage({ params, searchParams }: { para
   const playbook = await getPlaybookForScenario((session as any).persona_scenario_type ?? null);
   const currentUserId = await getCurrentUserId();
   const isOwner = !!(currentUserId && currentUserId === (session as any).user_id);
+  const sessionUser = (!isOwner && (session as any).user_id)
+    ? await getSessionUser((session as any).user_id)
+    : null;
 
   const messages = parseTranscript(session.transcript);
   const assessment = parseAssessment(session.assessment);
@@ -105,6 +122,26 @@ export default async function SessionDetailPage({ params, searchParams }: { para
 
   return (
     <AppShell>
+      {/* Trained-by banner — only visible to managers viewing someone else's session */}
+      {sessionUser && (
+        <div className="px-6 py-2.5 bg-slate-800/60 border-b border-white/[0.06] flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-violet-500/20 border border-violet-500/30 flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-bold text-violet-400">
+              {(sessionUser.full_name || sessionUser.email || '?')[0].toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <span className="text-xs text-slate-400">Trained by </span>
+            <span className="text-xs font-semibold text-white">{sessionUser.full_name || sessionUser.email}</span>
+            {sessionUser.full_name && (
+              <span className="text-xs text-slate-500 ml-1.5">{sessionUser.email}</span>
+            )}
+            <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] font-medium bg-slate-700 text-slate-400 uppercase tracking-wide">
+              {sessionUser.app_role.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+      )}
       {/* Back nav + title */}
       <div className="px-6 pt-6 pb-4 border-b border-white/[0.06]">
         <Link href={backHref} className="text-xs text-slate-500 hover:text-white transition-colors">
