@@ -4586,7 +4586,7 @@ Speak professionally and with sophistication. Reference quality and service stan
   {
     id: "plumber_bd_50",
     name: "Maria Santos",
-    scenarioType: undefined as ScenarioType,
+    scenarioType: "plumber_bd" as ScenarioType,
     gender: "female",
     personalityType: "Lead-Hungry Contractor",
     briefDescription: "A licensed plumber who also holds a general contractor license and wants to handle water damage restoration work herself rather than refer it out. She's more interested in getting plumbing leads back than paying out referrals.",
@@ -8834,3 +8834,6 @@ BEHAVIOR NOTES:
 You think strategically about vendor relationships and ask about their growth plans and capabilities. You're interested in technology, data analytics, and process improvements. You'll discuss specific healthcare challenges and expect knowledgeable responses about regulatory requirements. You make decisions based on building long-term partnerships that can scale with your portfolio growth.`,
   },
 ];
+
+// Alias for backward compatibility (seed route imports this)
+export const ALL_PERSONAS_EXTENDED = ALL_PERSONAS;
