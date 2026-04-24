@@ -352,8 +352,10 @@ export default function TeamPage() {
                     {members.map(m => (
                       <tr key={m.id} className="group">
                         <td className="py-3">
-                          <p className="text-white font-medium">{m.full_name}</p>
-                          <p className="text-gray-500 text-xs">{m.email}</p>
+                          <Link href={`/team/members/${m.id}`} className="group/link">
+                            <p className="text-white font-medium group-hover/link:text-sky-400 transition-colors">{m.full_name}</p>
+                            <p className="text-gray-500 text-xs">{m.email}</p>
+                          </Link>
                         </td>
                         <td className="py-3">
                           <div className="flex items-center gap-2">
