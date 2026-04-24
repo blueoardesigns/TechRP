@@ -1,6 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+/* Exclude large data/seed files from Tailwind's auto-scanner — these contain
+   natural-language text that produces thousands of false CSS class candidates */
+@source not "../lib/all-personas.ts";
+@source not "../generate-personas.mjs";
+@source not "../seed-transcripts.mjs";
+@source not "../seed-personas-direct.mjs";
+@source not "../update-playbooks.mjs";
+
 html {
   max-width: 100vw;
   overflow-x: hidden;
