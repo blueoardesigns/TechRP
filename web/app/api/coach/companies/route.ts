@@ -9,7 +9,7 @@ async function getCoachInstance() {
   const supabase = createServiceSupabase();
   const { data } = await (supabase as any)
     .from('users')
-    .select('id, app_role, coach_instance_id')
+    .select('id, app_role, coach_instance_id, organization_id')
     .eq('auth_user_id', authUser.id)
     .single();
   if (!data || ((data as any).app_role !== 'coach' && (data as any).app_role !== 'superuser')) return null;
@@ -39,6 +39,11 @@ export async function GET() {
       .eq('coach_instance_id', profile.coach_instance_id)
       .in('status', ['active', 'pending']);
     orgIds = ((conns ?? []) as any[]).map((c: any) => c.organization_id);
+  }
+
+  // Exclude the caller's own organization (coaches shouldn't see their own org in coached teams)
+  if (profile.organization_id) {
+    orgIds = orgIds.filter((id: string) => id !== profile.organization_id);
   }
 
   if (!orgIds.length) return NextResponse.json({ companies: [] });
