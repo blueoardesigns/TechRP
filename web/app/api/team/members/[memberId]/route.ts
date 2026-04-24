@@ -1,6 +1,90 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 
+export async function GET(_req: NextRequest, { params }: { params: { memberId: string } }) {
+  const supabaseAuth = createServerSupabase();
+  const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+  if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const supabase = createServiceSupabase();
+  const { data: admin } = await (supabase as any)
+    .from('users')
+    .select('id, email, organization_id, app_role')
+    .eq('auth_user_id', authUser.id)
+    .single();
+
+  const allowedRoles = ['company_admin', 'superuser'];
+  if (!admin || !allowedRoles.includes((admin as any).app_role)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { data: member } = await (supabase as any)
+    .from('users')
+    .select('id, full_name, email, status, created_at, scenario_access, organization_id')
+    .eq('id', params.memberId)
+    .single();
+
+  if (!member) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  // Verify org membership for company_admin
+  if ((admin as any).app_role === 'company_admin' &&
+      (member as any).organization_id !== (admin as any).organization_id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+
+  const { data: rawSessions } = await (supabase as any)
+    .from('training_sessions')
+    .select('id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
+    .eq('user_id', params.memberId)
+    .order('started_at', { ascending: false })
+    .limit(200);
+
+  const sessions = ((rawSessions ?? []) as any[]).map((s: any) => {
+    let score: number | null = null;
+    if (s.assessment) {
+      try {
+        const a = typeof s.assessment === 'string' ? JSON.parse(s.assessment) : s.assessment;
+        if (typeof a.score === 'number') {
+          score = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
+        }
+      } catch {}
+    }
+    return {
+      id: s.id,
+      started_at: s.started_at,
+      ended_at: s.ended_at,
+      score,
+      persona_name: s.persona_name,
+      persona_scenario_type: s.persona_scenario_type,
+    };
+  });
+
+  const allScores = sessions.map((s: any) => s.score).filter((x: any) => x !== null) as number[];
+  const avgScore = allScores.length
+    ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+    : null;
+  const now = Date.now();
+  const cutoff30d = now - 30 * 86400_000;
+  const sessions30d = sessions.filter((s: any) => new Date(s.started_at).getTime() >= cutoff30d).length;
+  const lastSessionAt = sessions.length > 0 ? sessions[0].started_at : null;
+
+  return NextResponse.json({
+    member: {
+      id: (member as any).id,
+      full_name: (member as any).full_name,
+      email: (member as any).email,
+      status: (member as any).status,
+      created_at: (member as any).created_at,
+      scenario_access: (member as any).scenario_access,
+      sessionCount: sessions.length,
+      sessions30d,
+      lastSessionAt,
+      avgScore,
+    },
+    sessions,
+  });
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: { memberId: string } }) {
   const supabaseAuth = createServerSupabase();
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
