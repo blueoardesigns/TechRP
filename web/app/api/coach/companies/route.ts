@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 import { randomBytes } from 'crypto';
 
 async function getCoachInstance() {
   const supabaseAuth = createServerSupabase();
   const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
   if (!authUser) return null;
-  const supabase = createServiceSupabase();
+  // Use createServiceRoleClient (bare @supabase/supabase-js, no cookies) so
+  // auth.role() = 'service_role' in RLS — createServiceSupabase uses @supabase/ssr
+  // which can run as anon when cookie session is absent, silently returning 0 rows.
+  const supabase = createServiceRoleClient();
   const { data } = await (supabase as any)
     .from('users')
     .select('id, app_role, coach_instance_id, organization_id')
@@ -20,7 +24,7 @@ export async function GET() {
   const profile = await getCoachInstance();
   if (!profile) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
 
   let orgIds: string[] = [];
 
@@ -76,7 +80,7 @@ export async function POST(req: NextRequest) {
   if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
 
   const inviteToken = randomBytes(6).toString('hex');
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data, error } = await (supabase as any)
     .from('organizations')
     .insert({ name, invite_token: inviteToken })

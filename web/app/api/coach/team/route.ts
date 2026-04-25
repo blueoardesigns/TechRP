@@ -2,10 +2,11 @@
 // Mirrors /api/team/sessions + /api/team/members but for a coached org.
 // Caller must be a coach (or superuser) with an active/pending connection to that org.
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { createServerSupabase } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase';
 
 async function getCoachContext(authUserId: string) {
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
   const { data } = await (supabase as any)
     .from('users')
     .select('id, app_role, coach_instance_id')
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const orgId = url.searchParams.get('orgId');
   if (!orgId) return NextResponse.json({ error: 'orgId required' }, { status: 400 });
 
-  const supabase = createServiceSupabase();
+  const supabase = createServiceRoleClient();
 
   // Verify coach has access to this org (skip for superuser)
   if (coach.app_role !== 'superuser') {
