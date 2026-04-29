@@ -228,7 +228,7 @@ export default function CoachedTeamsPage() {
                           <td className="py-2.5">{scoreBadge(s.score)}</td>
                           <td className="py-2.5 text-gray-500 text-xs">{fmtRelative(s.started_at)}</td>
                           <td className="py-2.5">
-                            <Link href={`/sessions/${s.id}`} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
+                            <Link href={`/sessions/${s.id}?back=/coached-teams`} className="text-xs text-blue-400 hover:text-blue-300 transition-colors">
                               View →
                             </Link>
                           </td>

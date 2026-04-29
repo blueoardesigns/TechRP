@@ -116,7 +116,11 @@ export default async function SessionDetailPage({ params, searchParams }: { para
   const scenarioType = (session as any).persona_scenario_type;
 
   const backHref = searchParams?.back ?? '/sessions';
-  const backLabel = backHref.startsWith('/coach') ? '← Coach Hub' : '← Sessions';
+  const backLabel = backHref.startsWith('/coached-teams')
+    ? '← Coached Teams'
+    : backHref.startsWith('/coach')
+      ? '← Coach Hub'
+      : '← Sessions';
 
   const displayScore = assessment ? getDisplayScore(assessment).score : 0;
 
