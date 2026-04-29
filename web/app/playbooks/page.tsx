@@ -129,7 +129,7 @@ export default function PlaybooksPage() {
       {/* Header */}
       <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-          <button onClick={() => router.push('/')} className="text-sm text-gray-400 hover:text-white transition-colors">
+          <button onClick={() => router.push('/dashboard')} className="text-sm text-gray-400 hover:text-white transition-colors">
             ← TechRP
           </button>
           <h1 className="text-sm font-semibold text-white">Playbooks</h1>

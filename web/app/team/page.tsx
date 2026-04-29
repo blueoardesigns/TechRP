@@ -160,7 +160,7 @@ export default function TeamPage() {
   useEffect(() => {
     if (!user) return;
     const managementRoles = ['company_admin', 'coach', 'superuser'];
-    if (!managementRoles.includes(user.role)) router.replace('/');
+    if (!managementRoles.includes(user.role)) router.replace('/dashboard');
   }, [user, router]);
 
   useEffect(() => {

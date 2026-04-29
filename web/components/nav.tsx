@@ -83,7 +83,7 @@ export function AppNav() {
   return (
     <header className="border-b border-white/10 bg-gray-950/80 backdrop-blur sticky top-0 z-10">
       <div className="max-w-5xl mx-auto px-6 sm:px-10 h-14 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/dashboard" className="flex items-center gap-2.5">
           <LogoMark />
           <span className="font-bold text-base tracking-tight text-white">TechRP</span>
         </Link>

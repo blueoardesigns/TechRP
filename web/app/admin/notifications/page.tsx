@@ -27,7 +27,7 @@ export default function BroadcastPage() {
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user && user.role !== 'superuser') router.replace('/');
+    if (user && user.role !== 'superuser') router.replace('/dashboard');
   }, [user, router]);
 
   const loadHistory = async () => {
