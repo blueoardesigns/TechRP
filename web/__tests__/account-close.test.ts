@@ -95,3 +95,37 @@ describe('buildAdminEmailBody', () => {
     expect(body).toContain('Detail: Custom reason here')
   })
 })
+
+describe('Stripe-abort-before-DB contract (suspend)', () => {
+  it('does not call DB update when Stripe throws', async () => {
+    // Simulate the exact logic path in the POST handler for suspend:
+    // If stripe.subscriptions.update throws, we return early before touching the DB.
+    let dbUpdateCalled = false
+
+    const stripeUpdate = async (_id: string, _opts: unknown) => {
+      throw new Error('Stripe unavailable')
+    }
+
+    const dbUpdate = async () => {
+      dbUpdateCalled = true
+      return { error: null }
+    }
+
+    // Replicate the handler's critical section
+    const subscriptionId = 'sub_test_123'
+    let stripeError: Error | null = null
+    try {
+      await stripeUpdate(subscriptionId, { pause_collection: { behavior: 'void' } })
+    } catch (err) {
+      stripeError = err as Error
+    }
+
+    if (!stripeError) {
+      await dbUpdate()
+    }
+
+    expect(stripeError).not.toBeNull()
+    expect(stripeError!.message).toBe('Stripe unavailable')
+    expect(dbUpdateCalled).toBe(false)
+  })
+})

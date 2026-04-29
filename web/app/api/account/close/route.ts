@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
 
   // 5. DB update
   if (action === 'suspend') {
-    await db.from('users').update({ status: 'suspended' }).eq('id', authUser.id)
+    const { error: suspendErr } = await db.from('users').update({ status: 'suspended' }).eq('id', authUser.id)
+    if (suspendErr) return NextResponse.json({ error: 'Failed to suspend account' }, { status: 500 })
   } else {
     // Delete in dependency order — each step must succeed before proceeding
     const { error: sessErr } = await db.from('training_sessions').delete().eq('user_id', authUser.id)
