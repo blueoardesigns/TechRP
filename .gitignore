@@ -62,3 +62,6 @@ TODO.md
 .superpowers/
 .worktrees/
 .worktrees/
+
+# Caliber AI context sync
+.caliber/
