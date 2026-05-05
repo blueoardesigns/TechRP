@@ -10,13 +10,13 @@ function CallbackInner() {
 
   useEffect(() => {
     const code = params.get('code')
-    const coachId = params.get('state')
-    if (!code || !coachId) { setStatus('error'); return }
+    const state = params.get('state')
+    if (!code || !state) { setStatus('error'); return }
 
     fetch('/api/coach/connect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, coachId }),
+      body: JSON.stringify({ code, state }),
     })
       .then(r => r.json())
       .then((d: { success?: boolean }) => {

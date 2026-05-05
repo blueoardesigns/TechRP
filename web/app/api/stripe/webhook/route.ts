@@ -90,7 +90,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, db: DbC
 
   if (!stripeSubId || !plan_id) return
 
-  const sub = await stripe.subscriptions.retrieve(stripeSubId)
+  const sub = await stripe.subscriptions.retrieve(stripeSubId) as any
   const priceId = sub.items.data[0]?.price.id ?? ''
   const trialEnd = sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null
   const periodStart = new Date(sub.current_period_start * 1000).toISOString()
@@ -146,7 +146,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session, db: DbC
   }
 }
 
-async function handleSubscriptionUpdated(sub: Stripe.Subscription, db: DbClient) {
+async function handleSubscriptionUpdated(subInput: Stripe.Subscription, db: DbClient) {
+  const sub = subInput as any
   const priceId = sub.items.data[0]?.price.id ?? ''
   const planId = (sub.items.data[0]?.price.metadata?.plan_key as string) ?? ''
   const periodStart = new Date(sub.current_period_start * 1000).toISOString()
@@ -177,7 +178,7 @@ async function handleSubscriptionDeleted(sub: Stripe.Subscription, db: DbClient)
 }
 
 async function handleInvoicePaid(invoice: Stripe.Invoice, db: DbClient) {
-  const stripeSubId = invoice.subscription as string | null
+  const stripeSubId = (invoice as any).subscription as string | null
   if (!stripeSubId) return
 
   const { data: subRow } = await (db as any).from('subscriptions')
@@ -242,7 +243,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, db: DbClient) {
 }
 
 async function handleInvoiceFailed(invoice: Stripe.Invoice, db: DbClient) {
-  const stripeSubId = invoice.subscription as string | null
+  const stripeSubId = (invoice as any).subscription as string | null
   if (!stripeSubId) return
 
   await (db as any).from('subscriptions')

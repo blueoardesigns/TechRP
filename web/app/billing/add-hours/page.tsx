@@ -30,8 +30,6 @@ export default function AddHoursPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planKey: addonKey,
-          userId: user.id,
-          orgId: (user as any).organizationId,
           mode: 'addon',
           addonQty: qty,
         }),

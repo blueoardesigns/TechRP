@@ -1,18 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceRoleClient } from '@/lib/supabase';
+import { requireUser } from '@/lib/api-auth';
 import { DEFAULT_PLAYBOOKS } from '@/lib/default-playbooks';
 import { ALL_PERSONAS_EXTENDED as ALL_PERSONAS } from '@/lib/all-personas';
 
 // POST /api/seed
 // Seeds default playbooks and all 150 personas.
-// Safe to call multiple times — skips records that already exist.
+//
+// Authorization rules:
+//   - Superusers may seed global defaults (no coachInstanceId) or any
+//     coach instance.
+//   - Coaches may seed only their own coach instance (body coachInstanceId
+//     must equal the caller's coach_instance_id).
+//   - Everyone else: 403.
 export async function POST(request: NextRequest) {
+  const auth = await requireUser({ roles: ['coach', 'superuser'] });
+  if (!auth.ok) return auth.response;
+  const { user, service: supabase } = auth;
+
   try {
     const body = await request.json().catch(() => ({}));
-    const coachInstanceId: string | null = body.coachInstanceId ?? null;
+    const requestedCoachInstanceId: string | null = body.coachInstanceId ?? null;
     const scenarioTypesFilter: string[] | null = body.scenarioTypes ?? null;
 
-    const supabase = createServiceRoleClient();
+    // Coaches may only seed their own coach instance.
+    if (user.appRole !== 'superuser') {
+      if (!requestedCoachInstanceId) {
+        return NextResponse.json({ error: 'coachInstanceId required' }, { status: 400 });
+      }
+      if (requestedCoachInstanceId !== user.coachInstanceId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+    const coachInstanceId = requestedCoachInstanceId;
+
     const results: Record<string, any> = {};
 
     // ── Seed scenario playbooks ────────────────────────────────────────────────

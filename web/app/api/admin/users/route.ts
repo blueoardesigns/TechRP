@@ -1,25 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+import { NextResponse } from 'next/server';
+import { requireUser } from '@/lib/api-auth';
 
-async function isAuthorized(request: NextRequest): Promise<boolean> {
-  // Option 1: admin_key cookie
-  const key = request.cookies.get('admin_key')?.value;
-  if (key && key === process.env.ADMIN_SECRET) return true;
-  // Option 2: logged in as superuser
-  const supabaseAuth = createServerSupabase();
-  const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
-  if (!authUser) return false;
-  const sb = createServiceSupabase();
-  const { data: profile } = await (sb as any).from('users').select('app_role').eq('auth_user_id', authUser.id).single();
-  return (profile as any)?.app_role === 'superuser';
-}
-
-export async function GET(request: NextRequest) {
-  if (!await isAuthorized(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const supabase = createServiceSupabase();
+export async function GET() {
+  const auth = await requireUser({ roles: ['superuser'] });
+  if (!auth.ok) return auth.response;
+  const { service: supabase } = auth;
 
   // Fetch all users
   const { data: users, error } = await (supabase as any)

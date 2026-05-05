@@ -24,7 +24,7 @@ export default function BillingPage() {
     const res = await fetch('/api/stripe/portal', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.id, orgId: (user as any).organizationId }),
+      body: JSON.stringify({ scope: (user as any).organizationId ? 'org' : 'user' }),
     })
     const { url } = await res.json() as { url?: string }
     if (url) window.location.href = url
@@ -109,7 +109,7 @@ export default function BillingPage() {
               await fetch('/api/billing/auto-refill', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user?.id, orgId: (user as any)?.organizationId, enabled: !autoRefill }),
+                body: JSON.stringify({ scope: (user as any)?.organizationId ? 'org' : 'user', enabled: !autoRefill }),
               })
               setBilling(b => b ? { ...b, autoRefill: !b.autoRefill } : b)
             }}
