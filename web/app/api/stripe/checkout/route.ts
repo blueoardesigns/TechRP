@@ -2,30 +2,46 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { getPriceId } from '@/lib/stripe-prices'
 import { isCompanyPlan, TRIAL_DAYS } from '@/lib/plans'
-import { createServiceRoleClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/api-auth'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+// Hard cap on coach-discount coupons. Anything larger must be issued
+// out-of-band via Stripe directly.
+const MAX_COACH_DISCOUNT_PCT = 50
 
 // POST /api/stripe/checkout
-// Body: { planKey, userId, orgId?, seats?, mode, addonQty? }
-// mode: 'subscription' | 'addon'
+// Body: { planKey, mode, seats?, addonQty?, coachToken? }
+// userId/orgId are derived from the authenticated session — body values ignored.
 export async function POST(req: NextRequest) {
-  const { planKey, userId, orgId, seats, mode, addonQty, coachToken } = await req.json()
+  const auth = await requireUser({ allowNonApproved: true })
+  if (!auth.ok) return auth.response
+  const { user, service: db } = auth
 
-  if (!planKey || !userId) {
-    return NextResponse.json({ error: 'Missing planKey or userId' }, { status: 400 })
+  const body = await req.json().catch(() => null) as Record<string, unknown> | null
+  if (!body) return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+
+  const planKey = typeof body.planKey === 'string' ? body.planKey : null
+  const mode = body.mode === 'addon' ? 'addon' : 'subscription'
+  const seats = typeof body.seats === 'number' ? body.seats : undefined
+  const addonQty = typeof body.addonQty === 'number' ? Math.max(1, Math.min(100, body.addonQty)) : 1
+  const coachToken = typeof body.coachToken === 'string' ? body.coachToken : undefined
+
+  if (!planKey) return NextResponse.json({ error: 'Missing planKey' }, { status: 400 })
+
+  const userId = user.profileId
+  const orgId = user.organizationId
+  // For company-plan checkouts the caller must be a company_admin or superuser.
+  if (isCompanyPlan(planKey) && user.appRole !== 'company_admin' && user.appRole !== 'superuser') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
-
-  const db = createServiceRoleClient()
 
   try {
     // Get or create Stripe customer
     let customerId: string | undefined
-    if (orgId) {
+    if (orgId && isCompanyPlan(planKey)) {
       const { data: org } = await (db as any).from('organizations')
         .select('stripe_customer_id, name').eq('id', orgId).single()
       customerId = org?.stripe_customer_id ?? undefined
-      // Create org customer if missing
       if (!customerId && org) {
         const customer = await stripe.customers.create({
           name: org.name,
@@ -35,13 +51,13 @@ export async function POST(req: NextRequest) {
         await (db as any).from('organizations').update({ stripe_customer_id: customerId }).eq('id', orgId)
       }
     } else {
-      const { data: user } = await (db as any).from('users')
+      const { data: u } = await (db as any).from('users')
         .select('stripe_customer_id, email, full_name').eq('id', userId).single()
-      customerId = user?.stripe_customer_id ?? undefined
+      customerId = u?.stripe_customer_id ?? undefined
       if (!customerId) {
         const customer = await stripe.customers.create({
-          email: user?.email,
-          name: user?.full_name,
+          email: u?.email ?? user.email,
+          name: u?.full_name,
           metadata: { user_id: userId },
         })
         customerId = customer.id
@@ -50,19 +66,18 @@ export async function POST(req: NextRequest) {
     }
 
     if (mode === 'addon') {
-      // One-time hour block purchase
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: 'payment',
         line_items: [{
-          price: getPriceId(planKey),
-          quantity: addonQty ?? 1,
+          price: getPriceId(planKey as Parameters<typeof getPriceId>[0]),
+          quantity: addonQty,
         }],
         metadata: {
           user_id: userId,
           org_id: orgId ?? '',
           addon_key: planKey,
-          addon_qty: String(addonQty ?? 1),
+          addon_qty: String(addonQty),
         },
         success_url: `${APP_URL}/billing?addon_success=true`,
         cancel_url: `${APP_URL}/billing/add-hours`,
@@ -70,22 +85,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url: session.url })
     }
 
-    // Subscription checkout
     const quantity = isCompanyPlan(planKey) ? (seats ?? 2) : 1
 
-    // Coach discount coupon (only for subscription + discount type token)
+    // Coach discount coupon — clamped to prevent abuse via leaked tokens.
     let discounts: { coupon: string }[] = []
-    if (coachToken && mode !== 'addon') {
+    if (coachToken) {
       const { verifyCoachToken } = await import('@/lib/coach-token')
-      const payload = verifyCoachToken(coachToken as string)
+      const payload = verifyCoachToken(coachToken)
       if (payload?.type === 'discount') {
+        const pct = Number(payload.percentage)
+        if (!Number.isFinite(pct) || pct <= 0 || pct > MAX_COACH_DISCOUNT_PCT) {
+          return NextResponse.json(
+            { error: `Coach discount percentage must be between 1 and ${MAX_COACH_DISCOUNT_PCT}` },
+            { status: 400 }
+          )
+        }
         const coupon = await stripe.coupons.create({
-          percent_off: payload.percentage,
+          percent_off: pct,
           duration: 'forever',
           metadata: { coach_id: payload.coachId, org_id: orgId ?? '' },
         })
         discounts = [{ coupon: coupon.id }]
-        // Store coupon_id on coach_referrals row (best-effort)
         try {
           await (db as any).from('coach_referrals')
             .update({ stripe_coupon_id: coupon.id })
@@ -98,7 +118,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      line_items: [{ price: getPriceId(planKey), quantity }],
+      line_items: [{ price: getPriceId(planKey as Parameters<typeof getPriceId>[0]), quantity }],
       subscription_data: {
         trial_period_days: TRIAL_DAYS,
         metadata: {

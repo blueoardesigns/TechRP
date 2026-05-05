@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { createBrowserSupabase } from '@/lib/supabase-browser';
 
 function LogoMark({ size = 32 }: { size?: number }) {
   return (
@@ -231,6 +232,15 @@ function SignupPageInner() {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Something went wrong.'); setLoading(false); return; }
 
+      // Sign the user in immediately so subsequent authenticated requests
+      // (checkout, /training) carry a valid session cookie.
+      try {
+        const browserSupabase = createBrowserSupabase();
+        await browserSupabase.auth.signInWithPassword({ email, password });
+      } catch (err) {
+        console.warn('Auto sign-in after signup failed:', err);
+      }
+
       if (planParam) {
         try {
           const checkoutRes = await fetch('/api/stripe/checkout', {
@@ -238,8 +248,6 @@ function SignupPageInner() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               planKey: planParam,
-              userId: data.userId,
-              orgId: data.orgId ?? null,
               seats: seatsParam ? parseInt(seatsParam, 10) : undefined,
               mode: 'subscription',
               coachToken: coachParam ?? undefined,

@@ -29,7 +29,7 @@ vi.mock('resend', () => ({
   },
 }))
 
-import { validateCloseRequest, buildAdminEmailBody } from '../app/api/account/close/route'
+import { validateCloseRequest, buildAdminEmailBody } from '../lib/account-close'
 
 describe('validateCloseRequest', () => {
   it('accepts valid suspend request', () => {

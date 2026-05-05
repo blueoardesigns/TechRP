@@ -85,56 +85,68 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/personas — create a new persona
+// POST /api/personas — create a new persona (coach / company_admin / superuser only)
+// Personas are written into the caller's coach_instance scope; superusers can
+// create global default personas via { make_default: true }.
 export async function POST(request: NextRequest) {
-  try {
-    const supabase = createServiceRoleClient();
-    const body = await request.json();
+  const { requireUser } = await import('@/lib/api-auth');
+  const auth = await requireUser({ roles: ['coach', 'company_admin', 'superuser'] });
+  if (!auth.ok) return auth.response;
+  const { user, service: supabase } = auth;
 
-    const {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  const {
+    scenario_type,
+    name,
+    personality_type,
+    brief_description,
+    speaker_label,
+    first_message,
+    system_prompt,
+    make_default,
+  } = body as Record<string, unknown>;
+
+  if (!scenario_type || !name || !personality_type || !first_message || !system_prompt) {
+    return NextResponse.json(
+      { error: 'Missing required fields: scenario_type, name, personality_type, first_message, system_prompt' },
+      { status: 400 }
+    );
+  }
+
+  // Only superusers may create global (coach_instance_id = null) defaults.
+  const wantsDefault = make_default === true && user.appRole === 'superuser';
+  const coachInstanceId = wantsDefault ? null : user.coachInstanceId;
+
+  const { data, error } = await (supabase as any)
+    .from('personas')
+    .insert({
+      organization_id: '00000000-0000-0000-0000-000000000001',
+      coach_instance_id: coachInstanceId,
       scenario_type,
       name,
       personality_type,
-      brief_description,
-      speaker_label,
+      brief_description: brief_description || '',
+      speaker_label: speaker_label || 'Contact',
       first_message,
       system_prompt,
-    } = body;
+      is_default: wantsDefault,
+      is_active: true,
+    })
+    .select()
+    .single();
 
-    if (!scenario_type || !name || !personality_type || !first_message || !system_prompt) {
-      return NextResponse.json(
-        { error: 'Missing required fields: scenario_type, name, personality_type, first_message, system_prompt' },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await (supabase as any)
-      .from('personas')
-      .insert({
-        organization_id: '00000000-0000-0000-0000-000000000001',
-        scenario_type,
-        name,
-        personality_type,
-        brief_description: brief_description || '',
-        speaker_label: speaker_label || 'Contact',
-        first_message,
-        system_prompt,
-        is_default: false,
-        is_active: true,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating persona:', error);
-      return NextResponse.json({ error: 'Failed to create persona' }, { status: 500 });
-    }
-
-    return NextResponse.json({ persona: data }, { status: 201 });
-  } catch (error) {
-    console.error('Error in POST /api/personas:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  if (error) {
+    console.error('Error creating persona:', error);
+    return NextResponse.json({ error: 'Failed to create persona' }, { status: 500 });
   }
+
+  return NextResponse.json({ persona: data }, { status: 201 });
 }
 
 // POST /api/personas/seed — bulk insert default personas (called once)

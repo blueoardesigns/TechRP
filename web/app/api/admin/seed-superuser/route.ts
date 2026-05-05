@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceSupabase } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
-  // Auth check — must have ADMIN_SECRET
+  // BOOTSTRAP ONLY — this is the single endpoint that still accepts
+  // ADMIN_SECRET, used to seed the very first superuser. Bearer header
+  // only (no query string, no cookie persistence) so accidental URL leaks
+  // can't escalate.
   const secret = process.env.ADMIN_SECRET;
+  if (!secret) {
+    return NextResponse.json({ error: 'ADMIN_SECRET not configured' }, { status: 503 });
+  }
   const authHeader = request.headers.get('authorization');
-  const cookieKey = request.cookies.get('admin_key')?.value;
-  const queryKey = new URL(request.url).searchParams.get('key');
-  const provided = authHeader?.replace('Bearer ', '') ?? cookieKey ?? queryKey;
-  if (!secret || provided !== secret) {
+  const provided = authHeader?.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : null;
+  if (!provided || provided !== secret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

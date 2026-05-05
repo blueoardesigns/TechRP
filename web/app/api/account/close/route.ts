@@ -4,38 +4,10 @@ import { createServiceRoleClient } from '@/lib/supabase'
 import { stripe } from '@/lib/stripe'
 import { Resend } from 'resend'
 import { PLAN_LABEL } from '@/lib/plans'
+import { validateCloseRequest, buildAdminEmailBody } from '@/lib/account-close'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const ADMIN_EMAIL = 'tbauertext@gmail.com'
-
-export function validateCloseRequest(body: unknown): { action: 'suspend' | 'delete'; reason: string; reasonDetail?: string } | { error: string } {
-  if (!body || typeof body !== 'object') return { error: 'Invalid request body' }
-  const { action, reason, reasonDetail } = body as Record<string, unknown>
-  if (action !== 'suspend' && action !== 'delete') return { error: 'action must be suspend or delete' }
-  if (!reason || typeof reason !== 'string' || reason.trim() === '') return { error: 'reason is required' }
-  if (reasonDetail !== undefined && typeof reasonDetail !== 'string') return { error: 'reasonDetail must be a string' }
-  return { action, reason: reason.trim(), reasonDetail: reasonDetail?.trim() }
-}
-
-export function buildAdminEmailBody(opts: {
-  action: 'suspend' | 'delete'
-  fullName: string
-  email: string
-  planLabel: string
-  reason: string
-  reasonDetail?: string
-  timestamp: string
-}): string {
-  const lines = [
-    `Action: ${opts.action === 'suspend' ? 'SUSPENDED' : 'DELETED'}`,
-    `User: ${opts.fullName} <${opts.email}>`,
-    `Plan: ${opts.planLabel}`,
-    `Reason: ${opts.reason}`,
-  ]
-  if (opts.reasonDetail) lines.push(`Detail: ${opts.reasonDetail}`)
-  lines.push(`Timestamp: ${opts.timestamp}`)
-  return lines.join('\n')
-}
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate
@@ -49,24 +21,28 @@ export async function POST(request: NextRequest) {
   if ('error' in parsed) return NextResponse.json({ error: parsed.error }, { status: 400 })
   const { action, reason, reasonDetail } = parsed
 
-  // 3. Fetch user record and active subscription
+  // 3. Fetch user record and active subscription.
+  //    `users.id` is the profile UUID, NOT the Supabase auth user UUID — use
+  //    `auth_user_id` to look up the profile, then key all subsequent
+  //    queries off the profile id.
   const db = createServiceRoleClient()
-  const { data: userRecord, error: userErr } = await db
+  const { data: userRecord, error: userErr } = await (db as any)
     .from('users')
-    .select('id, full_name, email, stripe_customer_id')
-    .eq('id', authUser.id)
-    .single()
+    .select('id, full_name, email, stripe_customer_id, auth_user_id')
+    .eq('auth_user_id', authUser.id)
+    .maybeSingle()
 
   if (userErr || !userRecord) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
+  const profileId = userRecord.id as string
 
-  const { data: subscription } = await db
+  const { data: subscription } = await (db as any)
     .from('subscriptions')
     .select('stripe_subscription_id, plan_id')
-    .eq('user_id', authUser.id)
+    .eq('user_id', profileId)
     .in('status', ['active', 'trialing'])
-    .single()
+    .maybeSingle()
 
   const planLabel = PLAN_LABEL[subscription?.plan_id ?? ''] ?? subscription?.plan_id ?? 'Unknown plan'
   const timestamp = new Date().toISOString()
@@ -89,19 +65,26 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // 5. DB update
+  // 5. DB update — keyed off the profile id, not the auth user id.
   if (action === 'suspend') {
-    const { error: suspendErr } = await db.from('users').update({ status: 'suspended' }).eq('id', authUser.id)
+    const { error: suspendErr } = await (db as any)
+      .from('users').update({ status: 'suspended' }).eq('id', profileId)
     if (suspendErr) return NextResponse.json({ error: 'Failed to suspend account' }, { status: 500 })
   } else {
-    // Delete in dependency order — each step must succeed before proceeding
-    const { error: sessErr } = await db.from('training_sessions').delete().eq('user_id', authUser.id)
+    // Delete in dependency order — each step must succeed before proceeding.
+    // Note: `playbooks` are owned via `uploaded_by` (not `created_by`) and
+    // are intentionally preserved at the org level on individual deletion;
+    // we only null out `uploaded_by` to retain organizational content.
+    const { error: sessErr } = await (db as any)
+      .from('training_sessions').delete().eq('user_id', profileId)
     if (sessErr) return NextResponse.json({ error: 'Failed to delete session data' }, { status: 500 })
 
-    const { error: playbookErr } = await db.from('playbooks').delete().eq('created_by', authUser.id)
-    if (playbookErr) return NextResponse.json({ error: 'Failed to delete playbooks' }, { status: 500 })
+    const { error: playbookErr } = await (db as any)
+      .from('playbooks').update({ uploaded_by: null }).eq('uploaded_by', profileId)
+    if (playbookErr) return NextResponse.json({ error: 'Failed to detach playbooks' }, { status: 500 })
 
-    const { error: userRowErr } = await db.from('users').delete().eq('id', authUser.id)
+    const { error: userRowErr } = await (db as any)
+      .from('users').delete().eq('id', profileId)
     if (userRowErr) return NextResponse.json({ error: 'Failed to delete user record' }, { status: 500 })
 
     const { error: authErr } = await db.auth.admin.deleteUser(authUser.id)

@@ -10,10 +10,13 @@ async function getSharedSession(token: string) {
   const supabase = createServiceSupabase();
   const { data: session } = await (supabase as any)
     .from('training_sessions')
-    .select('id, user_id, started_at, ended_at, assessment, persona_name, persona_scenario_type, share_token')
+    .select('id, user_id, started_at, ended_at, assessment, persona_name, persona_scenario_type, share_token, share_expires_at')
     .eq('share_token', token)
-    .single();
+    .maybeSingle();
   if (!session || !(session as any).share_token) return null;
+  // Reject expired share links.
+  const expiresAt = (session as any).share_expires_at as string | null;
+  if (expiresAt && new Date(expiresAt).getTime() < Date.now()) return null;
 
   const { data: user } = await (supabase as any)
     .from('users')

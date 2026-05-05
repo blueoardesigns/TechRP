@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { PLAN_PRICE_CENTS, ADDON_PRICE_CENTS, PLAN_LABEL } from '@/lib/plans'
+import { requireUser } from '@/lib/api-auth'
 
 // Helper: get or create a product by metadata seed_key
 async function getOrCreateProduct(
@@ -52,13 +53,12 @@ async function getOrCreatePrice(params: {
 // POST /api/stripe/seed
 // Creates all Stripe products and prices. Safe to re-run (idempotent via lookup_key + seed_key metadata).
 // Returns { priceIds } — copy into web/lib/stripe-prices.ts
-export async function POST(req: NextRequest) {
-  const adminSecret = process.env.ADMIN_SECRET
-  const auth = req.headers.get('authorization')
-  // Block if ADMIN_SECRET not configured (endpoint should never be open in prod)
-  if (!adminSecret || auth !== `Bearer ${adminSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+export async function POST() {
+  // Bootstrap endpoint — only runnable by an authenticated superuser.
+  // (Use /api/admin/seed-superuser with ADMIN_SECRET to bootstrap the very
+  // first superuser if one doesn't yet exist.)
+  const auth = await requireUser({ roles: ['superuser'] })
+  if (!auth.ok) return auth.response
 
   const priceIds: Record<string, string> = {}
 
