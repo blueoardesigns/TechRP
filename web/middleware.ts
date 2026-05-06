@@ -6,6 +6,14 @@ const PUBLIC_PREFIXES = [
   '/api/stripe/webhook',
   '/_next/',
   '/favicon',
+  // Coach-connection accept/decline confirmation flow. The approval token
+  // in the URL is the authentication; both the page and the API route are
+  // anon-accessible. See web/app/coach/connections/[id]/confirm/page.tsx.
+  '/api/coach/connections/',
+];
+const PUBLIC_PATH_PREFIXES = [
+  '/coach/connections/', // /coach/connections/[token]/confirm
+  '/share/session/',
 ];
 const MARKETING_ROUTES = ['/', '/pricing', '/about'];
 
@@ -25,6 +33,11 @@ export async function middleware(request: NextRequest) {
 
   // Public/static routes — let through.
   if (PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+    return NextResponse.next();
+  }
+
+  // Token-authenticated public pages (coach confirm, public share).
+  if (PUBLIC_PATH_PREFIXES.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 

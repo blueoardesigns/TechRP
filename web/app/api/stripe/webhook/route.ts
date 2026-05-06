@@ -4,6 +4,9 @@ import { constructWebhookEvent, stripe } from '@/lib/stripe'
 import { createServiceRoleClient } from '@/lib/supabase'
 import { getPlanMinutes, TRIAL_MINUTES } from '@/lib/plans'
 
+/** Hard cap on coach affiliate percentage. Defense-in-depth alongside coach-token clamp. */
+const MAX_AFFILIATE_PCT = 50
+
 export async function POST(req: NextRequest) {
   const payload = await req.text()
   const sig = req.headers.get('stripe-signature') ?? ''
@@ -18,6 +21,21 @@ export async function POST(req: NextRequest) {
   }
 
   const db = createServiceRoleClient()
+
+  // Idempotency: insert event.id into webhook_events. If we get a unique-violation
+  // (code 23505), this is a Stripe retry — return success without re-processing.
+  const { error: dedupeError } = await (db as any)
+    .from('webhook_events')
+    .insert({ event_id: event.id, event_type: event.type })
+  if (dedupeError) {
+    if ((dedupeError as { code?: string }).code === '23505') {
+      console.info(`Skipping duplicate Stripe event ${event.id} (${event.type})`)
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+    console.error('webhook_events insert failed:', dedupeError)
+    // Fall through and process anyway — duplicate processing is preferable to
+    // dropped events when the dedupe table is unavailable.
+  }
 
   try {
     switch (event.type) {
@@ -42,6 +60,8 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     console.error(`Webhook handler error for ${event.type}:`, message)
+    // Roll back the dedupe row so Stripe will retry.
+    await (db as any).from('webhook_events').delete().eq('event_id', event.id)
     return NextResponse.json({ error: 'Handler failed' }, { status: 500 })
   }
 
@@ -182,44 +202,59 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, db: DbClient) {
   if (!stripeSubId) return
 
   const { data: subRow } = await (db as any).from('subscriptions')
-    .select('*').eq('stripe_subscription_id', stripeSubId).single()
+    .select('*').eq('stripe_subscription_id', stripeSubId).maybeSingle()
   if (!subRow) return
 
-  // ── Monthly reset ────────────────────────────────────────────────────────
-  if (subRow.user_id) {
-    await (db as any).from('users').update({ minutes_used: 0 }).eq('id', subRow.user_id)
-    await (db as any).from('minute_transactions').insert({
-      user_id: subRow.user_id,
-      type: 'monthly_reset',
-      delta: 0,
-    })
-  }
+  // Only reset minutes_used at the start of a new billing period — NOT for
+  // proration / upgrade / downgrade / addon invoices, which would otherwise
+  // wipe paid mid-cycle usage.
+  const billingReason = (invoice as any).billing_reason as string | undefined
+  const isCycleStart = billingReason === 'subscription_cycle' || billingReason === 'subscription_create'
 
-  if (subRow.org_id) {
-    const { data: org } = await (db as any).from('organizations')
-      .select('seat_count, plan_id').eq('id', subRow.org_id).single()
-    if (org) {
-      const newPool = (org.seat_count as number) * getPlanMinutes(org.plan_id as string)
-      await (db as any).from('organizations')
-        .update({ minutes_pool: newPool, subscription_status: 'active' })
-        .eq('id', subRow.org_id)
-      await (db as any).from('users').update({ minutes_used: 0 }).eq('organization_id', subRow.org_id)
+  if (isCycleStart) {
+    if (subRow.user_id) {
+      await (db as any).from('users').update({ minutes_used: 0 }).eq('id', subRow.user_id)
+      await (db as any).from('minute_transactions').insert({
+        user_id: subRow.user_id,
+        type: 'monthly_reset',
+        delta: 0,
+      })
     }
+
+    if (subRow.org_id) {
+      const { data: org } = await (db as any).from('organizations')
+        .select('seat_count, plan_id').eq('id', subRow.org_id).maybeSingle()
+      if (org) {
+        const newPool = (org.seat_count as number) * getPlanMinutes(org.plan_id as string)
+        await (db as any).from('organizations')
+          .update({ minutes_pool: newPool, subscription_status: 'active' })
+          .eq('id', subRow.org_id)
+        await (db as any).from('users').update({ minutes_used: 0 }).eq('organization_id', subRow.org_id)
+      }
+    }
+  } else if (subRow.org_id) {
+    // Non-cycle invoices for orgs (proration etc.) still update status to active.
+    await (db as any).from('organizations')
+      .update({ subscription_status: 'active' })
+      .eq('id', subRow.org_id)
   }
 
   // ── Affiliate payout ─────────────────────────────────────────────────────
-  if (subRow.org_id) {
+  // Only on subscription_cycle invoices. Cap percentage. No payouts on $0 invoices.
+  if (isCycleStart && billingReason === 'subscription_cycle' && subRow.org_id && (invoice.amount_paid as number) > 0) {
     const { data: referral } = await (db as any).from('coach_referrals')
       .select('id, percentage, coach_id, users!coach_referrals_coach_id_fkey(stripe_connect_account_id)')
       .eq('org_id', subRow.org_id)
       .eq('type', 'affiliate')
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
 
     if (referral) {
       const connectAccountId = (referral.users as { stripe_connect_account_id: string | null } | null)
         ?.stripe_connect_account_id
-      const amountCents = Math.floor((invoice.amount_paid as number) * (referral.percentage as number) / 100)
+      const rawPct = Number(referral.percentage)
+      const pct = Math.max(0, Math.min(MAX_AFFILIATE_PCT, Number.isFinite(rawPct) ? rawPct : 0))
+      const amountCents = Math.floor((invoice.amount_paid as number) * pct / 100)
 
       if (connectAccountId && amountCents > 0) {
         try {
@@ -228,6 +263,10 @@ async function handleInvoicePaid(invoice: Stripe.Invoice, db: DbClient) {
             currency: 'usd',
             destination: connectAccountId,
             transfer_group: `invoice_${invoice.id}`,
+          }, {
+            // Stripe-side idempotency: if the same invoice payment fires twice,
+            // Stripe rejects the second transfer.
+            idempotencyKey: `affiliate_${invoice.id}_${referral.id}`,
           })
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err)

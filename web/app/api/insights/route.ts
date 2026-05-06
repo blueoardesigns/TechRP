@@ -1,119 +1,122 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDisplayScore } from '@/lib/scoring';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
-// GET /api/insights?days=30&user_id=xxx
-// Returns aggregate strengths + improvements from all session assessments in the window
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const daysParam = searchParams.get('days'); // null = all time
+// ── Cached computation ────────────────────────────────────────────────────────
+// Wrapped in unstable_cache so identical (userId, appRole, daysParam) combos
+// are served from the cache for 5 minutes instead of hitting the DB + Claude
+// on every request. Auth/session checks remain outside the cache.
 
-    const supabaseAuth = createServerSupabase();
-    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
-    if (!authUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const supabase = createServiceSupabase();
-    const { data: profile } = await (supabase as any)
-      .from('users')
-      .select('id, app_role, organization_id, coach_instance_id')
-      .eq('auth_user_id', authUser.id)
-      .single();
-    if (!profile) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const userId = (profile as any).id as string;
-    const appRole = (profile as any).app_role as string;
-    const organizationId = (profile as any).organization_id as string | null;
-    const coachInstanceId = (profile as any).coach_instance_id as string | null;
+type InsightsResult = {
+  sessionCount: number;
+  avgScore: number | null;
+  topStrengths: string[];
+  topImprovements: string[];
+  summary: string | null;
+  period: string;
+  metrics: {
+    totalSessions: number;
+    avgScore: string | null;
+    activeUsers: number;
+    byScenario: Record<string, number>;
+  };
+};
 
-    // Superusers see all sessions platform-wide
-    let query = (supabase as any)
-      .from('training_sessions')
-      .select('id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
-      .not('assessment', 'is', null)
-      .order('started_at', { ascending: false });
+async function _computeInsights(
+  userId: string,
+  appRole: string,
+  organizationId: string | null,
+  coachInstanceId: string | null,
+  daysParam: string | null,
+): Promise<InsightsResult> {
+  const supabase = createServiceSupabase();
 
-    if (appRole !== 'superuser') {
-      query = query.eq('user_id', userId);
-    }
+  // Superusers see all sessions platform-wide
+  let query = (supabase as any)
+    .from('training_sessions')
+    .select('id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
+    .not('assessment', 'is', null)
+    .order('started_at', { ascending: false });
 
-    if (daysParam) {
-      const days = parseInt(daysParam, 10);
-      const since = new Date();
-      since.setDate(since.getDate() - days);
-      query = query.gte('started_at', since.toISOString());
-    }
+  if (appRole !== 'superuser') {
+    query = query.eq('user_id', userId);
+  }
 
-    const { data: sessions, error } = await query;
+  if (daysParam) {
+    const days = parseInt(daysParam, 10);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    query = query.gte('started_at', since.toISOString());
+  }
 
-    if (error) {
-      console.error('Error fetching sessions for insights:', error);
-      return NextResponse.json({ error: 'Failed to fetch sessions' }, { status: 500 });
-    }
+  const { data: sessions, error } = await query;
 
-    if (!sessions || sessions.length === 0) {
-      return NextResponse.json({
-        sessionCount: 0,
-        avgScore: null,
-        topStrengths: [],
-        topImprovements: [],
-        summary: null,
-        period: daysParam ? `${daysParam} days` : 'all time',
-        metrics: { totalSessions: 0, avgScore: null, activeUsers: 0, byScenario: {} },
-      });
-    }
+  if (error) {
+    console.error('Error fetching sessions for insights:', error);
+    throw new Error('Failed to fetch sessions');
+  }
 
-    // Pull out all assessment data
-    const assessments = sessions
-      .map((s: any) => {
-        try {
-          const a = typeof s.assessment === 'string' ? JSON.parse(s.assessment) : s.assessment;
-          return {
-            score: a?.score ?? null,
-            strengths: a?.strengths ?? [],
-            improvements: a?.improvements ?? [],
-            summary: a?.summary ?? '',
-            date: s.started_at,
-            scenario: s.persona_scenario_type || 'unknown',
-          };
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean);
+  if (!sessions || sessions.length === 0) {
+    return {
+      sessionCount: 0,
+      avgScore: null,
+      topStrengths: [],
+      topImprovements: [],
+      summary: null,
+      period: daysParam ? `${daysParam} days` : 'all time',
+      metrics: { totalSessions: 0, avgScore: null, activeUsers: 0, byScenario: {} },
+    };
+  }
 
-    if (assessments.length === 0) {
-      return NextResponse.json({
-        sessionCount: sessions.length,
-        avgScore: null,
-        topStrengths: [],
-        topImprovements: [],
-        summary: 'No completed assessments found in this period.',
-        period: daysParam ? `${daysParam} days` : 'all time',
-        metrics: { totalSessions: sessions.length, avgScore: null, activeUsers: 0, byScenario: {} },
-      });
-    }
+  // Pull out all assessment data
+  const assessments = sessions
+    .map((s: any) => {
+      try {
+        const a = typeof s.assessment === 'string' ? JSON.parse(s.assessment) : s.assessment;
+        return {
+          score: a?.score ?? null,
+          strengths: a?.strengths ?? [],
+          improvements: a?.improvements ?? [],
+          summary: a?.summary ?? '',
+          date: s.started_at,
+          scenario: s.persona_scenario_type || 'unknown',
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
 
-    // Compute average score — normalize each row through getDisplayScore so legacy 1–10 values
-    // are scaled to 1–100 before averaging.
-    const scores = assessments
-      .map((a: any) => (a.score !== null ? getDisplayScore({ score: a.score }).score : null))
-      .filter((s: any) => s !== null);
-    const avgScore = scores.length > 0
-      ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
-      : null;
+  if (assessments.length === 0) {
+    return {
+      sessionCount: sessions.length,
+      avgScore: null,
+      topStrengths: [],
+      topImprovements: [],
+      summary: 'No completed assessments found in this period.',
+      period: daysParam ? `${daysParam} days` : 'all time',
+      metrics: { totalSessions: sessions.length, avgScore: null, activeUsers: 0, byScenario: {} },
+    };
+  }
 
-    // Build a prompt for Claude to synthesize the patterns
-    const allStrengths = assessments.flatMap((a: any) => a.strengths);
-    const allImprovements = assessments.flatMap((a: any) => a.improvements);
-    const allSummaries = assessments.map((a: any) => a.summary).filter(Boolean);
+  // Compute average score
+  const scores = assessments
+    .map((a: any) => (a.score !== null ? getDisplayScore({ score: a.score }).score : null))
+    .filter((s: any) => s !== null);
+  const avgScore = scores.length > 0
+    ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
+    : null;
 
-    const insightPrompt = `You are a sales training director analyzing a rep's training session history.
+  // Build a prompt for Claude to synthesize the patterns
+  const allStrengths = assessments.flatMap((a: any) => a.strengths);
+  const allImprovements = assessments.flatMap((a: any) => a.improvements);
+  const allSummaries = assessments.map((a: any) => a.summary).filter(Boolean);
+
+  const insightPrompt = `You are a sales training director analyzing a rep's training session history.
 
 Period: ${daysParam ? `Last ${daysParam} days` : 'All time'}
 Sessions analyzed: ${assessments.length}
@@ -135,95 +138,133 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
   "summary": "<2-3 sentence overall coaching observation — what this rep consistently does well, and the #1 thing to focus on to level up>"
 }`;
 
-    // Fallback: frequency-ranked raw items in case AI call fails
-    const strengthFreq: Record<string, number> = {};
-    allStrengths.forEach((s: string) => { strengthFreq[s] = (strengthFreq[s] ?? 0) + 1; });
-    const topRawStrengths = Object.entries(strengthFreq)
-      .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s]) => s);
+  // Fallback: frequency-ranked raw items in case AI call fails
+  const strengthFreq: Record<string, number> = {};
+  allStrengths.forEach((s: string) => { strengthFreq[s] = (strengthFreq[s] ?? 0) + 1; });
+  const topRawStrengths = Object.entries(strengthFreq)
+    .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s]) => s);
 
-    const improvFreq: Record<string, number> = {};
-    allImprovements.forEach((s: string) => { improvFreq[s] = (improvFreq[s] ?? 0) + 1; });
-    const topRawImprovements = Object.entries(improvFreq)
-      .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s]) => s);
+  const improvFreq: Record<string, number> = {};
+  allImprovements.forEach((s: string) => { improvFreq[s] = (improvFreq[s] ?? 0) + 1; });
+  const topRawImprovements = Object.entries(improvFreq)
+    .sort((a, b) => b[1] - a[1]).slice(0, 5).map(([s]) => s);
 
-    let insights: { topStrengths: string[]; topImprovements: string[]; summary: string } = {
-      topStrengths: topRawStrengths,
-      topImprovements: topRawImprovements,
-      summary: '',
-    };
+  let insights: { topStrengths: string[]; topImprovements: string[]; summary: string } = {
+    topStrengths: topRawStrengths,
+    topImprovements: topRawImprovements,
+    summary: '',
+  };
 
-    try {
-      const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 800,
-        messages: [{ role: 'user', content: insightPrompt }],
-      });
+  try {
+    const message = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 800,
+      messages: [{ role: 'user', content: insightPrompt }],
+    });
 
-      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-      const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      const aiInsights = JSON.parse(cleaned);
-      insights = aiInsights;
-    } catch (aiError) {
-      console.error('AI insights synthesis failed, returning raw aggregated data:', aiError);
-      // insights already has fallback values from above
+    const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+    const cleaned = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const aiInsights = JSON.parse(cleaned);
+    insights = aiInsights;
+  } catch (aiError) {
+    console.error('AI insights synthesis failed, returning raw aggregated data:', aiError);
+  }
+
+  // Aggregate org/coach metrics
+  let orgSessionsQuery = (supabase as any)
+    .from('training_sessions')
+    .select('id, started_at, user_id, persona_scenario_type')
+    .order('started_at', { ascending: false })
+    .limit(500);
+
+  if (appRole === 'company_admin' && organizationId) {
+    const { data: orgUsers } = await (supabase as any)
+      .from('users')
+      .select('id')
+      .eq('organization_id', organizationId);
+    const orgUserIds = (orgUsers ?? []).map((u: any) => u.id);
+    if (orgUserIds.length > 0) {
+      orgSessionsQuery = orgSessionsQuery.in('user_id', orgUserIds);
+    }
+  } else if (appRole === 'coach' && coachInstanceId) {
+    const { data: coachUsers } = await (supabase as any)
+      .from('users')
+      .select('id')
+      .eq('coach_instance_id', coachInstanceId);
+    const coachUserIds = (coachUsers ?? []).map((u: any) => u.id);
+    if (coachUserIds.length > 0) {
+      orgSessionsQuery = orgSessionsQuery.in('user_id', coachUserIds);
+    }
+  } else {
+    orgSessionsQuery = orgSessionsQuery.eq('user_id', userId);
+  }
+
+  const { data: orgSessions } = await orgSessionsQuery;
+  const totalSessions = (orgSessions ?? []).length;
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const activeUserIds = new Set(
+    (orgSessions ?? []).filter((s: any) => s.started_at > cutoff).map((s: any) => s.user_id)
+  );
+  const byScenario: Record<string, number> = {};
+  (orgSessions ?? []).forEach((s: any) => {
+    const t = s.persona_scenario_type || 'unknown';
+    byScenario[t] = (byScenario[t] ?? 0) + 1;
+  });
+
+  return {
+    sessionCount: assessments.length,
+    avgScore,
+    topStrengths: insights.topStrengths || [],
+    topImprovements: insights.topImprovements || [],
+    summary: insights.summary || '',
+    period: daysParam ? `Last ${daysParam} days` : 'All time',
+    metrics: {
+      totalSessions,
+      avgScore: avgScore !== null ? String(avgScore) : null,
+      activeUsers: activeUserIds.size,
+      byScenario,
+    },
+  };
+}
+
+// GET /api/insights?days=30
+// Returns aggregate strengths + improvements from all session assessments in the window.
+// Heavy DB + AI work is cached per-user for 5 minutes (300 s).
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const daysParam = searchParams.get('days'); // null = all time
+
+    // Auth check — NOT cached (must be fresh per request).
+    const supabaseAuth = createServerSupabase();
+    const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+    if (!authUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const supabase = createServiceSupabase();
+    const { data: profile } = await (supabase as any)
+      .from('users')
+      .select('id, app_role, organization_id, coach_instance_id')
+      .eq('auth_user_id', authUser.id)
+      .single();
+    if (!profile) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Aggregate org/coach metrics
-    let orgSessionsQuery = (supabase as any)
-      .from('training_sessions')
-      .select('id, started_at, user_id, persona_scenario_type')
-      .order('started_at', { ascending: false })
-      .limit(500);
+    const userId = (profile as any).id as string;
+    const appRole = (profile as any).app_role as string;
+    const organizationId = (profile as any).organization_id as string | null;
+    const coachInstanceId = (profile as any).coach_instance_id as string | null;
 
-    if (appRole === 'company_admin' && organizationId) {
-      // Get user IDs in this org
-      const { data: orgUsers } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .eq('organization_id', organizationId);
-      const orgUserIds = (orgUsers ?? []).map((u: any) => u.id);
-      if (orgUserIds.length > 0) {
-        orgSessionsQuery = orgSessionsQuery.in('user_id', orgUserIds);
-      }
-    } else if (appRole === 'coach' && coachInstanceId) {
-      const { data: coachUsers } = await (supabase as any)
-        .from('users')
-        .select('id')
-        .eq('coach_instance_id', coachInstanceId);
-      const coachUserIds = (coachUsers ?? []).map((u: any) => u.id);
-      if (coachUserIds.length > 0) {
-        orgSessionsQuery = orgSessionsQuery.in('user_id', coachUserIds);
-      }
-    } else {
-      orgSessionsQuery = orgSessionsQuery.eq('user_id', userId);
-    }
-
-    const { data: orgSessions } = await orgSessionsQuery;
-    const totalSessions = (orgSessions ?? []).length;
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const activeUserIds = new Set(
-      (orgSessions ?? []).filter((s: any) => s.started_at > cutoff).map((s: any) => s.user_id)
+    // Heavy computation cached per user + days for 5 minutes.
+    const cachedCompute = unstable_cache(
+      () => _computeInsights(userId, appRole, organizationId, coachInstanceId, daysParam),
+      ['insights', userId, daysParam ?? 'all'],
+      { revalidate: 300, tags: [`insights-${userId}`] },
     );
-    const byScenario: Record<string, number> = {};
-    (orgSessions ?? []).forEach((s: any) => {
-      const t = s.persona_scenario_type || 'unknown';
-      byScenario[t] = (byScenario[t] ?? 0) + 1;
-    });
 
-    return NextResponse.json({
-      sessionCount: assessments.length,
-      avgScore,
-      topStrengths: insights.topStrengths || [],
-      topImprovements: insights.topImprovements || [],
-      summary: insights.summary || '',
-      period: daysParam ? `Last ${daysParam} days` : 'All time',
-      metrics: {
-        totalSessions,
-        avgScore: avgScore !== null ? String(avgScore) : null,
-        activeUsers: activeUserIds.size,
-        byScenario,
-      },
-    });
+    const result = await cachedCompute();
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error generating insights:', error);
     return NextResponse.json({ error: 'Failed to generate insights' }, { status: 500 });

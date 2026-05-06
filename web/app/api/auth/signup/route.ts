@@ -42,10 +42,13 @@ export async function POST(req: NextRequest) {
   const authUserId = authData.user.id;
 
   // 2. Resolve invite context (coach/org tokens)
+  //
+  // Per product decision (2026-05-05): all signups are auto-approved. The
+  // legacy `autoApprove` flag and email-approval flow have been removed; the
+  // response still returns `autoApproved: true` for backwards compatibility
+  // with the signup page's UI redirects.
   let resolvedCoachInstanceId: string | null = null;
   let organizationId: string | null = null;
-  let autoApprove = false;
-  let approverEmail = 'tim@blueoardesigns.com';
   let finalScenarioAccess = scenarioAccess ?? [];
 
   if (orgToken) {
@@ -70,20 +73,6 @@ export async function POST(req: NextRequest) {
         .eq('app_role', 'company_admin')
         .single();
       if (admin) finalScenarioAccess = (admin as any).scenario_access ?? [];
-      // Check coach instance auto-approve setting
-      if (resolvedCoachInstanceId) {
-        const { data: inst } = await (supabase as any)
-          .from('coach_instances')
-          .select('auto_approve_users, coach_user_id')
-          .eq('id', resolvedCoachInstanceId)
-          .single();
-        if (inst) {
-          autoApprove = (inst as any).auto_approve_users;
-          const { data: coachUser } = await (supabase as any)
-            .from('users').select('email').eq('id', (inst as any).coach_user_id).single();
-          if (coachUser) approverEmail = (coachUser as any).email;
-        }
-      }
     }
   } else if (coachToken) {
     // Signing up via coach invite link
@@ -98,10 +87,6 @@ export async function POST(req: NextRequest) {
     }
     if (inst) {
       resolvedCoachInstanceId = (inst as any).id;
-      autoApprove = (inst as any).auto_approve_users;
-      const { data: coachUser } = await (supabase as any)
-        .from('users').select('email').eq('id', (inst as any).coach_user_id).single();
-      if (coachUser) approverEmail = (coachUser as any).email;
       // If company_admin invite, create org
       if (role === 'company_admin' && companyName) {
         const { randomBytes } = await import('crypto');
@@ -131,23 +116,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'This invite link has expired.' }, { status: 400 });
     }
 
+    // Anti-hijack: the email used to sign up must match the email the invite
+    // was sent to. Without this, anyone with a leaked candidate_token could
+    // claim the invite slot under their own credentials.
+    const inviteEmailRaw = (invite as any).email as string | null;
+    const inviteEmail = inviteEmailRaw ? inviteEmailRaw.trim().toLowerCase() : '';
+    const submittedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    if (!inviteEmail || inviteEmail !== submittedEmail) {
+      await supabase.auth.admin.deleteUser(authUserId);
+      return NextResponse.json({
+        error: 'Sign up using the email this invite was sent to.',
+      }, { status: 400 });
+    }
+
     organizationId = (invite as any).organization_id;
     resolvedCoachInstanceId = (invite as any).coach_instance_id;
-    autoApprove = true; // candidates skip the approval queue
 
     // Compute session_limit and scenario_access from assigned_scenarios
     const assigned: { scenario_type: string; count: number }[] = (invite as any).assigned_scenarios ?? [];
     const sessionLimit = assigned.reduce((sum, s) => sum + s.count, 0);
     finalScenarioAccess = [...new Set(assigned.map(s => s.scenario_type))];
 
-    // Insert user profile with candidate-specific fields
+    // Insert user profile with candidate-specific fields. Both the invite
+    // email and the submitted email match (validated above), so we can safely
+    // store the canonical invite email.
     const { error: candidateProfileError } = await (supabase as any).from('users').insert({
       auth_user_id: authUserId,
       organization_id: organizationId,
       coach_instance_id: resolvedCoachInstanceId,
       name: fullName,
       full_name: fullName,
-      email: (invite as any).email, // use invite email, not form email
+      email: inviteEmail,
       role: 'technician',
       app_role: 'individual',
       status: 'approved',
@@ -262,7 +261,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    autoApproved: autoApprove,
+    autoApproved: true,
     userId: profileData?.id ?? null,
     orgId: profileData?.organization_id ?? null,
   });

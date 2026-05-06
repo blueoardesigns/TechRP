@@ -17,8 +17,9 @@ export async function sendCoachApprovalRequest({
   permissionLevel: 'edit_playbooks' | 'readonly';
   approvalToken: string;
 }) {
-  const acceptUrl = `${BASE_URL}/api/coach/connections/${approvalToken}/respond?action=accept`;
-  const declineUrl = `${BASE_URL}/api/coach/connections/${approvalToken}/respond?action=decline`;
+  // Single confirmation page that POSTs accept/decline after a real click.
+  // Avoids accidental accepts via Outlook/Slack/AV link prefetching.
+  const confirmUrl = `${BASE_URL}/coach/connections/${approvalToken}/confirm`;
 
   const permissionText =
     permissionLevel === 'edit_playbooks'
@@ -36,13 +37,9 @@ export async function sendCoachApprovalRequest({
         <p><strong>${companyName}</strong> has requested to connect with you on TechRP.</p>
         <p>If you accept, you will be able to ${permissionText} for this company.</p>
         <div style="margin:32px 0">
-          <a href="${acceptUrl}"
-             style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-right:12px">
-            Accept
-          </a>
-          <a href="${declineUrl}"
-             style="background:#4b5563;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
-            Decline
+          <a href="${confirmUrl}"
+             style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+            Review request
           </a>
         </div>
         <p style="color:#6b7280;font-size:13px">

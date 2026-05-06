@@ -59,7 +59,8 @@ export async function POST(request: NextRequest) {
   const linkValue = typeof link === 'string' && link.trim().length > 0 ? link.trim() : null;
   const notifData = linkValue ? { link: linkValue } : null;
 
-  // Bulk insert.
+  // Bulk insert in chunks of 500 to avoid exceeding Supabase/Postgres limits.
+  const CHUNK_SIZE = 500;
   const rows = ids.map((user_id) => ({
     user_id,
     type: 'global_broadcast',
@@ -68,12 +69,14 @@ export async function POST(request: NextRequest) {
     data: notifData,
   }));
 
-  const { error: insertError } = await (supabase as any)
-    .from('notifications')
-    .insert(rows);
-
-  if (insertError) {
-    return NextResponse.json({ error: insertError.message }, { status: 500 });
+  for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + CHUNK_SIZE);
+    const { error: insertError } = await (supabase as any)
+      .from('notifications')
+      .insert(chunk);
+    if (insertError) {
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
+    }
   }
 
   await (supabase as any).from('global_broadcasts').insert({

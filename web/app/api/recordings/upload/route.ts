@@ -4,6 +4,11 @@ import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-serv
 
 export const maxDuration = 120; // Allow up to 2 min for large files
 
+// Monthly upload cap: 10 hours = 600 minutes
+const MONTHLY_UPLOAD_LIMIT_MINUTES = 600;
+// Maximum duration the client may claim for a single upload (360 min = 6 hours)
+const MAX_SINGLE_UPLOAD_MINUTES = 360;
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' });
 
 // ─── Whisper Transcription ─────────────────────────────────────────────────────
@@ -105,6 +110,11 @@ export async function POST(request: NextRequest) {
 
     const file = formData.get('audio') as File | null;
     const consentConfirmed = formData.get('consent') === 'true';
+    // Client-supplied duration (seconds). Clamped to MAX_SINGLE_UPLOAD_MINUTES.
+    const rawDurationSeconds = Number(formData.get('durationSeconds') ?? 0);
+    const clampedDurationSeconds = isFinite(rawDurationSeconds) && rawDurationSeconds > 0
+      ? Math.min(rawDurationSeconds, MAX_SINGLE_UPLOAD_MINUTES * 60)
+      : null; // null → fall back to file-size estimate after transcription
 
     if (!file) {
       return NextResponse.json({ error: 'No audio file provided' }, { status: 400 });
@@ -147,8 +157,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Assessment failed: ' + err.message }, { status: 500 });
     }
 
-    // Step 3: Estimate duration from file size (rough: ~1 MB/min for MP3)
-    const durationMs = Math.round((file.size / (128 * 1024)) * 60 * 1000);
+    // Step 3: Resolve duration in seconds (client-supplied preferred; fall back to file-size estimate).
+    const durationSeconds = clampedDurationSeconds
+      ?? Math.round((file.size / (128 * 1024)) * 60); // ~1 MB/min for 128kbps MP3
+    const durationMinutes = Math.ceil(durationSeconds / 60);
+
+    // Step 3a: Check + reserve upload minutes atomically via RPC.
+    // The RPC increments optimistically; if we go over the cap we compensate.
+    const { data: newTotalRaw, error: rpcError } = await (supabase as any)
+      .rpc('increment_upload_minutes', { target_user_id: USER_ID, delta_minutes: durationMinutes });
+    if (rpcError) {
+      console.error('increment_upload_minutes RPC error:', rpcError);
+      return NextResponse.json({ error: 'Could not track upload usage' }, { status: 500 });
+    }
+    const newTotal = newTotalRaw as number;
+    if (newTotal > MONTHLY_UPLOAD_LIMIT_MINUTES) {
+      // Compensate: undo the increment before returning.
+      await (supabase as any)
+        .rpc('increment_upload_minutes', { target_user_id: USER_ID, delta_minutes: -durationMinutes });
+      const remaining = Math.max(0, MONTHLY_UPLOAD_LIMIT_MINUTES - (newTotal - durationMinutes));
+      return NextResponse.json({
+        error: `Monthly upload limit reached (${MONTHLY_UPLOAD_LIMIT_MINUTES} min/month). You have ${remaining} minute(s) remaining this month.`,
+        remaining,
+      }, { status: 429 });
+    }
+
+    const durationMs = durationSeconds * 1000;
     const startedAt = new Date();
     const endedAt = new Date(startedAt.getTime() + durationMs);
 

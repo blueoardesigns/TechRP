@@ -58,20 +58,14 @@ export async function applyReferral(
     return;
   }
 
-  // Note: Supabase JS v2 doesn't support atomic field increments without an RPC.
-  // The referrals UNIQUE constraint on referred_id prevents this code from running
-  // more than once per referred user, so the race window is extremely small.
-  const { data: currentUser } = await (supabase as any)
-    .from('users')
-    .select('referral_credits_minutes')
-    .eq('id', referrerId)
-    .single();
+  // Atomically credit the referrer +60 minutes via RPC (eliminates read-modify-write race).
+  const { error: creditError } = await (supabase as any)
+    .rpc('apply_referral_credit', { target_user_id: referrerId, delta_minutes: 60 });
 
-  // Credit the referrer +60 minutes.
-  await (supabase as any)
-    .from('users')
-    .update({ referral_credits_minutes: ((currentUser as any)?.referral_credits_minutes ?? 0) + 60 })
-    .eq('id', referrerId);
+  if (creditError) {
+    console.error('apply_referral_credit RPC error:', creditError);
+    return;
+  }
 
   // Fire notification to referrer.
   await (supabase as any).from('notifications').insert({

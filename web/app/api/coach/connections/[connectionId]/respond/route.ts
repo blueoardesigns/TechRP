@@ -1,26 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabase-server';
 import { createServiceRoleClient } from '@/lib/supabase';
 import { sendConnectionAccepted, sendConnectionDeclined } from '@/lib/connection-emails';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-export async function GET(
+/**
+ * Coach-connection accept/decline.
+ *
+ * Historically this was a GET endpoint, but email-link prefetchers (Outlook
+ * Safe Links, Slack unfurl, antivirus scanners) auto-fetched those URLs and
+ * silently triggered accept/decline. The flow now uses a confirmation page
+ * (`/coach/connections/[token]/confirm`) which POSTs here after a real click.
+ *
+ * Body: { action: 'accept' | 'decline' }
+ * URL param `connectionId` is the per-invite approval_token.
+ */
+export async function POST(
   request: NextRequest,
   { params }: { params: { connectionId: string } }
 ) {
-  const action = request.nextUrl.searchParams.get('action');
+  let action: string | null = null;
+  try {
+    const body = await request.json();
+    action = body?.action ?? null;
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
 
   if (action !== 'accept' && action !== 'decline') {
-    return new NextResponse('Invalid action', { status: 400 });
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   }
 
   const supabase = createServiceRoleClient();
@@ -29,20 +35,16 @@ export async function GET(
     .from('company_coach_connections')
     .select('id, organization_id, coach_instance_id, status, permission_level')
     .eq('approval_token', params.connectionId)
-    .single();
+    .maybeSingle();
 
   if (!conn) {
-    return new NextResponse(
-      '<html><body style="font-family:sans-serif;padding:40px"><h2>Link not found or already used.</h2></body></html>',
-      { status: 404, headers: { 'Content-Type': 'text/html' } }
-    );
+    return NextResponse.json({ error: 'Connection not found' }, { status: 404 });
   }
-
   if ((conn as any).status !== 'pending') {
-    return new NextResponse(
-      `<html><body style="font-family:sans-serif;padding:40px"><h2>This request has already been ${(conn as any).status}.</h2></body></html>`,
-      { status: 200, headers: { 'Content-Type': 'text/html' } }
-    );
+    return NextResponse.json({
+      error: `This request has already been ${(conn as any).status}.`,
+      status: (conn as any).status,
+    }, { status: 409 });
   }
 
   if (action === 'accept') {
@@ -50,18 +52,14 @@ export async function GET(
       .from('company_coach_connections')
       .update({ status: 'active', accepted_at: new Date().toISOString() })
       .eq('id', (conn as any).id);
-
     if (updateError) {
-      return new NextResponse(
-        '<html><body style="font-family:sans-serif;padding:40px"><h2>Something went wrong. Please try again later.</h2></body></html>',
-        { status: 500, headers: { 'Content-Type': 'text/html' } }
-      );
+      return NextResponse.json({ error: 'Failed to accept connection' }, { status: 500 });
     }
 
     const [{ data: org }, { data: adminUser }, { data: coachUser }] = await Promise.all([
-      (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).single(),
-      (supabase as any).from('users').select('id, full_name, email').eq('organization_id', (conn as any).organization_id).eq('app_role', 'company_admin').single(),
-      (supabase as any).from('users').select('full_name').eq('coach_instance_id', (conn as any).coach_instance_id).eq('app_role', 'coach').single(),
+      (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).maybeSingle(),
+      (supabase as any).from('users').select('id, full_name, email').eq('organization_id', (conn as any).organization_id).eq('app_role', 'company_admin').maybeSingle(),
+      (supabase as any).from('users').select('full_name').eq('coach_instance_id', (conn as any).coach_instance_id).eq('app_role', 'coach').maybeSingle(),
     ]);
 
     if ((adminUser as any)?.email) {
@@ -76,7 +74,6 @@ export async function GET(
       }
     }
 
-    // In-app notification to the company admin.
     if (adminUser && (adminUser as any).id) {
       await (supabase as any).from('notifications').insert({
         user_id: (adminUser as any).id,
@@ -87,51 +84,75 @@ export async function GET(
       });
     }
 
-    return new NextResponse(
-      `<html><body style="font-family:sans-serif;padding:40px;max-width:480px">
-        <h2 style="color:#16a34a">&#10003; Connection Accepted</h2>
-        <p>You now have access to <strong>${escapeHtml((org as any)?.name ?? 'the company')}</strong>'s data on TechRP.</p>
-        <a href="${APP_URL}/coach" style="color:#2563eb">Go to your dashboard &rarr;</a>
-      </body></html>`,
-      { status: 200, headers: { 'Content-Type': 'text/html' } }
-    );
-  } else {
-    const { error: declineError } = await (supabase as any)
-      .from('company_coach_connections')
-      .update({ status: 'declined' })
-      .eq('id', (conn as any).id);
-
-    if (declineError) {
-      return new NextResponse(
-        '<html><body style="font-family:sans-serif;padding:40px"><h2>Something went wrong. Please try again later.</h2></body></html>',
-        { status: 500, headers: { 'Content-Type': 'text/html' } }
-      );
-    }
-
-    const [{ data: org }, { data: adminUser }, { data: coachUser }] = await Promise.all([
-      (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).single(),
-      (supabase as any).from('users').select('full_name, email').eq('organization_id', (conn as any).organization_id).eq('app_role', 'company_admin').single(),
-      (supabase as any).from('users').select('full_name').eq('coach_instance_id', (conn as any).coach_instance_id).eq('app_role', 'coach').single(),
-    ]);
-
-    if ((adminUser as any)?.email) {
-      try {
-        await sendConnectionDeclined({
-          companyAdminEmail: (adminUser as any).email,
-          companyName: (org as any)?.name ?? 'the company',
-          coachName: (coachUser as any)?.full_name ?? 'The coach',
-        });
-      } catch (e) {
-        console.error('Failed to send decline email:', e);
-      }
-    }
-
-    return new NextResponse(
-      `<html><body style="font-family:sans-serif;padding:40px;max-width:480px">
-        <h2>Request Declined</h2>
-        <p>You have declined the connection request from <strong>${escapeHtml((org as any)?.name ?? 'the company')}</strong>.</p>
-      </body></html>`,
-      { status: 200, headers: { 'Content-Type': 'text/html' } }
-    );
+    return NextResponse.json({
+      success: true,
+      action: 'accepted',
+      companyName: (org as any)?.name ?? null,
+    });
   }
+
+  // decline
+  const { error: declineError } = await (supabase as any)
+    .from('company_coach_connections')
+    .update({ status: 'declined' })
+    .eq('id', (conn as any).id);
+  if (declineError) {
+    return NextResponse.json({ error: 'Failed to decline connection' }, { status: 500 });
+  }
+
+  const [{ data: org }, { data: adminUser }, { data: coachUser }] = await Promise.all([
+    (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).maybeSingle(),
+    (supabase as any).from('users').select('full_name, email').eq('organization_id', (conn as any).organization_id).eq('app_role', 'company_admin').maybeSingle(),
+    (supabase as any).from('users').select('full_name').eq('coach_instance_id', (conn as any).coach_instance_id).eq('app_role', 'coach').maybeSingle(),
+  ]);
+
+  if ((adminUser as any)?.email) {
+    try {
+      await sendConnectionDeclined({
+        companyAdminEmail: (adminUser as any).email,
+        companyName: (org as any)?.name ?? 'the company',
+        coachName: (coachUser as any)?.full_name ?? 'The coach',
+      });
+    } catch (e) {
+      console.error('Failed to send decline email:', e);
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    action: 'declined',
+    companyName: (org as any)?.name ?? null,
+  });
+}
+
+/**
+ * GET — preview info for the confirmation page (read-only).
+ *  Does NOT mutate state, so link prefetchers can't accept/decline.
+ *  Used by /coach/connections/[token]/confirm to render org/coach context.
+ */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { connectionId: string } }
+) {
+  const supabase = createServiceRoleClient();
+  const { data: conn } = await (supabase as any)
+    .from('company_coach_connections')
+    .select('id, organization_id, coach_instance_id, status, permission_level')
+    .eq('approval_token', params.connectionId)
+    .maybeSingle();
+  if (!conn) {
+    return NextResponse.json({ error: 'Connection not found' }, { status: 404 });
+  }
+
+  const [{ data: org }, { data: coachUser }] = await Promise.all([
+    (supabase as any).from('organizations').select('name').eq('id', (conn as any).organization_id).maybeSingle(),
+    (supabase as any).from('users').select('full_name').eq('coach_instance_id', (conn as any).coach_instance_id).eq('app_role', 'coach').maybeSingle(),
+  ]);
+
+  return NextResponse.json({
+    status: (conn as any).status,
+    companyName: (org as any)?.name ?? null,
+    coachName: (coachUser as any)?.full_name ?? null,
+    permissionLevel: (conn as any).permission_level ?? null,
+  });
 }
