@@ -122,6 +122,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'name and content are required' }, { status: 400 });
   }
 
+  // Length guards
+  if (String(name).length > 255) return NextResponse.json({ error: 'Playbook name too long (max 255 characters).' }, { status: 400 });
+  if (String(content).length > 100_000) return NextResponse.json({ error: 'Playbook content too long (max 100 000 characters).' }, { status: 400 });
+
   const { data, error } = await (supabase as any)
     .from('playbooks')
     .insert({

@@ -42,6 +42,9 @@ export async function POST(request: NextRequest) {
   if (typeof body !== 'string' || body.trim().length === 0) {
     return NextResponse.json({ error: 'Body is required' }, { status: 400 });
   }
+  if (title.length > 255) return NextResponse.json({ error: 'Title too long (max 255 characters).' }, { status: 400 });
+  if (body.length > 2000) return NextResponse.json({ error: 'Body too long (max 2000 characters).' }, { status: 400 });
+  if (link && String(link).length > 500) return NextResponse.json({ error: 'Link too long (max 500 characters).' }, { status: 400 });
 
   const supabase = createServiceSupabase();
 

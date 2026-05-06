@@ -17,7 +17,7 @@ export async function GET() {
   if (!auth.ok) return auth.response;
   const { user, service } = auth;
 
-  let query = (service as any).from('training_sessions').select('*').order('started_at', { ascending: false });
+  let query = (service as any).from('training_sessions').select('*').order('started_at', { ascending: false }).limit(200);
 
   if (user.appRole === 'superuser') {
     // no filter

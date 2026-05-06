@@ -58,7 +58,9 @@ export async function GET() {
       }
       const raw = s.assessment;
       if (raw) {
-        const a = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        let a: any;
+        try { a = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { a = null; }
+        if (!a) continue;
         if (typeof a.score === 'number') {
           const display = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
           if (!scoresByUser[s.user_id]) scoresByUser[s.user_id] = [];

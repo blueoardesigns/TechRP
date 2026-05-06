@@ -5,7 +5,6 @@ import { applyReferral, generateReferralCode, type ReferralSource } from '@/lib/
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const APPROVAL_SECRET = process.env.APPROVAL_SECRET ?? 'change-me-in-env';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 export async function POST(req: NextRequest) {
@@ -14,6 +13,12 @@ export async function POST(req: NextRequest) {
   if (!fullName || !email || !password || !role) {
     return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 });
   }
+
+  // Input length guards — prevent oversized payloads reaching the DB
+  if (String(fullName).length > 255) return NextResponse.json({ error: 'Name too long (max 255 characters).' }, { status: 400 });
+  if (String(email).length > 320) return NextResponse.json({ error: 'Email too long.' }, { status: 400 });
+  if (String(password).length > 1024) return NextResponse.json({ error: 'Password too long.' }, { status: 400 });
+  if (companyName && String(companyName).length > 255) return NextResponse.json({ error: 'Company name too long (max 255 characters).' }, { status: 400 });
 
   // Use service role to bypass RLS
   const supabase = createClient(

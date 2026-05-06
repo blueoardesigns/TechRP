@@ -7,7 +7,7 @@ import { PLAN_LABEL } from '@/lib/plans'
 import { validateCloseRequest, buildAdminEmailBody } from '@/lib/account-close'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const ADMIN_EMAIL = 'tbauertext@gmail.com'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'tbauertext@gmail.com'
 
 export async function POST(request: NextRequest) {
   // 1. Authenticate

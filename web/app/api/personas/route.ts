@@ -119,6 +119,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Length guards
+  if (String(name).length > 255) return NextResponse.json({ error: 'Name too long (max 255 characters).' }, { status: 400 });
+  if (String(personality_type).length > 255) return NextResponse.json({ error: 'Personality type too long (max 255 characters).' }, { status: 400 });
+  if (String(first_message).length > 2000) return NextResponse.json({ error: 'First message too long (max 2000 characters).' }, { status: 400 });
+  if (String(system_prompt).length > 20000) return NextResponse.json({ error: 'System prompt too long (max 20000 characters).' }, { status: 400 });
+
   // Only superusers may create global (coach_instance_id = null) defaults.
   const wantsDefault = make_default === true && user.appRole === 'superuser';
   const coachInstanceId = wantsDefault ? null : user.coachInstanceId;

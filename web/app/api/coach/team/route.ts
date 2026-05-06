@@ -78,11 +78,13 @@ export async function GET(req: NextRequest) {
     if (!st.lastSessionAt || s.started_at > st.lastSessionAt) st.lastSessionAt = s.started_at;
     const raw = s.assessment;
     if (raw) {
-      const a = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (typeof a.score === 'number') {
-        const display = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
-        st.avgScore = st.avgScore === null ? display : Math.round((st.avgScore + display) / 2);
-      }
+      try {
+        const a = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (typeof a?.score === 'number') {
+          const display = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
+          st.avgScore = st.avgScore === null ? display : Math.round((st.avgScore + display) / 2);
+        }
+      } catch { /* corrupted stored JSON — skip */ }
     }
   }
 
@@ -93,8 +95,10 @@ export async function GET(req: NextRequest) {
     const raw = s.assessment;
     let score: number | null = null;
     if (raw) {
-      const a = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (typeof a.score === 'number') score = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
+      try {
+        const a = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        if (typeof a?.score === 'number') score = a.score <= 10 ? Math.round(a.score * 10) : Math.round(a.score);
+      } catch { /* corrupted stored JSON — skip */ }
     }
     return { ...s, score, user: memberMap[s.user_id] ?? null };
   });
