@@ -15,7 +15,7 @@ const PUBLIC_PATH_PREFIXES = [
   '/coach/connections/', // /coach/connections/[token]/confirm
   '/share/session/',
 ];
-const MARKETING_ROUTES = ['/', '/pricing', '/about'];
+const MARKETING_ROUTES = ['/', '/pricing', '/about', '/lp', '/lp2'];
 
 /**
  * Authentication middleware.
