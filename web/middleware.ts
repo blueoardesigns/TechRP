@@ -17,6 +17,14 @@ const PUBLIC_PATH_PREFIXES = [
 ];
 const MARKETING_ROUTES = ['/', '/pricing', '/about', '/lp', '/lp2'];
 
+const PUBLIC_PAGES = [
+  '/login',
+  '/signup',
+  '/pending',
+  '/forgot-password',
+  '/reset-password',
+];
+
 /**
  * Authentication middleware.
  *
@@ -40,6 +48,9 @@ export async function middleware(request: NextRequest) {
   if (PUBLIC_PATH_PREFIXES.some(p => pathname.startsWith(p))) {
     return NextResponse.next();
   }
+
+  // Auth pages — always public.
+  if (PUBLIC_PAGES.includes(pathname)) return NextResponse.next();
 
   // /admin/login is public so users can sign in.
   if (pathname === '/admin/login') return NextResponse.next();
