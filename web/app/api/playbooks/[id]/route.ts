@@ -6,7 +6,7 @@ const FALLBACK_ORG = '00000000-0000-0000-0000-000000000001';
 async function loadPlaybook(service: ReturnType<typeof import('@/lib/supabase-server').createServiceSupabase>, id: string) {
   const { data, error } = await (service as any)
     .from('playbooks')
-    .select('id, organization_id, uploaded_by, name, content, scenario_type, is_active, created_at, updated_at, file_url')
+    .select('id, organization_id, uploaded_by, name, content, scenario_type, created_at, updated_at')
     .eq('id', id)
     .maybeSingle();
   return { data, error };
