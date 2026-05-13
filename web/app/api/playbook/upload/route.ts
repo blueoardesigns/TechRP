@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
-// @ts-ignore
-import pdf from 'pdf-parse';
+// pdf-parse is CJS-only; dynamic require avoids ESM default-export build error
+const getPdfParse = () => require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>;
 import mammoth from 'mammoth';
 
 export async function POST(request: NextRequest) {
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
   if (isPdf) {
     try {
-      const result = await pdf(buffer);
+      const result = await getPdfParse()(buffer);
       extractedText = result.text;
     } catch {
       return NextResponse.json({ error: 'Failed to read PDF. Make sure it is not password-protected.' }, { status: 422 });
