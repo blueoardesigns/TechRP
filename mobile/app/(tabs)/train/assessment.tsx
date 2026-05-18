@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { Assessment } from '../../../lib/types';
 import ScoreBadge from '../../../components/ScoreBadge';
@@ -38,7 +39,7 @@ export default function AssessmentScreen() {
   if (!assessment) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorIcon}>⚠️</Text>
+        <Ionicons name="warning-outline" size={36} color={colors.textMuted} />
         <Text style={styles.errorText}>Assessment not available.</Text>
       </View>
     );
@@ -62,7 +63,7 @@ export default function AssessmentScreen() {
       {assessment.strengths.map((s, i) => (
         <View key={i} style={styles.bulletRow}>
           <View style={[styles.bulletIcon, styles.strengthIcon]}>
-            <Text style={styles.bulletIconText}>✓</Text>
+            <Ionicons name="checkmark" size={13} color={colors.scoreGreen} />
           </View>
           <Text style={styles.bulletText}>{s}</Text>
         </View>
@@ -73,7 +74,7 @@ export default function AssessmentScreen() {
       {assessment.improvements.map((s, i) => (
         <View key={i} style={styles.bulletRow}>
           <View style={[styles.bulletIcon, styles.improvIcon]}>
-            <Text style={styles.bulletIconText}>→</Text>
+            <Ionicons name="arrow-forward" size={12} color={colors.accentLight} />
           </View>
           <Text style={styles.bulletText}>{s}</Text>
         </View>
@@ -101,7 +102,8 @@ export default function AssessmentScreen() {
 
       {/* Done */}
       <TouchableOpacity style={styles.doneButton} onPress={() => router.replace('/(tabs)/train')} activeOpacity={0.85}>
-        <Text style={styles.doneButtonText}>↩  Train Again</Text>
+        <Ionicons name="refresh" size={18} color="#fff" style={{ marginRight: 6 }} />
+        <Text style={styles.doneButtonText}>Train Again</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.sessionsButton} onPress={() => router.replace('/(tabs)/sessions')} activeOpacity={0.85}>
@@ -149,8 +151,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: colors.border,
+    marginTop: spacing.sm,
   },
   scoreRow: {
     flexDirection: 'row',
@@ -183,11 +186,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
-    borderLeftWidth: 3,
+    borderLeftWidth: 2,
     borderLeftColor: colors.accent,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
+    borderTopWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
     borderTopColor: colors.border,
     borderRightColor: colors.border,
     borderBottomColor: colors.border,
@@ -221,13 +224,20 @@ const styles = StyleSheet.create({
 
   // Buttons
   doneButton: {
+    flexDirection: 'row',
     backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: spacing.xl,
     minHeight: 56,
-    justifyContent: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   doneButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   sessionsButton: {

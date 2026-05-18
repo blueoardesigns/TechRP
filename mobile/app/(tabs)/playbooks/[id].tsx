@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { Playbook } from '../../../lib/types';
 import { getScenarioConfig } from '../../../lib/scenarios';
@@ -52,7 +53,7 @@ export default function PlaybookDetailScreen() {
   if (!playbook) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorIcon}>📖</Text>
+        <Ionicons name="book-outline" size={44} color={colors.textDim} />
         <Text style={styles.errorText}>Playbook not found.</Text>
       </View>
     );
@@ -87,7 +88,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
   },
-  errorIcon: { fontSize: 36 },
   errorText: { color: colors.textMuted, fontSize: 14 },
 
   scroll: { flex: 1, backgroundColor: colors.bg },
@@ -120,8 +120,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0.5,
+    borderColor: colors.borderStrong,
   },
   body: {
     color: colors.text,

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { SectionList, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { SectionList, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import { Playbook } from '../../../lib/types';
 import { getScenarioConfig } from '../../../lib/scenarios';
 import { colors, spacing, radius } from '../../../lib/theme';
+import { Touchable } from '../../../components/Touchable';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -84,7 +86,7 @@ export default function PlaybooksListScreen() {
       )}
       ListEmptyComponent={
         <View style={styles.emptyContent}>
-          <Text style={styles.emptyIcon}>📖</Text>
+          <Ionicons name="book-outline" size={44} color={colors.textDim} />
           <Text style={styles.emptyTitle}>No playbooks yet</Text>
           <Text style={styles.emptyText}>Playbooks will appear here once your manager adds them.</Text>
         </View>
@@ -92,17 +94,17 @@ export default function PlaybooksListScreen() {
       renderItem={({ item }) => {
         const scenario = getScenarioConfig(item.scenario_type ?? '');
         return (
-          <TouchableOpacity
+          <Touchable
             style={styles.row}
             onPress={() => router.push({ pathname: '/(tabs)/playbooks/[id]', params: { id: item.id } })}
-            activeOpacity={0.75}
+            
           >
             <View style={styles.iconWrap}>
               <Text style={styles.icon}>{scenario?.icon ?? '📖'}</Text>
             </View>
             <Text style={styles.label}>{item.name ?? scenario?.label ?? item.scenario_type}</Text>
-            <Text style={styles.chevron}>›</Text>
-          </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+          </Touchable>
         );
       }}
     />
@@ -126,7 +128,6 @@ const styles = StyleSheet.create({
     padding: spacing.xxl,
     gap: spacing.sm,
   },
-  emptyIcon: { fontSize: 48, marginBottom: spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
   emptyText: { color: colors.textMuted, fontSize: 14, textAlign: 'center', lineHeight: 21 },
 
@@ -149,7 +150,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: colors.border,
     minHeight: 60,
   },

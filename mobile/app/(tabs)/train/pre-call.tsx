@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { Persona } from '../../../lib/types';
 import PersonaCard from '../../../components/PersonaCard';
@@ -75,7 +76,8 @@ export default function PreCallScreen() {
         onPress={handleStartCall}
         activeOpacity={0.85}
       >
-        <Text style={styles.buttonText}>🎙️  Start Call</Text>
+        <Ionicons name="mic" size={22} color="#fff" style={{ marginRight: spacing.sm }} />
+        <Text style={styles.buttonText}>Start Call</Text>
       </TouchableOpacity>
     </View>
   );
@@ -139,19 +141,21 @@ const styles = StyleSheet.create({
   tipLine: { color: colors.textMuted, fontSize: 13, lineHeight: 20 },
 
   button: {
+    flexDirection: 'row',
     backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxl,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 'auto',
     marginBottom: spacing.lg,
     minHeight: 58,
-    justifyContent: 'center',
     shadowColor: colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  buttonText: { color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: 0.2 },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: '700', letterSpacing: 0.1 },
 });

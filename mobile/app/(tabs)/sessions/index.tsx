@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { FlatList, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { FlatList, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import { TrainingSession } from '../../../lib/types';
 import { getScenarioConfig } from '../../../lib/scenarios';
 import ScoreBadge from '../../../components/ScoreBadge';
 import { colors, spacing, radius } from '../../../lib/theme';
+import { Touchable } from '../../../components/Touchable';
 
 export default function SessionsListScreen() {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
@@ -54,7 +56,7 @@ export default function SessionsListScreen() {
       }
       ListEmptyComponent={
         <View style={styles.emptyContent}>
-          <Text style={styles.emptyIcon}>🎙️</Text>
+          <Ionicons name="mic-outline" size={44} color={colors.textDim} />
           <Text style={styles.emptyTitle}>No sessions yet</Text>
           <Text style={styles.emptyText}>Complete a training call to see your results here.</Text>
         </View>
@@ -66,13 +68,13 @@ export default function SessionsListScreen() {
           month: 'short', day: 'numeric', year: 'numeric',
         });
         return (
-          <TouchableOpacity
+          <Touchable
             style={styles.row}
             onPress={() => router.push({ pathname: '/(tabs)/sessions/[id]', params: { id: item.id } })}
-            activeOpacity={0.75}
+            
           >
             <View style={styles.iconWrap}>
-              <Text style={styles.icon}>{scenario?.icon ?? '🎙️'}</Text>
+              <Text style={styles.icon}>{scenario?.icon ?? '🎙'}</Text>
             </View>
             <View style={styles.rowText}>
               <Text style={styles.personaName}>{item.persona_name ?? 'Unknown'}</Text>
@@ -80,7 +82,7 @@ export default function SessionsListScreen() {
               <Text style={styles.date}>{date}</Text>
             </View>
             <ScoreBadge score={score} />
-          </TouchableOpacity>
+          </Touchable>
         );
       }}
     />
@@ -115,15 +117,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: colors.border,
-    minHeight: 72,
+    minHeight: 68,
   },
   iconWrap: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: radius.sm,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    backgroundColor: 'rgba(14,165,233,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,

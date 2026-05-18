@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, Linking,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, radius } from '../../lib/theme';
@@ -37,7 +38,9 @@ export default function LoginScreen() {
       <View style={styles.inner}>
         {/* Logo / wordmark */}
         <View style={styles.logoBlock}>
-          <Text style={styles.logoIcon}>🎙️</Text>
+          <View style={styles.logoIconWrap}>
+            <Ionicons name="mic" size={32} color={colors.accent} />
+          </View>
           <Text style={styles.title}>TechRP</Text>
           <Text style={styles.subtitle}>Voice AI Training Platform</Text>
         </View>
@@ -74,6 +77,7 @@ export default function LoginScreen() {
             disabled={loading}
             activeOpacity={0.85}
           >
+            {!loading && <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginRight: 8 }} />}
             <Text style={styles.buttonText}>{loading ? 'Signing In…' : 'Sign In'}</Text>
           </TouchableOpacity>
 
@@ -108,7 +112,17 @@ const styles = StyleSheet.create({
 
   // Logo
   logoBlock: { alignItems: 'center', gap: spacing.sm },
-  logoIcon: { fontSize: 48, marginBottom: spacing.xs },
+  logoIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.accentGlow,
+    borderWidth: 1,
+    borderColor: colors.borderAccent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
   title: {
     fontSize: 36,
     fontWeight: '900',
@@ -133,8 +147,8 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0.5,
+    borderColor: colors.borderStrong,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -144,12 +158,18 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingVertical: spacing.md,
     alignItems: 'center',
+    flexDirection: 'row',
     minHeight: 52,
     justifyContent: 'center',
     marginTop: spacing.sm,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.2 },

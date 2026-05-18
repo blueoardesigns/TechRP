@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator,
+  View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, SafeAreaView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { Persona, TranscriptEntry } from '../../../lib/types';
 import { getVapi } from '../../../lib/vapi';
@@ -107,7 +108,6 @@ export default function CallScreen() {
       .select('organization_id')
       .eq('auth_user_id', userId ?? '')
       .single();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const insertPayload: any = {
       user_id: userId,
       organization_id: (profile as any)?.organization_id ?? null,
@@ -132,35 +132,53 @@ export default function CallScreen() {
   };
 
   const speakerLabel = persona?.speaker_label ?? 'Contact';
+  const personaInitials = persona?.name
+    ? persona.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?';
 
   return (
     <View style={styles.container}>
-      {/* Status bar */}
-      <View style={styles.statusBar}>
-        {callStatus === 'connecting' && (
-          <>
-            <ActivityIndicator color={colors.accentLight} size="small" />
-            <Text style={styles.statusText}>Connecting…</Text>
-          </>
-        )}
-        {callStatus === 'connected' && (
-          <>
-            <View style={[styles.dot, isSpeaking && styles.dotActive]} />
-            <Text style={styles.statusText}>
-              {isSpeaking ? `${speakerLabel} is speaking` : 'Your turn — say something'}
+      <SafeAreaView style={styles.safeTop}>
+        {/* Call header */}
+        <View style={styles.header}>
+          {/* Avatar + status */}
+          <View style={styles.avatarSection}>
+            <View style={[
+              styles.avatarRing,
+              callStatus === 'connected' && isSpeaking && styles.avatarRingActive,
+            ]}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{personaInitials}</Text>
+              </View>
+            </View>
+            <Text style={styles.personaName} numberOfLines={1}>
+              {persona?.name ?? 'Connecting…'}
             </Text>
-          </>
-        )}
-        {callStatus === 'ending' && (
-          <>
-            <ActivityIndicator color={colors.textMuted} size="small" />
-            <Text style={styles.statusText}>Grading your call…</Text>
-          </>
-        )}
-        {persona && (
-          <Text style={styles.personaChip} numberOfLines={1}>{persona.name}</Text>
-        )}
-      </View>
+            <View style={styles.statusRow}>
+              {callStatus === 'connecting' && (
+                <>
+                  <ActivityIndicator color={colors.accentLight} size="small" />
+                  <Text style={styles.statusText}>Connecting…</Text>
+                </>
+              )}
+              {callStatus === 'connected' && (
+                <>
+                  <View style={[styles.liveDot, isSpeaking && styles.liveDotActive]} />
+                  <Text style={styles.statusText}>
+                    {isSpeaking ? `${speakerLabel} is speaking` : 'Your turn'}
+                  </Text>
+                </>
+              )}
+              {callStatus === 'ending' && (
+                <>
+                  <ActivityIndicator color={colors.textMuted} size="small" />
+                  <Text style={styles.statusText}>Grading your call…</Text>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
 
       {/* Live transcript */}
       <FlatList
@@ -174,85 +192,119 @@ export default function CallScreen() {
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyText}>Conversation will appear here as you speak…</Text>
+            <Ionicons name="chatbubbles-outline" size={32} color={colors.textDim} />
+            <Text style={styles.emptyText}>Conversation will appear{`\n`}as you speak…</Text>
           </View>
         }
       />
 
-      {/* End call button */}
-      <TouchableOpacity
-        style={[styles.endButton, callStatus !== 'connected' && styles.endButtonDisabled]}
-        onPress={handleEndCall}
-        disabled={callStatus !== 'connected'}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.endButtonText}>
-          {callStatus === 'ending' ? 'Saving…' : '📵  End Call'}
-        </Text>
-      </TouchableOpacity>
+      {/* End call */}
+      <SafeAreaView style={styles.safeBottom}>
+        <TouchableOpacity
+          style={[styles.endButton, callStatus !== 'connected' && styles.endButtonDisabled]}
+          onPress={handleEndCall}
+          disabled={callStatus !== 'connected'}
+          activeOpacity={0.8}
+        >
+          {callStatus === 'ending' ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Ionicons name="call" size={26} color="#fff" />
+          )}
+          <Text style={styles.endButtonText}>
+            {callStatus === 'ending' ? 'Saving…' : 'End Call'}
+          </Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
+  safeTop: { backgroundColor: colors.bg },
+  safeBottom: { backgroundColor: colors.bg, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
 
-  statusBar: {
-    flexDirection: 'row',
+  header: {
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xl,
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surfaceAlt,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: colors.border,
-    gap: spacing.sm,
-    minHeight: 52,
   },
-  statusText: { color: colors.textMuted, fontSize: 13, flex: 1 },
-  dot: {
-    width: 9, height: 9, borderRadius: 5,
+
+  avatarSection: { alignItems: 'center', gap: spacing.sm },
+  avatarRing: {
+    width: 92,
+    height: 92,
+    borderRadius: 46,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  avatarRingActive: {
+    borderColor: colors.accentLight,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.surfaceHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: 28, fontWeight: '700', color: colors.text },
+  personaName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.2,
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  statusText: { color: colors.textMuted, fontSize: 13 },
+  liveDot: {
+    width: 8, height: 8, borderRadius: 4,
     backgroundColor: colors.textDim,
   },
-  dotActive: { backgroundColor: colors.scoreGreen },
-  personaChip: {
-    color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: '600',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-    maxWidth: 120,
-  },
+  liveDotActive: { backgroundColor: colors.scoreGreen },
 
   transcript: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
   },
-  emptyWrap: { alignItems: 'center', marginTop: 80 },
+  emptyWrap: { alignItems: 'center', marginTop: 60, gap: spacing.md },
   emptyText: {
     color: colors.textDim,
     textAlign: 'center',
     fontSize: 14,
     lineHeight: 22,
-    maxWidth: 260,
   },
 
   endButton: {
-    margin: spacing.lg,
+    flexDirection: 'row',
     backgroundColor: colors.danger,
-    borderRadius: radius.md,
-    paddingVertical: spacing.lg,
+    borderRadius: radius.full,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
-    minHeight: 58,
     justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 56,
+    marginBottom: spacing.sm,
     shadowColor: colors.danger,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  endButtonDisabled: { opacity: 0.45 },
-  endButtonText: { color: '#fff', fontSize: 17, fontWeight: '700', letterSpacing: 0.2 },
+  endButtonDisabled: { opacity: 0.4 },
+  endButtonText: { color: '#fff', fontSize: 17, fontWeight: '700' },
 });

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Touchable } from '../../../components/Touchable';
 import { supabase } from '../../../lib/supabase';
 import { TrainingSession } from '../../../lib/types';
 import ScoreBadge from '../../../components/ScoreBadge';
@@ -83,7 +85,7 @@ export default function SessionDetailScreen() {
           {assessment.strengths.map((s: string, i: number) => (
             <View key={i} style={styles.bullet}>
               <View style={[styles.bulletIcon, styles.strengthIcon]}>
-                <Text style={styles.bulletIconText}>✓</Text>
+                <Ionicons name="checkmark" size={13} color={colors.scoreGreen} />
               </View>
               <Text style={styles.bulletText}>{s}</Text>
             </View>
@@ -98,7 +100,7 @@ export default function SessionDetailScreen() {
           {assessment.improvements.map((s: string, i: number) => (
             <View key={i} style={styles.bullet}>
               <View style={[styles.bulletIcon, styles.improvIcon]}>
-                <Text style={styles.bulletIconText}>→</Text>
+                <Ionicons name="arrow-forward" size={13} color={colors.accent} />
               </View>
               <Text style={styles.bulletText}>{s}</Text>
             </View>
@@ -109,15 +111,15 @@ export default function SessionDetailScreen() {
       {/* Transcript (collapsible) */}
       {transcript?.length > 0 && (
         <>
-          <TouchableOpacity
+          <Touchable
             style={styles.transcriptToggle}
             onPress={() => setShowTranscript(v => !v)}
-            activeOpacity={0.75}
           >
-            <Text style={styles.sectionTitle} onPress={() => setShowTranscript(v => !v)}>
-              {showTranscript ? '▾' : '▸'}  Transcript ({transcript.length} messages)
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.transcriptHeader}>
+              <Ionicons name={showTranscript ? 'chevron-down' : 'chevron-forward'} size={16} color={colors.accentLight} />
+              <Text style={styles.sectionTitle}>Transcript ({transcript.length} messages)</Text>
+            </View>
+          </Touchable>
           {showTranscript && transcript.map((msg: any, i: number) => (
             <TranscriptMessage
               key={i}
@@ -130,9 +132,10 @@ export default function SessionDetailScreen() {
       )}
 
       {/* Train again */}
-      <TouchableOpacity style={styles.trainButton} onPress={handleTrainAgain} activeOpacity={0.85}>
-        <Text style={styles.trainButtonText}>▶  Train on Same Scenario</Text>
-      </TouchableOpacity>
+      <Touchable style={styles.trainButton} onPress={handleTrainAgain}>
+        <Ionicons name="refresh" size={18} color="#fff" style={{ marginRight: 8 }} />
+        <Text style={styles.trainButtonText}>Train on Same Scenario</Text>
+      </Touchable>
     </ScrollView>
   );
 }
@@ -166,8 +169,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0.5,
+    borderColor: colors.borderStrong,
   },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   grade: { fontSize: 42, fontWeight: '900', color: colors.text },
@@ -190,19 +193,25 @@ const styles = StyleSheet.create({
   },
   strengthIcon: { backgroundColor: 'rgba(34,197,94,0.15)' },
   improvIcon:   { backgroundColor: 'rgba(2,132,199,0.12)' },
-  bulletIconText: { fontSize: 12, fontWeight: '700', color: colors.text },
   bulletText: { flex: 1, color: colors.text, fontSize: 14, lineHeight: 22 },
 
   transcriptToggle: { marginTop: spacing.lg },
+  transcriptHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 
   trainButton: {
     backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingVertical: spacing.lg,
     alignItems: 'center',
+    flexDirection: 'row',
     marginTop: spacing.xl,
     minHeight: 56,
     justifyContent: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   trainButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

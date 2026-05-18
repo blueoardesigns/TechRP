@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, radius } from '../../lib/theme';
 
@@ -35,14 +36,14 @@ export default function ForgotPasswordScreen() {
     >
       <View style={styles.inner}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
-          <Text style={styles.backText}>← Back</Text>
+          <Ionicons name="arrow-back" size={22} color={colors.accentLight} />
         </TouchableOpacity>
 
         <Text style={styles.title}>Reset Password</Text>
 
         {sent ? (
           <View style={styles.confirmCard}>
-            <Text style={styles.confirmIcon}>✉️</Text>
+            <Ionicons name="mail-outline" size={48} color={colors.accentLight} />
             <Text style={styles.confirmation}>
               Check your email for a password reset link.
             </Text>
@@ -70,6 +71,7 @@ export default function ForgotPasswordScreen() {
               disabled={loading}
               activeOpacity={0.85}
             >
+              {!loading && <Ionicons name="mail-outline" size={18} color="#fff" style={{ marginRight: 8 }} />}
               <Text style={styles.buttonText}>
                 {loading ? 'Sending…' : 'Send Reset Link'}
               </Text>
@@ -102,8 +104,8 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600', color: colors.textMuted, marginBottom: 2 },
   input: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0.5,
+    borderColor: colors.borderStrong,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
@@ -114,12 +116,18 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: colors.accent,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingVertical: spacing.md,
     alignItems: 'center',
+    flexDirection: 'row',
     minHeight: 52,
     justifyContent: 'center',
     marginTop: spacing.xs,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
@@ -130,10 +138,9 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     alignItems: 'center',
     gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 0.5,
+    borderColor: colors.borderStrong,
   },
-  confirmIcon: { fontSize: 40 },
   confirmation: {
     color: colors.text,
     fontSize: 15,

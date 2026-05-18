@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { colors } from '../lib/theme';
 
@@ -19,7 +20,6 @@ function AuthGate() {
     }
   }, [session, loading, segments, router]);
 
-  // Blank dark screen while auth state resolves
   if (session === undefined) {
     return <View style={{ flex: 1, backgroundColor: colors.bg }} />;
   }
@@ -30,6 +30,7 @@ function AuthGate() {
 export default function RootLayout() {
   return (
     <AuthProvider>
+      <StatusBar style="light" backgroundColor={colors.bg} translucent />
       <AuthGate />
     </AuthProvider>
   );
