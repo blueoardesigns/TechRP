@@ -7,6 +7,7 @@ import {
   getPlanMinutes,
   TRIAL_DAYS,
   TRIAL_MINUTES,
+  TRIAL_SESSION_LIMIT,
 } from '../lib/plans'
 
 describe('getCompanyPlanId', () => {
@@ -41,4 +42,5 @@ describe('getAddonPriceKey', () => {
 describe('constants', () => {
   it('TRIAL_DAYS is 7', () => expect(TRIAL_DAYS).toBe(7))
   it('TRIAL_MINUTES is 25', () => expect(TRIAL_MINUTES).toBe(25))
+  it('TRIAL_SESSION_LIMIT is 3', () => expect(TRIAL_SESSION_LIMIT).toBe(3))
 })

@@ -67,7 +67,7 @@ export default function BillingPage() {
 
           {status === 'trialing' && trialEnd && (
             <p className="text-sm text-yellow-400">
-              Trial ends {new Date(trialEnd).toLocaleDateString()} or at 25 minutes used.
+              Trial ends {new Date(trialEnd).toLocaleDateString()} or after 3 calls (25 minutes total).
             </p>
           )}
 

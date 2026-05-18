@@ -82,7 +82,7 @@ const TEAM_PLANS = [
 const FAQ = [
   {
     q: 'What happens after the 7-day trial?',
-    a: "Your trial includes 25 minutes of practice time. After 7 days (or when you've used your trial minutes), you'll be prompted to pick a plan. You won't be charged until you choose one.",
+    a: "Your trial includes 3 free calls (25 minutes total). After 7 days or when your trial calls are used, you'll be prompted to pick a plan. You won't be charged until you choose one.",
   },
   {
     q: 'What is a training minute?',

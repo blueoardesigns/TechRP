@@ -1,5 +1,6 @@
 export const TRIAL_DAYS = 7
 export const TRIAL_MINUTES = 25
+export const TRIAL_SESSION_LIMIT = 3
 
 export const PLAN_MINUTES: Record<string, number> = {
   individual_starter: 120,

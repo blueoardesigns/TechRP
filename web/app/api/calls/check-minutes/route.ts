@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/api-auth'
 import { checkMinuteGate } from '@/lib/minute-gate'
-import { getPerUserCap, TRIAL_MINUTES } from '@/lib/plans'
+import { getPerUserCap, TRIAL_MINUTES, TRIAL_SESSION_LIMIT } from '@/lib/plans'
 import { stripe } from '@/lib/stripe'
 
 // POST /api/calls/check-minutes
@@ -14,7 +14,7 @@ export async function POST() {
   const userId = user.profileId
 
   const { data: userRow } = await (db as any).from('users')
-    .select('id, app_role, organization_id, minutes_used, bonus_minutes, trial_ends_at, auto_refill_enabled')
+    .select('id, app_role, organization_id, minutes_used, bonus_minutes, trial_ends_at, auto_refill_enabled, sessions_used')
     .eq('id', userId).single()
 
   if (!userRow) return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -42,7 +42,12 @@ export async function POST() {
     planId = (activeSub?.plan_id as string) ?? null
   }
 
-  // Trial 25-minute cutoff — checked BEFORE the gate so it takes precedence
+  // Trial session limit — block before a new call if all 3 sessions are used
+  if (subscriptionStatus === 'trialing' && (userRow.sessions_used as number) >= TRIAL_SESSION_LIMIT) {
+    return NextResponse.json({ allowed: false, reason: 'trial_expired', minutesRemaining: 0 })
+  }
+
+  // Trial 90-minute cutoff — checked BEFORE the gate so it takes precedence
   if (subscriptionStatus === 'trialing' && (userRow.minutes_used as number) >= TRIAL_MINUTES) {
     try {
       const { data: sub } = await (db as any).from('subscriptions')

@@ -370,7 +370,7 @@ function SignupPageInner() {
           {step === 0 && (
             <div>
               <h1 className="text-2xl font-extrabold text-white mb-1">Create your account</h1>
-              <p className="text-sm text-slate-500 mb-7">Start with 5 free training sessions — no card needed.</p>
+              <p className="text-sm text-slate-500 mb-7">7-day free trial · 3 calls, up to 25 minutes total — no card needed.</p>
 
               <form onSubmit={handleAccountNext} className="space-y-5">
                 {!lockedRole && (
@@ -517,7 +517,6 @@ function SignupPageInner() {
                 <p><strong className="text-slate-200">Recordings.</strong> Training calls are recorded for transcription. Recordings are retained for up to 7 days. You consent to your voice being recorded during sessions.</p>
                 <p><strong className="text-slate-200">Data Use.</strong> Transcript and assessment data is stored securely for your training history. Your data is never sold to third parties.</p>
                 <p><strong className="text-slate-200">Acceptable Use.</strong> TechRP is for legitimate sales training only. Misuse may result in account termination.</p>
-                <p className="text-slate-600 italic">Placeholder agreement — final ToS pending legal review.</p>
               </div>
 
               <div className="space-y-4 mb-6">
