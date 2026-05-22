@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
 
@@ -50,10 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createBrowserSupabase();
+  // Memoize to avoid creating a new client on every render
+  const supabase = useMemo(() => createBrowserSupabase(), []);
 
   const loadUser = useCallback(async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
+    // getSession() reads from local storage without acquiring a network lock,
+    // avoiding the "lock was stolen" race when concurrent calls hit getUser().
+    // The middleware already validates sessions server-side per request.
+    const { data: { session } } = await supabase.auth.getSession();
+    const authUser = session?.user ?? null;
 
     if (!authUser) {
       setUser(null);
