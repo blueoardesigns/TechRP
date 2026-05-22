@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="fastlane.lanes">
+    
+    
+    
+      
+      <testcase classname="fastlane.lanes" name="0: increment_build_number" time="0.229818">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="1: match" time="2.151863">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="2: gym" time="224.887054">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="3: pilot" time="82.227672">
+        
+      </testcase>
+    
+  </testsuite>
+</testsuites>

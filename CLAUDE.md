@@ -152,8 +152,26 @@ Uses `@anthropic-ai/sdk`. Receives transcript (`messages[]`) and `PersonaContext
 | `PATCH /api/account` | Update individual user's name/email |
 | `POST /api/auth/signup` | Signup (supports `?coach=TOKEN`, `?org=TOKEN`) |
 | `POST /api/sessions/[id]/share` | Toggle public share link for a session (owner-only) |
-| `POST /api/admin/notifications/broadcast` | Superuser: send a notification to all approved users |
+| `POST /api/admin/notifications/broadcast` | Superuser: broadcast notification to all users |
 | `GET /api/admin/notifications/broadcast` | Superuser: list broadcast history |
+| `GET /api/billing/summary` | Fetch billing summary for org |
+| `POST /api/billing/auto-refill` | Configure auto-refill settings |
+| `POST /api/stripe/checkout` | Create Stripe checkout session |
+| `POST /api/stripe/portal` | Create Stripe billing portal session |
+| `POST /api/stripe/webhook` | Handle Stripe webhook events |
+| `GET /api/calls/check-minutes` | Check remaining call minutes |
+| `POST /api/calls/record-usage` | Record call usage after session |
+| `GET /api/coach/instance` | Fetch coach's instance config |
+| `GET/POST /api/coach/team` | List or manage coach's team members |
+| `GET /api/coach/companies` | List companies connected to coach |
+| `POST /api/coach/connect` | Connect coach to a company |
+| `GET /api/coach/referrals` | Fetch coach referral stats |
+| `POST /api/coach/generate-personas` | AI-generate personas for coach |
+| `GET /api/company/coaches` | List coaches connected to company |
+| `GET /api/team/members` | List team members |
+| `GET /api/team/sessions` | Team session history |
+| `GET/POST /api/team/candidates` | Manage candidate invites |
+| `POST /api/ai/rewrite-content` | AI rewrite for playbook content |
 
 ### Notes
 - Transcript filtering: use `transcriptType === 'final'` to avoid partials
@@ -161,20 +179,24 @@ Uses `@anthropic-ai/sdk`. Receives transcript (`messages[]`) and `PersonaContext
 - `@/*` maps to `web/` root in path aliases
 
 ## Auth System
-Role-based auth is live. Roles: `individual`, `company_admin`, `coach`, `superuser`. Status flow: `pending` → `approved` | `rejected` | `suspended`. Auth context in `web/components/auth-provider.tsx` exposes `user`, `refreshUser`. Pending SQL migration required to enable session limit enforcement: run `web/supabase/session-limit-migration.sql` in Supabase SQL Editor.
+Role-based auth is live. Roles: `individual`, `company_admin`, `coach`, `superuser`. Status flow: `pending` → `approved` | `rejected` | `suspended`. Auth context in `web/components/auth-provider.tsx` exposes `user`, `refreshUser`.
 
 Password reset uses Supabase native email flow (`/forgot-password` → `/reset-password`). Email verification skipped by default; set `SKIP_EMAIL_CONFIRM=false` in production to require it.
 
+### Coach Role
+Coaches have their own instance config (`coach_instance_id`), can manage multiple companies, generate custom personas, and track referrals. Coach pages: `/coach`, `/coached-teams`. Full API surface under `/api/coach/*` and `/api/company/*`.
+
+### Billing & Stripe
+Stripe integration is live. Users purchase call-minute packs via `/pricing` → `/api/stripe/checkout`. Webhooks at `/api/stripe/webhook` update org balance. Auto-refill and billing summary at `/api/billing/*`. Upgrade flow at `/upgrade`.
+
 ## Known Issues
-- Mobile Vapi integration not yet working (needs Expo dev build)
-- Field recording upload not yet built
+- Field recording upload not yet built (UI exists at `/recordings`, upload endpoint stubbed)
 
 ## Codebase Index
 Pre-built index files are in `.ai-codex/`. Read these FIRST before exploring the codebase:
 - `.ai-codex/routes.md` -- all API routes
 - `.ai-codex/pages.md` -- page tree
 - `.ai-codex/lib.md` -- library exports
-- `.ai-codex/schema.md` -- database schema
 - `.ai-codex/components.md` -- component tree
 
 ## Future Revisions

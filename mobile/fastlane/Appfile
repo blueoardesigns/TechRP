@@ -1,0 +1,7 @@
+app_identifier("com.techrp.mobile")
+apple_id("tim.f.bauer@gmail.com")   # ← replace with your Apple ID
+team_id("W4FLZ5587D")                 # ← replace with your 10-char Apple Team ID
+
+# Android
+json_key_file("fastlane/google-play-key.json")  # ← service account key for Play Store
+package_name("com.techrp.mobile")
