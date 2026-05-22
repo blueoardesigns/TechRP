@@ -10,19 +10,53 @@ platform :ios do
 
   desc "Build + upload to TestFlight (internal)"
   lane :beta do |options|
+    # gym on Ruby 4.x crashes its own error handler — build with xcodebuild
+    # directly and export manually, then upload with pilot.
     increment_build_number(xcodeproj: "ios/TechRPMobile.xcodeproj") unless options[:skip_build_increment]
     match(type: "appstore", readonly: true)
-    gym(
-      scheme: SCHEME,
-      workspace: "ios/TechRPMobile.xcworkspace",
-      export_method: "app-store",
-      export_options: {
-        provisioningProfiles: {
-          "com.techrp.mobile" => "match AppStore com.techrp.mobile"
-        }
-      }
+
+    archive_path = "/tmp/TechRPMobile_#{Time.now.strftime('%Y%m%d_%H%M%S')}.xcarchive"
+    export_path  = "/tmp/TechRPMobile_export_#{Time.now.strftime('%Y%m%d_%H%M%S')}"
+
+    sh("xcodebuild",
+      "-workspace", "../ios/TechRPMobile.xcworkspace",
+      "-scheme", SCHEME,
+      "-destination", "generic/platform=iOS",
+      "-archivePath", archive_path,
+      "archive"
     )
-    pilot(skip_waiting_for_build_processing: true)
+
+    export_plist = Tempfile.new(["ExportOptions", ".plist"])
+    export_plist.write(<<~PLIST)
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>method</key><string>app-store-connect</string>
+        <key>teamID</key><string>W4FLZ5587D</string>
+        <key>signingStyle</key><string>manual</string>
+        <key>signingCertificate</key><string>Apple Distribution</string>
+        <key>provisioningProfiles</key>
+        <dict>
+          <key>com.techrp.mobile</key><string>match AppStore com.techrp.mobile</string>
+        </dict>
+        <key>stripSwiftSymbols</key><true/>
+        <key>uploadSymbols</key><true/>
+      </dict>
+      </plist>
+    PLIST
+    export_plist.close
+
+    sh("xcodebuild",
+      "-exportArchive",
+      "-archivePath", archive_path,
+      "-exportPath", export_path,
+      "-exportOptionsPlist", export_plist.path
+    )
+    export_plist.unlink
+
+    ipa = Dir["#{export_path}/*.ipa"].first
+    pilot(ipa: ipa, skip_waiting_for_build_processing: true)
   end
 
   desc "Submit latest TestFlight build for App Store review"
