@@ -11,6 +11,7 @@ export default function SessionsLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Review Past Sessions' }} />
+      <Stack.Screen name="[id]" options={{ title: '' }} />
     </Stack>
   );
 }

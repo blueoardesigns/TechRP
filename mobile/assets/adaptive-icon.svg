@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Transparent bg — Android composites this over backgroundColor="#0A1628" -->
+  <defs>
+    <linearGradient id="dropFill" x1="309" y1="155" x2="715" y2="758" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#082840" stop-opacity="0.88"/>
+      <stop offset="60%"  stop-color="#061E35" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#050F22" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="glow-cyan" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="9"  result="b1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-green" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6"  result="b1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="b2"/>
+      <feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="bloom" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="45"/>
+    </filter>
+    <clipPath id="dropClip">
+      <path d="M 512 155 C 512 175,715 340,715 555 A 203 203 0 0 1 309 555 C 309 340,512 175,512 155 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Ambient glow -->
+  <ellipse cx="512" cy="490" rx="280" ry="310" fill="#0080C0" opacity="0.38" filter="url(#bloom)"/>
+
+  <!-- Left chat bubble -->
+  <g filter="url(#glow-cyan)">
+    <path d="M 103 105 L 352 105 Q 382 105 382 133 L 382 262 Q 382 292 352 292 L 335 292 L 308 370 L 281 292 L 103 292 Q 73 292 73 262 L 73 133 Q 73 105 103 105 Z"
+          fill="rgba(0,40,90,0.18)" stroke="#00CCFF" stroke-width="5.5" stroke-linejoin="round"/>
+    <line x1="107" y1="163" x2="350" y2="163" stroke="#00CCFF" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+    <line x1="107" y1="199" x2="315" y2="199" stroke="#00CCFF" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+    <line x1="107" y1="235" x2="335" y2="235" stroke="#00CCFF" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+  </g>
+
+  <!-- Drop fill -->
+  <path d="M 512 155 C 512 175,715 340,715 555 A 203 203 0 0 1 309 555 C 309 340,512 175,512 155 Z"
+        fill="url(#dropFill)"/>
+
+  <!-- Circuit traces -->
+  <g clip-path="url(#dropClip)" filter="url(#glow-green)">
+    <line x1="512" y1="745" x2="512" y2="345" stroke="#00FF88" stroke-width="5.5"/>
+    <polyline points="512,695 440,695 440,630 396,630" stroke="#00FF88" stroke-width="4.5" fill="none"/>
+    <polyline points="512,695 588,695 588,620 634,620" stroke="#00FF88" stroke-width="4.5" fill="none"/>
+    <polyline points="512,595 454,595 454,538 418,538" stroke="#00FF88" stroke-width="4" fill="none"/>
+    <polyline points="512,595 572,595 572,528"         stroke="#00FF88" stroke-width="4" fill="none"/>
+    <polyline points="512,490 454,490 454,438"         stroke="#00FF88" stroke-width="4" fill="none"/>
+    <polyline points="512,490 572,490 572,426 545,426" stroke="#00FF88" stroke-width="4" fill="none"/>
+    <polyline points="512,393 468,393 468,356"         stroke="#00FF88" stroke-width="3.5" fill="none"/>
+    <polyline points="512,393 556,393 556,354"         stroke="#00FF88" stroke-width="3.5" fill="none"/>
+    <circle cx="512" cy="695" r="8.5" fill="#00FF88"/>
+    <circle cx="512" cy="595" r="8.5" fill="#00FF88"/>
+    <circle cx="512" cy="490" r="8.5" fill="#00FF88"/>
+    <circle cx="512" cy="393" r="7"   fill="#00FF88"/>
+    <circle cx="440" cy="695" r="6" fill="#00FF88"/> <circle cx="440" cy="630" r="6" fill="#00FF88"/>
+    <circle cx="588" cy="695" r="6" fill="#00FF88"/> <circle cx="588" cy="620" r="6" fill="#00FF88"/>
+    <circle cx="454" cy="595" r="6" fill="#00FF88"/> <circle cx="454" cy="538" r="6" fill="#00FF88"/>
+    <circle cx="572" cy="595" r="6" fill="#00FF88"/>
+    <circle cx="454" cy="490" r="6" fill="#00FF88"/> <circle cx="572" cy="490" r="6" fill="#00FF88"/>
+    <circle cx="572" cy="426" r="6" fill="#00FF88"/> <circle cx="545" cy="426" r="5" fill="#00FF88"/>
+    <circle cx="468" cy="393" r="5" fill="#00FF88"/> <circle cx="556" cy="393" r="5" fill="#00FF88"/>
+    <rect x="374" y="622" width="28" height="16" rx="3" fill="none" stroke="#00FF88" stroke-width="3.5"/>
+    <rect x="621" y="612" width="28" height="16" rx="3" fill="none" stroke="#00FF88" stroke-width="3.5"/>
+    <rect x="405" y="530" width="26" height="15" rx="3" fill="none" stroke="#00FF88" stroke-width="3.5"/>
+    <rect x="444" y="428" width="20" height="20" rx="4" fill="none" stroke="#00FF88" stroke-width="3"/>
+    <rect x="455" y="348" width="22" height="14" rx="3" fill="none" stroke="#00FF88" stroke-width="3"/>
+    <rect x="544" y="346" width="22" height="14" rx="3" fill="none" stroke="#00FF88" stroke-width="3"/>
+  </g>
+
+  <!-- Drop outline -->
+  <path d="M 512 155 C 512 175,715 340,715 555 A 203 203 0 0 1 309 555 C 309 340,512 175,512 155 Z"
+        fill="none" stroke="#00D4FF" stroke-width="9" filter="url(#glow-cyan)"/>
+
+  <!-- Inner rim -->
+  <path d="M 512 182 C 512 200,692 355,692 555 A 180 180 0 0 1 332 555 C 332 355,512 200,512 182 Z"
+        fill="none" stroke="#00D4FF" stroke-width="2" opacity="0.20"/>
+
+  <!-- Tip dot -->
+  <circle cx="512" cy="155" r="14" fill="#00D4FF" filter="url(#glow-cyan)"/>
+
+  <!-- Refraction highlight -->
+  <path d="M 512 188 C 488 245,432 372,412 510"
+        fill="none" stroke="rgba(255,255,255,0.20)" stroke-width="14" stroke-linecap="round"/>
+
+  <!-- Right chat bubble -->
+  <g filter="url(#glow-cyan)">
+    <path d="M 672 420 L 921 420 Q 951 420 951 450 L 951 579 Q 951 609 921 609 L 789 609 L 762 687 L 735 609 L 672 609 Q 642 609 642 579 L 642 450 Q 642 420 672 420 Z"
+          fill="rgba(0,40,90,0.18)" stroke="#00CCFF" stroke-width="5.5" stroke-linejoin="round"/>
+    <line x1="676" y1="477" x2="919" y2="477" stroke="#00CCFF" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+    <line x1="676" y1="513" x2="884" y2="513" stroke="#00CCFF" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+    <line x1="676" y1="549" x2="901" y2="549" stroke="#00CCFF" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+  </g>
+</svg>

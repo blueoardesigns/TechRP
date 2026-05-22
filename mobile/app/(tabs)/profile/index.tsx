@@ -1,6 +1,17 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../lib/supabase';
 import { colors, spacing, radius } from '../../../lib/theme';
+
+interface BillingInfo {
+  planId: string | null;
+  status: string | null;
+  minutesUsed: number;
+  minutesPool: number;
+  bonusMinutes: number;
+  trialEnd: string | null;
+}
 
 const ROLE_LABELS: Record<string, string> = {
   individual: 'Individual',
@@ -11,6 +22,53 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default function ProfileScreen() {
   const { profile, signOut } = useAuth();
+  const [billing, setBilling] = useState<BillingInfo | null>(null);
+  const [billingLoading, setBillingLoading] = useState(true);
+
+  useEffect(() => {
+    if (!profile) return;
+    const load = async () => {
+      const { data: u } = await supabase
+        .from('users')
+        .select('minutes_used, bonus_minutes, trial_ends_at, plan_id')
+        .eq('id', profile.id)
+        .single();
+
+      if (profile.organization_id) {
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('plan_id, minutes_pool, bonus_minutes, subscription_status')
+          .eq('id', profile.organization_id)
+          .single();
+        setBilling({
+          planId: (org as any)?.plan_id ?? (u as any)?.plan_id ?? null,
+          status: (org as any)?.subscription_status ?? null,
+          minutesUsed: (u as any)?.minutes_used ?? 0,
+          minutesPool: (org as any)?.minutes_pool ?? 0,
+          bonusMinutes: (org as any)?.bonus_minutes ?? (u as any)?.bonus_minutes ?? 0,
+          trialEnd: (u as any)?.trial_ends_at ?? null,
+        });
+      } else {
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('plan_id, status, trial_end')
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        setBilling({
+          planId: (sub as any)?.plan_id ?? (u as any)?.plan_id ?? null,
+          status: (sub as any)?.status ?? null,
+          minutesUsed: (u as any)?.minutes_used ?? 0,
+          minutesPool: 0,
+          bonusMinutes: (u as any)?.bonus_minutes ?? 0,
+          trialEnd: (sub as any)?.trial_end ?? (u as any)?.trial_ends_at ?? null,
+        });
+      }
+      setBillingLoading(false);
+    };
+    load();
+  }, [profile]);
 
   const handleLogout = () => {
     Alert.alert(
@@ -47,6 +105,41 @@ export default function ProfileScreen() {
         <InfoRow label="Role" value={ROLE_LABELS[profile?.app_role ?? ''] ?? profile?.app_role ?? '—'} last />
       </View>
 
+      {/* Subscription */}
+      <Text style={styles.sectionLabel}>Subscription</Text>
+      <View style={styles.card}>
+        {billingLoading ? (
+          <View style={styles.billingLoader}>
+            <ActivityIndicator color={colors.accent} size="small" />
+          </View>
+        ) : (
+          <>
+            <InfoRow label="Plan" value={formatPlan(billing?.planId)} />
+            <InfoRow label="Status" value={formatStatus(billing?.status)} />
+            {billing?.trialEnd && (
+              <InfoRow
+                label="Trial ends"
+                value={new Date(billing.trialEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              />
+            )}
+            <InfoRow
+              label="Minutes used"
+              value={String(billing?.minutesUsed ?? 0)}
+            />
+            {(billing?.minutesPool ?? 0) > 0 && (
+              <InfoRow
+                label="Minutes remaining"
+                value={String(Math.max(0, (billing!.minutesPool + billing!.bonusMinutes) - billing!.minutesUsed))}
+                last
+              />
+            )}
+            {(billing?.minutesPool ?? 0) === 0 && (
+              <InfoRow label="Bonus minutes" value={String(billing?.bonusMinutes ?? 0)} last />
+            )}
+          </>
+        )}
+      </View>
+
       {/* Sign out — danger */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
         <Text style={styles.logoutText}>Sign Out</Text>
@@ -55,6 +148,29 @@ export default function ProfileScreen() {
       <Text style={styles.version}>TechRP Mobile · v1.0.0</Text>
     </ScrollView>
   );
+}
+
+function formatPlan(planId: string | null | undefined): string {
+  if (!planId) return 'Free Trial';
+  const map: Record<string, string> = {
+    starter: 'Starter',
+    pro: 'Pro',
+    team: 'Team',
+    enterprise: 'Enterprise',
+  };
+  return map[planId] ?? planId;
+}
+
+function formatStatus(status: string | null | undefined): string {
+  if (!status) return '—';
+  const map: Record<string, string> = {
+    active: 'Active',
+    trialing: 'Trial',
+    inactive: 'Inactive',
+    canceled: 'Canceled',
+    past_due: 'Past Due',
+  };
+  return map[status] ?? status;
 }
 
 function InfoRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
@@ -98,6 +214,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   roleText: { color: colors.accentLight, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
+
+  sectionLabel: {
+    color: colors.accentLight,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  billingLoader: {
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
 
   // Info card
   card: {

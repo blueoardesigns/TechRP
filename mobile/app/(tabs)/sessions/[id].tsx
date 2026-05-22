@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, ActivityIndicator,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Touchable } from '../../../components/Touchable';
 import { supabase } from '../../../lib/supabase';
@@ -61,22 +61,33 @@ export default function SessionDetailScreen() {
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <Stack.Screen options={{ title: persona_name ?? 'Session Detail' }} />
       {/* Header */}
       <View style={styles.scenarioPill}>
         <Text style={styles.scenarioPillText}>{scenario?.label ?? persona_scenario_type}</Text>
       </View>
       <Text style={styles.personaName}>{persona_name}</Text>
 
-      {/* Score */}
-      <View style={styles.heroCard}>
-        <View style={styles.scoreRow}>
-          <ScoreBadge score={assessment?.score ?? 0} size="lg" />
-          {assessment?.letter_grade && <Text style={styles.grade}>{assessment.letter_grade}</Text>}
+      {/* Score / no-assessment state */}
+      {!assessment ? (
+        <View style={[styles.heroCard, styles.pendingCard]}>
+          <Ionicons name="hourglass-outline" size={28} color={colors.textMuted} />
+          <Text style={styles.pendingTitle}>Assessment Pending</Text>
+          <Text style={styles.pendingText}>
+            The AI grade for this session wasn't saved. This usually means the app couldn't reach the server when the call ended.
+          </Text>
         </View>
-        {assessment?.summary && (
-          <Text style={styles.summary}>{assessment.summary}</Text>
-        )}
-      </View>
+      ) : (
+        <View style={styles.heroCard}>
+          <View style={styles.scoreRow}>
+            <ScoreBadge score={assessment.score ?? 0} size="lg" />
+            {assessment.letter_grade && <Text style={styles.grade}>{assessment.letter_grade}</Text>}
+          </View>
+          {assessment.summary && (
+            <Text style={styles.summary}>{assessment.summary}</Text>
+          )}
+        </View>
+      )}
 
       {/* Strengths */}
       {assessment?.strengths?.length > 0 && (
@@ -172,6 +183,12 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: colors.borderStrong,
   },
+  pendingCard: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  pendingTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  pendingText: { color: colors.textMuted, fontSize: 13, lineHeight: 20, textAlign: 'center' },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.md },
   grade: { fontSize: 42, fontWeight: '900', color: colors.text },
   summary: { color: colors.textMuted, fontSize: 15, lineHeight: 23 },

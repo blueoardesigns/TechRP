@@ -3,20 +3,28 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radius } from '../lib/theme';
 
 interface Props {
-  role: 'user' | 'assistant';
-  content: string;
+  role: string;
+  content: unknown;
   speakerLabel: string;
 }
 
 export default function TranscriptMessage({ role, content, speakerLabel }: Props) {
   const isUser = role === 'user';
+  const text = Array.isArray(content)
+    ? (content as Array<{ text?: string } | string>)
+        .map(c => (typeof c === 'string' ? c : c?.text ?? ''))
+        .join(' ')
+    : typeof content === 'string'
+    ? content
+    : '';
+  if (!text) return null;
   return (
     <View style={[styles.container, isUser ? styles.userContainer : styles.assistantContainer]}>
       <Text style={[styles.label, isUser ? styles.userLabel : styles.assistantLabel]}>
         {isUser ? 'You' : speakerLabel}
       </Text>
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
-        <Text style={[styles.text, isUser && styles.userText]}>{content}</Text>
+        <Text style={[styles.text, isUser && styles.userText]}>{text}</Text>
       </View>
     </View>
   );
