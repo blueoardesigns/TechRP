@@ -59,9 +59,13 @@ platform :ios do
 
     # Use xcrun altool directly — pilot/altool via Fastlane credentials chain
     # fails on this setup; xcrun altool with explicit env vars works reliably.
+    # Source ~/.zshrc so FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD is available
+    # even when fastlane is not launched from an interactive shell.
+    zshrc_pwd = `source ~/.zshrc 2>/dev/null && echo $FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD`.strip
     apple_id = ENV["FASTLANE_APPLE_ID"] || "tim.f.bauer@gmail.com"
     app_pwd  = ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"]
-    raise "FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD not set" unless app_pwd
+    app_pwd  = zshrc_pwd if (app_pwd.nil? || app_pwd.empty?) && !zshrc_pwd.empty?
+    raise "FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD not set" unless app_pwd && !app_pwd.empty?
     sh("xcrun", "altool",
       "--upload-app",
       "--type", "ios",
