@@ -56,7 +56,19 @@ platform :ios do
     export_plist.unlink
 
     ipa = Dir["#{export_path}/*.ipa"].first
-    pilot(ipa: ipa, skip_waiting_for_build_processing: true)
+
+    # Use xcrun altool directly — pilot/altool via Fastlane credentials chain
+    # fails on this setup; xcrun altool with explicit env vars works reliably.
+    apple_id = ENV["FASTLANE_APPLE_ID"] || "tim.f.bauer@gmail.com"
+    app_pwd  = ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"]
+    raise "FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD not set" unless app_pwd
+    sh("xcrun", "altool",
+      "--upload-app",
+      "--type", "ios",
+      "--file", ipa,
+      "--username", apple_id,
+      "--password", app_pwd
+    )
   end
 
   desc "Submit latest TestFlight build for App Store review"
