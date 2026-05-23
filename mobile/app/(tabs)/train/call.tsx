@@ -41,6 +41,9 @@ export default function CallScreen() {
     const vapi = getVapi();
     const voiceId = pickVoice(p);
 
+    // Clear any stale listeners from a previous session before registering new ones.
+    vapi.removeAllListeners();
+
     vapi.on('call-start', () => setCallStatus('connected'));
     vapi.on('speech-start', () => setIsSpeaking(true));
     vapi.on('speech-end', () => setIsSpeaking(false));
@@ -55,19 +58,24 @@ export default function CallScreen() {
       }
     });
     vapi.on('call-end', () => handleCallEnd());
-    vapi.on('error', (e: Error) => console.error('Vapi error:', e));
+    vapi.on('error', (e: any) => console.error('[Vapi] error:', JSON.stringify(e)));
 
     callStartRef.current = new Date();
-    await vapi.start(VAPI_ASSISTANT_ID, {
-      model: {
-        provider: 'groq',
-        model: GROQ_MODEL,
-        messages: [{ role: 'system', content: p.system_prompt }],
-      },
-      voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
-      firstMessage: p.first_message,
-      maxDurationSeconds: 600,
-    } as any);
+    try {
+      await vapi.start(VAPI_ASSISTANT_ID, {
+        model: {
+          provider: 'groq',
+          model: GROQ_MODEL,
+          messages: [{ role: 'system', content: p.system_prompt }],
+        },
+        voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
+        firstMessage: p.first_message,
+        maxDurationSeconds: 600,
+      } as any);
+    } catch (e) {
+      console.error('[Vapi] start failed:', e);
+      setCallStatus('connecting');
+    }
   };
 
   const handleEndCall = async () => {

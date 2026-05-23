@@ -9,8 +9,6 @@ import { getScenarioConfig } from '../../../lib/scenarios';
 import { colors, spacing, radius } from '../../../lib/theme';
 import { Touchable } from '../../../components/Touchable';
 
-const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
-
 export default function PlaybooksListScreen() {
   const [sections, setSections] = useState<Array<{ title: string; data: Playbook[] }>>([]);
   const [loading, setLoading] = useState(true);
@@ -19,39 +17,25 @@ export default function PlaybooksListScreen() {
 
   useEffect(() => {
     if (!profile) return;
-    const orgId = profile.organization_id ?? DEFAULT_ORG_ID;
 
     const load = async () => {
-      const { data, error } = await supabase
-        .from('playbooks')
-        .select('id, scenario_type, name, is_active')
-        .eq('is_active', true)
-        .eq('organization_id', orgId);
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      let playbooks: Playbook[] = [];
 
-      if (error) {
-        console.error('[playbooks] query error:', JSON.stringify(error));
-      }
-
-      let playbooks = (data ?? []) as Playbook[];
-
-      if (playbooks.length === 0 && orgId !== DEFAULT_ORG_ID) {
-        const { data: fallback, error: fallbackErr } = await supabase
-          .from('playbooks')
-          .select('id, scenario_type, name, is_active')
-          .eq('is_active', true)
-          .eq('organization_id', DEFAULT_ORG_ID);
-        if (fallbackErr) console.error('[playbooks] fallback error:', JSON.stringify(fallbackErr));
-        playbooks = (fallback ?? []) as Playbook[];
-      }
-
-      // Last resort: fetch all active playbooks visible to the user (relies on RLS).
-      if (playbooks.length === 0) {
-        const { data: any, error: anyErr } = await supabase
-          .from('playbooks')
-          .select('id, scenario_type, name, is_active')
-          .eq('is_active', true);
-        if (anyErr) console.error('[playbooks] any error:', JSON.stringify(anyErr));
-        playbooks = (any ?? []) as Playbook[];
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const res = await fetch(`${baseUrl}/api/playbooks`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const json = await res.json();
+          playbooks = (json.playbooks ?? []) as Playbook[];
+        } else {
+          console.error('[playbooks] API error:', res.status);
+        }
+      } catch (e) {
+        console.error('[playbooks] fetch error:', e);
       }
 
       const map = new Map<string, Playbook[]>();

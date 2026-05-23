@@ -62,6 +62,14 @@ export default function PreCallScreen() {
         <Text style={styles.roleValue}>{scenario?.techRole ?? 'Technician'}</Text>
       </View>
 
+      {/* Opening line */}
+      {!!persona.first_message && (
+        <View style={styles.openingCard}>
+          <Text style={styles.openingLabel}>They'll say</Text>
+          <Text style={styles.openingText}>"{persona.first_message}"</Text>
+        </View>
+      )}
+
       {/* Tips */}
       <View style={styles.tipsCard}>
         <Text style={styles.tipsTitle}>Before you call</Text>
@@ -127,6 +135,29 @@ const styles = StyleSheet.create({
   },
   roleLabel: { color: colors.textMuted, fontSize: 13 },
   roleValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
+
+  openingCard: {
+    backgroundColor: 'rgba(2,132,199,0.08)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+  },
+  openingLabel: {
+    color: colors.accentLight,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.xs,
+  },
+  openingText: {
+    color: colors.text,
+    fontSize: 14,
+    fontStyle: 'italic',
+    lineHeight: 22,
+  },
 
   tipsCard: {
     backgroundColor: colors.surface,

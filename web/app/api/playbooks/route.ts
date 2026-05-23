@@ -1,11 +1,28 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
 
-export async function GET() {
-  const supabaseAuth = createServerSupabase();
-  const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+export async function GET(request: NextRequest) {
+  let authUser: { id: string } | null = null;
+
+  // Accept Bearer token from mobile clients (no cookies available)
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user } } = await anonClient.auth.getUser(token);
+    authUser = user;
+  } else {
+    const supabaseAuth = createServerSupabase();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    authUser = user;
+  }
+
   if (!authUser) return NextResponse.json({ playbooks: [] });
 
   const supabase = createServiceSupabase();

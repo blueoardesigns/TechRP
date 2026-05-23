@@ -19,10 +19,14 @@ export default function SessionsListScreen() {
   useEffect(() => {
     if (!profile) return;
     const load = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const authUserId = authUser?.id;
+      if (!authUserId) { setLoading(false); return; }
+
       const { data, error } = await supabase
         .from('training_sessions')
         .select('id, persona_name, persona_scenario_type, assessment, created_at, started_at')
-        .eq('user_id', profile.id)
+        .eq('user_id', authUserId)
         .order('created_at', { ascending: false });
 
       if (error) console.error('[sessions] query error:', JSON.stringify(error));
