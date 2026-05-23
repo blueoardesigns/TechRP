@@ -86,6 +86,14 @@ cd mobile && npx expo start --ios
 cd mobile && npx expo start --android
 ```
 
+## Mobile Deployment (Fastlane)
+- Fastfile at `mobile/fastlane/Fastfile` — `fastlane ios beta` builds and uploads to TestFlight
+- Upload uses `xcrun altool` directly (not `pilot` — auth fails); `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD` is in `~/.zshrc`
+- Always prefix with `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` to avoid Ruby 4.0 encoding errors
+- Full command: `cd mobile && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 fastlane ios beta`
+- If a prior run built but failed at upload, retry with `fastlane ios beta skip_build_increment:true`
+- Vapi/WebRTC requires a physical device — simulator shows "requires device build" screen by design
+
 ## Environment Variables
 
 **`web/.env.local`:**
