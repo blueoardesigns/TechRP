@@ -6,23 +6,7 @@ import { supabase } from '../../../lib/supabase';
 import { Playbook } from '../../../lib/types';
 import { getScenarioConfig } from '../../../lib/scenarios';
 import { colors, spacing, radius } from '../../../lib/theme';
-
-// Strip HTML tags so playbook content (saved as HTML from the web editor) renders as plain text
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<\/h[1-6]>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&quot;/g, '"')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
+import MarkdownBody from '../../../components/MarkdownBody';
 
 export default function PlaybookDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,9 +44,6 @@ export default function PlaybookDetailScreen() {
   }
 
   const scenario = getScenarioConfig(playbook.scenario_type ?? '');
-  const bodyText = playbook.content
-    ? (playbook.content.trim().startsWith('<') ? stripHtml(playbook.content) : playbook.content)
-    : '';
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -74,7 +55,7 @@ export default function PlaybookDetailScreen() {
 
       {/* Content card */}
       <View style={styles.contentCard}>
-        <Text style={styles.body}>{bodyText}</Text>
+        <MarkdownBody content={playbook.content ?? ''} />
       </View>
     </ScrollView>
   );
@@ -122,10 +103,5 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderWidth: 0.5,
     borderColor: colors.borderStrong,
-  },
-  body: {
-    color: colors.text,
-    fontSize: 15,
-    lineHeight: 26,
   },
 });

@@ -7,14 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { Persona, TranscriptEntry } from '../../../lib/types';
 import { getVapi, isVapiAvailable } from '../../../lib/vapi';
-import { VAPI_ASSISTANT_ID, GROQ_MODEL, pickVoice, getScenarioConfig } from '../../../lib/scenarios';
+import { VAPI_ASSISTANT_ID, GROQ_MODEL, pickVoice, getScenarioConfig, DIFFICULTY_MODIFIERS, Difficulty } from '../../../lib/scenarios';
 import TranscriptMessage from '../../../components/TranscriptMessage';
 import { colors, spacing, radius } from '../../../lib/theme';
 
 type CallStatus = 'connecting' | 'connected' | 'ending';
 
 export default function CallScreen() {
-  const { personaId } = useLocalSearchParams<{ personaId: string }>();
+  const { personaId, difficulty: diffParam } = useLocalSearchParams<{ personaId: string; difficulty?: string }>();
+  const difficulty: Difficulty = (['easy', 'medium', 'hard'].includes(diffParam ?? '') ? diffParam : 'medium') as Difficulty;
   const [persona, setPersona] = useState<Persona | null>(null);
   const [messages, setMessages] = useState<TranscriptEntry[]>([]);
   const [callStatus, setCallStatus] = useState<CallStatus>('connecting');
@@ -70,7 +71,7 @@ export default function CallScreen() {
         model: {
           provider: 'groq',
           model: GROQ_MODEL,
-          messages: [{ role: 'system', content: p.system_prompt }],
+          messages: [{ role: 'system', content: DIFFICULTY_MODIFIERS[difficulty] + p.system_prompt }],
         },
         voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
         firstMessage: p.first_message,
@@ -94,9 +95,12 @@ export default function CallScreen() {
     const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
     let assessment = null;
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
       const res = await fetch(`${baseUrl}/api/assess`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           messages: transcript,
           persona: {
@@ -107,10 +111,11 @@ export default function CallScreen() {
           },
         }),
       });
+      clearTimeout(timeout);
       const json = await res.json();
       assessment = json.assessment;
     } catch (e) {
-      console.error('Assessment failed:', e);
+      console.error('Assessment failed (may have timed out):', e);
     }
 
     let sessionId = '';

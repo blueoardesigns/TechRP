@@ -11,6 +11,14 @@ export default function TrainLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Pick a Session Type Below' }} />
+      <Stack.Screen
+        name="call"
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
+          presentation: 'fullScreenModal',
+        }}
+      />
     </Stack>
   );
 }

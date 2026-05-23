@@ -23,10 +23,11 @@ export default function SessionsListScreen() {
       const authUserId = authUser?.id;
       if (!authUserId) { setLoading(false); return; }
 
+      // Match sessions saved with either auth user ID (new) or profile.id (old builds)
       const { data, error } = await supabase
         .from('training_sessions')
         .select('id, persona_name, persona_scenario_type, assessment, created_at, started_at')
-        .eq('user_id', authUserId)
+        .or(`user_id.eq.${authUserId},user_id.eq.${profile.id}`)
         .order('created_at', { ascending: false });
 
       if (error) console.error('[sessions] query error:', JSON.stringify(error));

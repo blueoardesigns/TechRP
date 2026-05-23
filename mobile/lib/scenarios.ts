@@ -1,5 +1,13 @@
 import { ScenarioConfig } from './types';
 
+export type Difficulty = 'easy' | 'medium' | 'hard';
+
+export const DIFFICULTY_MODIFIERS: Record<Difficulty, string> = {
+  easy: '[DIFFICULTY: EASY] Be cooperative and relatively easy to work with. Raise at most one minor objection before warming up to the conversation.\n\n',
+  medium: '',
+  hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
+};
+
 export const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';
 export const GROQ_MODEL = 'llama-3.1-8b-instant';
 

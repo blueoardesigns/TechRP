@@ -6,12 +6,13 @@ import { supabase } from '../../../lib/supabase';
 import { Persona } from '../../../lib/types';
 import PersonaCard from '../../../components/PersonaCard';
 import { colors, spacing, radius } from '../../../lib/theme';
-import { getScenarioConfig } from '../../../lib/scenarios';
+import { getScenarioConfig, Difficulty } from '../../../lib/scenarios';
 
 export default function PreCallScreen() {
   const { personaId, scenarioType } = useLocalSearchParams<{ personaId: string; scenarioType: string }>();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [loading, setLoading] = useState(true);
+  const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const router = useRouter();
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export default function PreCallScreen() {
     if (!persona) return;
     router.push({
       pathname: '/(tabs)/train/call',
-      params: { personaId: persona.id },
+      params: { personaId: persona.id, difficulty },
     });
   };
 
@@ -65,6 +66,35 @@ export default function PreCallScreen() {
       <View style={styles.roleCard}>
         <Text style={styles.roleLabel}>Your role</Text>
         <Text style={styles.roleValue}>{scenario?.techRole ?? 'Technician'}</Text>
+      </View>
+
+      {/* Difficulty */}
+      <View style={styles.difficultyCard}>
+        <Text style={styles.difficultyTitle}>Difficulty</Text>
+        <View style={styles.difficultyRow}>
+          {(['easy', 'medium', 'hard'] as Difficulty[]).map(d => (
+            <TouchableOpacity
+              key={d}
+              style={[
+                styles.difficultyPill,
+                difficulty === d && (
+                  d === 'easy' ? styles.diffPillEasy :
+                  d === 'hard' ? styles.diffPillHard :
+                  styles.diffPillMedium
+                ),
+              ]}
+              onPress={() => setDifficulty(d)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.difficultyPillText,
+                difficulty === d && styles.difficultyPillTextActive,
+              ]}>
+                {d.charAt(0).toUpperCase() + d.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Opening line */}
@@ -142,6 +172,31 @@ const styles = StyleSheet.create({
   },
   roleLabel: { color: colors.textMuted, fontSize: 13 },
   roleValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
+
+  difficultyCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  difficultyTitle: { color: colors.textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: spacing.sm },
+  difficultyRow: { flexDirection: 'row', gap: spacing.sm },
+  difficultyPill: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  diffPillEasy: { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: 'rgba(16,185,129,0.4)' },
+  diffPillMedium: { backgroundColor: 'rgba(14,165,233,0.15)', borderColor: 'rgba(56,189,248,0.4)' },
+  diffPillHard: { backgroundColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.4)' },
+  difficultyPillText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  difficultyPillTextActive: { color: colors.text },
 
   openingCard: {
     backgroundColor: 'rgba(2,132,199,0.08)',
