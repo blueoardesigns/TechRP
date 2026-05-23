@@ -6,7 +6,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { Persona, TranscriptEntry } from '../../../lib/types';
-import { getVapi } from '../../../lib/vapi';
+import { getVapi, isVapiAvailable } from '../../../lib/vapi';
 import { VAPI_ASSISTANT_ID, GROQ_MODEL, pickVoice, getScenarioConfig } from '../../../lib/scenarios';
 import TranscriptMessage from '../../../components/TranscriptMessage';
 import { colors, spacing, radius } from '../../../lib/theme';
@@ -26,6 +26,10 @@ export default function CallScreen() {
 
   useEffect(() => {
     if (!personaId) return;
+    if (!isVapiAvailable()) {
+      setCallStatus('connecting');
+      return;
+    }
     supabase.from('personas').select('*').eq('id', personaId).single().then(({ data }) => {
       if (data) {
         setPersona(data);
@@ -154,6 +158,22 @@ export default function CallScreen() {
   const personaInitials = persona?.name
     ? persona.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
     : '?';
+
+  if (!isVapiAvailable()) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <Ionicons name="mic-off-outline" size={48} color={colors.textDim} />
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>
+            Voice calls require a device build
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+            This feature isn't available in Expo Go. Install via TestFlight to make calls.
+          </Text>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

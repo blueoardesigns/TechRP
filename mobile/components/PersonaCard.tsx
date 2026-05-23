@@ -6,9 +6,10 @@ import { getScenarioConfig } from '../lib/scenarios';
 
 interface Props {
   persona: Persona;
+  compact?: boolean;
 }
 
-export default function PersonaCard({ persona }: Props) {
+export default function PersonaCard({ persona, compact }: Props) {
   const scenario = getScenarioConfig(persona.scenario_type);
   const initials = persona.name
     ? persona.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
@@ -30,7 +31,7 @@ export default function PersonaCard({ persona }: Props) {
             </View>
           )}
         </View>
-        <Text style={styles.description}>{persona.brief_description}</Text>
+        {!compact && <Text style={styles.description}>{persona.brief_description}</Text>}
       </View>
     </View>
   );

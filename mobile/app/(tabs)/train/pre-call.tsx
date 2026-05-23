@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
@@ -48,13 +48,18 @@ export default function PreCallScreen() {
 
   return (
     <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Scenario label */}
       <View style={styles.scenarioPill}>
         <Text style={styles.scenarioPillText}>{scenario?.label ?? persona.scenario_type}</Text>
       </View>
 
-      {/* Persona info */}
-      <PersonaCard persona={persona} />
+      {/* Persona info — compact hides the long description */}
+      <PersonaCard persona={persona} compact />
 
       {/* Role context */}
       <View style={styles.roleCard}>
@@ -77,8 +82,9 @@ export default function PreCallScreen() {
         <Text style={styles.tipLine}>• Try to handle objections and close</Text>
         <Text style={styles.tipLine}>• You'll get scored when the call ends</Text>
       </View>
+      </ScrollView>
 
-      {/* CTA */}
+      {/* CTA — pinned outside scroll so it's always visible */}
       <TouchableOpacity
         style={styles.button}
         onPress={handleStartCall}
@@ -101,7 +107,8 @@ const styles = StyleSheet.create({
   },
   loadingText: { color: colors.textMuted, fontSize: 14 },
 
-  container: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.bg, paddingHorizontal: spacing.lg },
+  scroll: { paddingTop: spacing.lg, paddingBottom: spacing.md },
 
   scenarioPill: {
     alignSelf: 'flex-start',
@@ -179,8 +186,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xxl,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 'auto',
-    marginBottom: spacing.lg,
+    marginVertical: spacing.lg,
     minHeight: 58,
     shadowColor: colors.accent,
     shadowOffset: { width: 0, height: 6 },

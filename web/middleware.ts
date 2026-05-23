@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_PREFIXES = [
   '/api/auth/',
   '/api/stripe/webhook',
+  '/api/playbooks',  // route handler validates Bearer token from mobile
   '/_next/',
   '/favicon',
   // Coach-connection accept/decline confirmation flow. The approval token
