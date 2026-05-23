@@ -68,7 +68,16 @@ export default function SessionsListScreen() {
       }
       renderItem={({ item }) => {
         const scenario = getScenarioConfig(item.persona_scenario_type ?? '');
-        const score = item.assessment?.score ?? 0;
+        // Supabase may return jsonb as object or JSON string — normalise
+        const parsedAssessment = (() => {
+          const raw = item.assessment;
+          if (!raw) return null;
+          if (typeof raw === 'string') {
+            try { return JSON.parse(raw); } catch { return null; }
+          }
+          return raw;
+        })();
+        const score = parsedAssessment?.score ?? 0;
         const date = new Date(item.created_at).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric',
         });

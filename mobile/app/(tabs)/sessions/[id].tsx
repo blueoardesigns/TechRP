@@ -55,9 +55,22 @@ export default function SessionDetailScreen() {
     );
   }
 
-  const { assessment, transcript, persona_name, persona_scenario_type } = session;
+  const { transcript, persona_name, persona_scenario_type } = session;
+  // Supabase may return jsonb as an object OR a JSON string — normalise both
+  const assessment: any = (() => {
+    const raw = session.assessment;
+    if (!raw) return null;
+    if (typeof raw === 'string') {
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+    return raw;
+  })();
   const scenario = getScenarioConfig(persona_scenario_type ?? '');
   const speakerLabel = persona_name ?? 'Contact';
+  // Treat empty/broken assessment (no score or score 0 with no data) as missing
+  const hasAssessment = assessment
+    && typeof assessment.score === 'number'
+    && (assessment.score > 0 || (assessment.strengths?.length > 0 || assessment.improvements?.length > 0));
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
@@ -69,7 +82,7 @@ export default function SessionDetailScreen() {
       <Text style={styles.personaName}>{persona_name}</Text>
 
       {/* Score / no-assessment state */}
-      {!assessment ? (
+      {!hasAssessment ? (
         <View style={[styles.heroCard, styles.pendingCard]}>
           <Ionicons name="hourglass-outline" size={28} color={colors.textMuted} />
           <Text style={styles.pendingTitle}>Assessment Pending</Text>
