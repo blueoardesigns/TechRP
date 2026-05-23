@@ -9,6 +9,8 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@daily-co/react-native-daily-js": "^0.78.0",
+    "@daily-co/react-native-webrtc": "^118.0.3-daily.4",
     "@react-native-async-storage/async-storage": "^1.24.0",
     "@supabase/supabase-js": "^2.39.0",
     "@vapi-ai/react-native": "^0.3.0",
@@ -19,7 +21,9 @@
     "expo-status-bar": "~2.0.0",
     "react": "18.3.1",
     "react-native": "0.76.6",
+    "react-native-background-timer": "^2.4.1",
     "react-native-gesture-handler": "~2.20.2",
+    "react-native-get-random-values": "^1.11.0",
     "react-native-safe-area-context": "4.14.1",
     "react-native-screens": "~4.4.0"
   },

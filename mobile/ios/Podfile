@@ -33,9 +33,10 @@ target 'TechRPMobile' do
 
   config = use_native_modules!(config_command)
 
-  # Manually link @vapi-ai/react-native transitive native deps (not auto-linked)
+  # Vapi SDK transitive native deps (peer dependencies, must be explicitly linked)
   pod 'react-native-webrtc', :path => '../node_modules/@daily-co/react-native-webrtc'
   pod 'react-native-daily-js', :path => '../node_modules/@daily-co/react-native-daily-js'
+
 
   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
   use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']

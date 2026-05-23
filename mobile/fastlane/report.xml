@@ -5,22 +5,27 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: match" time="2.228296">
+      <testcase classname="fastlane.lanes" name="0: increment_build_number" time="0.329984">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: xcodebuild -workspace ../ios/TechRPMobile.xcworkspace -scheme TechRPMobile -destination generic/platform\=iOS -archivePath /tmp/TechRPMobile_20260522_171614.xcarchive archive" time="97.080469">
+      <testcase classname="fastlane.lanes" name="1: match" time="2.661798">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: xcodebuild -exportArchive -archivePath /tmp/TechRPMobile_20260522_171614.xcarchive -exportPath /tmp/TechRPMobile_export_20260522_171614 -exportOptionsPlist /var/folders/4m/zqt8j0k532db29xc2whn9t6r0000gn/T/ExportOptions20260522-14031-39s39e.plist" time="12.689967">
+      <testcase classname="fastlane.lanes" name="2: xcodebuild -workspace ../ios/TechRPMobile.xcworkspace -scheme TechRPMobile -destination generic/platform\=iOS -archivePath /tmp/TechRPMobile_20260522_185902.xcarchive archive" time="113.47166">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: pilot" time="72.183896">
+      <testcase classname="fastlane.lanes" name="3: xcodebuild -exportArchive -archivePath /tmp/TechRPMobile_20260522_185902.xcarchive -exportPath /tmp/TechRPMobile_export_20260522_185902 -exportOptionsPlist /var/folders/4m/zqt8j0k532db29xc2whn9t6r0000gn/T/ExportOptions20260522-24299-45jiry.plist" time="12.798808">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="4: pilot" time="75.106619">
         
       </testcase>
     
