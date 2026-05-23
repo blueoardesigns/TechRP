@@ -120,7 +120,7 @@ export default function SessionDetailScreen() {
       )}
 
       {/* Transcript (collapsible) */}
-      {transcript?.length > 0 && (
+      {Array.isArray(transcript) && transcript.length > 0 && (
         <>
           <Touchable
             style={styles.transcriptToggle}
@@ -135,7 +135,7 @@ export default function SessionDetailScreen() {
             <TranscriptMessage
               key={i}
               role={msg.role}
-              content={msg.content}
+              content={msg.content ?? ''}
               speakerLabel={speakerLabel}
             />
           ))}

@@ -44,6 +44,16 @@ export default function PlaybooksListScreen() {
         playbooks = (fallback ?? []) as Playbook[];
       }
 
+      // Last resort: fetch all active playbooks visible to the user (relies on RLS).
+      if (playbooks.length === 0) {
+        const { data: any, error: anyErr } = await supabase
+          .from('playbooks')
+          .select('id, scenario_type, name, is_active')
+          .eq('is_active', true);
+        if (anyErr) console.error('[playbooks] any error:', JSON.stringify(anyErr));
+        playbooks = (any ?? []) as Playbook[];
+      }
+
       const map = new Map<string, Playbook[]>();
       playbooks.forEach(p => {
         const key = p.scenario_type ?? 'other';

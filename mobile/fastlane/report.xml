@@ -5,22 +5,22 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: increment_build_number" time="0.229818">
+      <testcase classname="fastlane.lanes" name="0: match" time="2.228296">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: match" time="2.151863">
+      <testcase classname="fastlane.lanes" name="1: xcodebuild -workspace ../ios/TechRPMobile.xcworkspace -scheme TechRPMobile -destination generic/platform\=iOS -archivePath /tmp/TechRPMobile_20260522_171614.xcarchive archive" time="97.080469">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: gym" time="224.887054">
+      <testcase classname="fastlane.lanes" name="2: xcodebuild -exportArchive -archivePath /tmp/TechRPMobile_20260522_171614.xcarchive -exportPath /tmp/TechRPMobile_export_20260522_171614 -exportOptionsPlist /var/folders/4m/zqt8j0k532db29xc2whn9t6r0000gn/T/ExportOptions20260522-14031-39s39e.plist" time="12.689967">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: pilot" time="82.227672">
+      <testcase classname="fastlane.lanes" name="3: pilot" time="72.183896">
         
       </testcase>
     

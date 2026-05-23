@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, Alert, Linking,
+  KeyboardAvoidingView, Platform, Alert, Linking, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { saveRememberMe } from '../../context/AuthContext';
 import { colors, spacing, radius } from '../../lib/theme';
 
 const SIGNUP_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://techrp.com'}/signup`;
@@ -13,6 +14,7 @@ const SIGNUP_URL = `${process.env.EXPO_PUBLIC_API_BASE_URL ?? 'https://techrp.co
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -26,8 +28,13 @@ export default function LoginScreen() {
     setLoading(false);
     if (error) {
       Alert.alert('Login Failed', error.message);
+      return;
     }
-    // On success, root layout auth gate redirects to /(tabs)/train automatically
+    // Persist the Remember Me preference so AuthContext can act on next launch.
+    if (!rememberMe) {
+      await saveRememberMe(false);
+    }
+    // On success, root layout auth gate redirects to /(tabs)/train automatically.
   };
 
   return (
@@ -36,11 +43,13 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.inner}>
-        {/* Logo / wordmark */}
+        {/* Logo */}
         <View style={styles.logoBlock}>
-          <View style={styles.logoIconWrap}>
-            <Ionicons name="mic" size={32} color={colors.accent} />
-          </View>
+          <Image
+            source={require('../../assets/icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>TechRP</Text>
           <Text style={styles.subtitle}>Voice AI Training Platform</Text>
         </View>
@@ -70,6 +79,18 @@ export default function LoginScreen() {
             secureTextEntry
             textContentType="password"
           />
+
+          {/* Remember Me */}
+          <TouchableOpacity
+            style={styles.rememberRow}
+            onPress={() => setRememberMe(v => !v)}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Ionicons name="checkmark" size={13} color="#fff" />}
+            </View>
+            <Text style={styles.rememberText}>Remember me</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -112,15 +133,10 @@ const styles = StyleSheet.create({
 
   // Logo
   logoBlock: { alignItems: 'center', gap: spacing.sm },
-  logoIconWrap: {
+  logoImage: {
     width: 72,
     height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.accentGlow,
-    borderWidth: 1,
-    borderColor: colors.borderAccent,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 16,
     marginBottom: spacing.xs,
   },
   title: {
@@ -156,6 +172,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 52,
   },
+
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent,
+  },
+  rememberText: {
+    color: colors.textMuted,
+    fontSize: 14,
+  },
+
   button: {
     backgroundColor: colors.accent,
     borderRadius: radius.full,

@@ -101,33 +101,44 @@ export default function CallScreen() {
       console.error('Assessment failed:', e);
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id ?? null;
-    const { data: profile } = await supabase
-      .from('users')
-      .select('organization_id')
-      .eq('auth_user_id', userId ?? '')
-      .single();
-    const insertPayload: any = {
-      user_id: userId,
-      organization_id: (profile as any)?.organization_id ?? null,
-      persona_id: persona.id,
-      persona_name: persona.name,
-      persona_scenario_type: persona.scenario_type,
-      transcript,
-      assessment,
-      started_at: callStartRef.current.toISOString(),
-      ended_at: new Date().toISOString(),
-    };
-    const { data: sessionData } = await supabase
-      .from('training_sessions')
-      .insert(insertPayload)
-      .select('id')
-      .single();
+    let sessionId = '';
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id ?? null;
+      let organizationId: string | null = null;
+      if (userId) {
+        const { data: profileData } = await supabase
+          .from('users')
+          .select('organization_id')
+          .eq('auth_user_id', userId)
+          .single();
+        organizationId = (profileData as any)?.organization_id ?? null;
+      }
+      const insertPayload: any = {
+        user_id: userId,
+        organization_id: organizationId,
+        persona_id: persona.id,
+        persona_name: persona.name,
+        persona_scenario_type: persona.scenario_type,
+        transcript,
+        assessment,
+        started_at: callStartRef.current.toISOString(),
+        ended_at: new Date().toISOString(),
+      };
+      const { data: sessionData, error: insertError } = await supabase
+        .from('training_sessions')
+        .insert(insertPayload)
+        .select('id')
+        .single();
+      if (insertError) console.error('Session insert error:', insertError);
+      sessionId = (sessionData as { id: string } | null)?.id ?? '';
+    } catch (e) {
+      console.error('Error saving session:', e);
+    }
 
     router.replace({
       pathname: '/(tabs)/train/assessment',
-      params: { sessionId: (sessionData as { id: string } | null)?.id ?? '' },
+      params: { sessionId },
     });
   };
 

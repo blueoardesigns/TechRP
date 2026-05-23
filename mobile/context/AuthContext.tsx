@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
+const REMEMBER_ME_KEY = 'techrp_remember_me';
+
 export interface UserProfile {
-  id: string;                      // users table PK — use for training_sessions.user_id
-  organization_id: string | null;  // use for personas / playbooks queries
+  id: string;
+  organization_id: string | null;
   coach_instance_id: string | null;
   app_role: string | null;
   full_name: string | null;
@@ -12,7 +15,7 @@ export interface UserProfile {
 }
 
 interface AuthContextValue {
-  session: Session | null | undefined; // undefined = still loading
+  session: Session | null | undefined;
   profile: UserProfile | null;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -25,17 +28,35 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
+export async function saveRememberMe(value: boolean) {
+  await AsyncStorage.setItem(REMEMBER_ME_KEY, value ? 'true' : 'false');
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Listen for auth state changes
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (!session) {
+    const init = async () => {
+      // If the user previously chose not to remember, clear the persisted session.
+      const rememberMe = await AsyncStorage.getItem(REMEMBER_ME_KEY);
+      if (rememberMe === 'false') {
+        await AsyncStorage.removeItem(REMEMBER_ME_KEY);
+        await supabase.auth.signOut();
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { session: existing } } = await supabase.auth.getSession();
+      setSession(existing);
+    };
+    init();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (!s) {
         setProfile(null);
         setLoading(false);
       }
@@ -43,9 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch user profile row whenever session changes
   useEffect(() => {
-    if (session === undefined) return; // still loading auth
+    if (session === undefined) return;
     if (!session) {
       setProfile(null);
       setLoading(false);
