@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../lib/supabase';
 import { Persona, TranscriptEntry } from '../../../lib/types';
 import { getVapi, isVapiAvailable } from '../../../lib/vapi';
@@ -105,61 +106,74 @@ export default function CallScreen() {
   const handleCallEnd = async () => {
     if (!persona) {
       console.warn('[CallEnd] No persona — navigating away anyway');
+      await AsyncStorage.setItem('last_save_error', 'No persona loaded when call ended.');
       navigateToAssessment('');
       return;
     }
     const transcript = messagesRef.current;
+    const pendingPayload = {
+      persona_id: persona.id,
+      persona_name: persona.name,
+      persona_scenario_type: persona.scenario_type,
+      transcript,
+      assessment: null,
+      vapi_call_id: vapiCallIdRef.current,
+      started_at: callStartRef.current.toISOString(),
+      ended_at: new Date().toISOString(),
+    };
+    // ALWAYS cache the transcript locally first so it's never lost
+    try {
+      await AsyncStorage.setItem('pending_session', JSON.stringify(pendingPayload));
+      await AsyncStorage.removeItem('last_save_error');
+    } catch (e) { console.warn('[CallEnd] AsyncStorage cache failed:', e); }
 
-    // Hard ceiling: ALWAYS navigate within 6s. Save still happens in background.
+    // Hard ceiling: ALWAYS navigate within 15s.
     const failsafe = setTimeout(() => {
-      console.warn('[CallEnd] Save failsafe fired — navigating without sessionId');
+      console.warn('[CallEnd] Save failsafe fired (15s) — navigating without sessionId');
+      AsyncStorage.setItem('last_save_error', 'Save took longer than 15 seconds. Your transcript is cached and can be retried.').catch(() => {});
       navigateToAssessment('');
-    }, 6000);
+    }, 15000);
 
-    // Save session immediately (no assessment yet) so it's never lost
     try {
       const { data: authData } = await Promise.race([
         supabase.auth.getUser(),
-        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('auth timeout')), 3000)),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('auth timeout (5s)')), 5000)),
       ]);
       const userId = authData?.user?.id ?? null;
+      if (!userId) throw new Error('No authenticated user');
 
       let organizationId: string | null = null;
-      if (userId) {
-        try {
-          const { data: profileData } = await Promise.race([
-            supabase.from('users').select('organization_id').eq('auth_user_id', userId).single(),
-            new Promise<any>((_, reject) => setTimeout(() => reject(new Error('profile timeout')), 2000)),
-          ]);
-          organizationId = (profileData as any)?.organization_id ?? null;
-        } catch (e) {
-          console.warn('[CallEnd] Profile fetch timed out, continuing without org:', e);
-        }
+      try {
+        const { data: profileData } = await Promise.race([
+          supabase.from('users').select('organization_id').eq('auth_user_id', userId).single(),
+          new Promise<any>((_, reject) => setTimeout(() => reject(new Error('profile timeout (3s)')), 3000)),
+        ]);
+        organizationId = (profileData as any)?.organization_id ?? null;
+      } catch (e) {
+        console.warn('[CallEnd] Profile fetch failed, continuing without org:', e);
       }
 
-      const insertPayload: any = {
-        user_id: userId,
-        organization_id: organizationId,
-        persona_id: persona.id,
-        persona_name: persona.name,
-        persona_scenario_type: persona.scenario_type,
-        transcript,
-        assessment: null,
-        vapi_call_id: vapiCallIdRef.current,
-        started_at: callStartRef.current.toISOString(),
-        ended_at: new Date().toISOString(),
-      };
+      const insertPayload: any = { ...pendingPayload, user_id: userId, organization_id: organizationId };
 
       const insertResult: any = await Promise.race([
         supabase.from('training_sessions').insert(insertPayload).select('id').single(),
-        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('insert timeout')), 4000)),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('insert timeout (10s)')), 10000)),
       ]);
-      if (insertResult?.error) console.error('[CallEnd] Insert error:', insertResult.error);
+      if (insertResult?.error) {
+        console.error('[CallEnd] Insert error:', JSON.stringify(insertResult.error));
+        throw new Error(insertResult.error.message || insertResult.error.code || 'DB insert failed');
+      }
       const sessionId = (insertResult?.data as { id: string } | null)?.id ?? '';
+      if (!sessionId) throw new Error('Insert returned no session id');
+
+      // Success — clear cache
+      await AsyncStorage.removeItem('pending_session').catch(() => {});
       clearTimeout(failsafe);
       navigateToAssessment(sessionId);
-    } catch (e) {
-      console.error('[CallEnd] Save flow exception:', e);
+    } catch (e: any) {
+      const errMsg = e?.message ?? String(e);
+      console.error('[CallEnd] Save flow exception:', errMsg);
+      await AsyncStorage.setItem('last_save_error', errMsg).catch(() => {});
       clearTimeout(failsafe);
       navigateToAssessment('');
     }

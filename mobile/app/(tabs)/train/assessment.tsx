@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../lib/supabase';
 import { Assessment } from '../../../lib/types';
 import ScoreBadge from '../../../components/ScoreBadge';
@@ -11,10 +12,14 @@ import { colors, spacing, radius } from '../../../lib/theme';
 type GradingStep = 'loading' | 'grading' | 'done' | 'skipped' | 'error';
 
 export default function AssessmentScreen() {
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const { sessionId: paramSessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const [sessionId, setSessionId] = useState<string>(paramSessionId ?? '');
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [step, setStep] = useState<GradingStep>('loading');
   const [statusMessage, setStatusMessage] = useState('Loading session…');
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [hasPending, setHasPending] = useState(false);
+  const [retrying, setRetrying] = useState(false);
   const [elapsedSecs, setElapsedSecs] = useState(0);
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
@@ -33,8 +38,23 @@ export default function AssessmentScreen() {
 
   useEffect(() => {
     if (!sessionId) {
-      setStatusMessage('Session could not be saved — network may be down. Try again.');
-      setStep('error');
+      // Load diagnostic info from AsyncStorage
+      (async () => {
+        try {
+          const [errMsg, pending] = await Promise.all([
+            AsyncStorage.getItem('last_save_error'),
+            AsyncStorage.getItem('pending_session'),
+          ]);
+          setErrorDetail(errMsg);
+          setHasPending(!!pending);
+          setStatusMessage(pending
+            ? 'We couldn\'t save your session to the server, but your transcript is safe on your device. Tap Retry to save it.'
+            : 'Session could not be saved.');
+        } catch {
+          setStatusMessage('Session could not be saved.');
+        }
+        setStep('error');
+      })();
       return;
     }
 
@@ -176,6 +196,50 @@ export default function AssessmentScreen() {
     setStatusMessage('Grading skipped. Your session was saved.');
   };
 
+  const handleRetrySave = async () => {
+    setRetrying(true);
+    setStep('loading');
+    setStatusMessage('Retrying save…');
+    try {
+      const cached = await AsyncStorage.getItem('pending_session');
+      if (!cached) throw new Error('No cached session to retry');
+      const payload = JSON.parse(cached);
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+      if (!userId) throw new Error('Not signed in');
+      let organizationId: string | null = null;
+      try {
+        const { data: profileData } = await supabase
+          .from('users')
+          .select('organization_id')
+          .eq('auth_user_id', userId)
+          .single();
+        organizationId = (profileData as any)?.organization_id ?? null;
+      } catch { /* non-critical */ }
+      const insertResult: any = await supabase
+        .from('training_sessions')
+        .insert({ ...payload, user_id: userId, organization_id: organizationId })
+        .select('id')
+        .single();
+      if (insertResult.error) throw new Error(insertResult.error.message);
+      const newId = (insertResult.data as { id: string } | null)?.id;
+      if (!newId) throw new Error('Insert returned no id');
+      await AsyncStorage.removeItem('pending_session');
+      await AsyncStorage.removeItem('last_save_error');
+      setSessionId(newId);
+      setErrorDetail(null);
+      setHasPending(false);
+      setRetrying(false);
+      // useEffect will re-run with new sessionId and proceed to grading
+    } catch (e: any) {
+      const msg = e?.message ?? String(e);
+      setErrorDetail(msg);
+      setStatusMessage('Retry failed. ' + msg);
+      setStep('error');
+      setRetrying(false);
+    }
+  };
+
   // Progress / loading states
   if (step === 'loading' || step === 'grading') {
     const stepIndex = step === 'loading' ? 0 : 1;
@@ -238,14 +302,31 @@ export default function AssessmentScreen() {
           color={colors.textMuted}
         />
         <Text style={styles.errorText}>{statusMessage}</Text>
+        {errorDetail && (
+          <View style={styles.errorDetailBox}>
+            <Text style={styles.errorDetailLabel}>Details</Text>
+            <Text style={styles.errorDetailText}>{errorDetail}</Text>
+          </View>
+        )}
         <View style={styles.errorButtons}>
+          {hasPending && !sessionId && (
+            <TouchableOpacity
+              style={styles.doneButton}
+              onPress={handleRetrySave}
+              activeOpacity={0.85}
+              disabled={retrying}
+            >
+              <Ionicons name="cloud-upload-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
+              <Text style={styles.doneButtonText}>{retrying ? 'Retrying…' : 'Retry Save'}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={styles.doneButton}
+            style={hasPending && !sessionId ? styles.sessionsButton : styles.doneButton}
             onPress={() => router.replace('/(tabs)/train')}
             activeOpacity={0.85}
           >
-            <Ionicons name="refresh" size={18} color="#fff" style={{ marginRight: 6 }} />
-            <Text style={styles.doneButtonText}>Train Again</Text>
+            <Ionicons name="refresh" size={18} color={hasPending && !sessionId ? colors.textMuted : '#fff'} style={{ marginRight: 6 }} />
+            <Text style={hasPending && !sessionId ? styles.sessionsButtonText : styles.doneButtonText}>Train Again</Text>
           </TouchableOpacity>
           {sessionId && (
             <TouchableOpacity
@@ -410,6 +491,24 @@ const styles = StyleSheet.create({
   skipButtonText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
 
   errorText: { color: colors.text, fontSize: 15, fontWeight: '600', textAlign: 'center', lineHeight: 22 },
+  errorDetailBox: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.md,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  errorDetailLabel: {
+    color: colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  errorDetailText: { color: colors.text, fontSize: 12, fontFamily: 'Courier', lineHeight: 18 },
   errorButtons: { width: '100%', marginTop: spacing.lg, gap: spacing.sm },
 
   scroll: { flex: 1, backgroundColor: colors.bg },
