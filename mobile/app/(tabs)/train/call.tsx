@@ -27,6 +27,7 @@ export default function CallScreen() {
   const callStartRef = useRef<Date>(new Date());
   const vapiCallIdRef = useRef<string | null>(null);
   const everConnectedRef = useRef(false);
+  const personaRef = useRef<Persona | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function CallScreen() {
     }
     supabase.from('personas').select('*').eq('id', personaId).single().then(({ data }) => {
       if (data) {
+        personaRef.current = data as Persona;
         setPersona(data);
         startCall(data);
       }
@@ -118,7 +120,8 @@ export default function CallScreen() {
       return;
     }
 
-    if (!persona) {
+    const activePersona = personaRef.current ?? persona;
+    if (!activePersona) {
       console.warn('[CallEnd] No persona — navigating away anyway');
       await AsyncStorage.setItem('last_save_error', 'No persona loaded when call ended.');
       navigateToAssessment('');
@@ -126,9 +129,9 @@ export default function CallScreen() {
     }
     const transcript = messagesRef.current;
     const pendingPayload = {
-      persona_id: persona.id,
-      persona_name: persona.name,
-      persona_scenario_type: persona.scenario_type,
+      persona_id: activePersona.id,
+      persona_name: activePersona.name,
+      persona_scenario_type: activePersona.scenario_type,
       transcript,
       assessment: null,
       vapi_call_id: vapiCallIdRef.current,
