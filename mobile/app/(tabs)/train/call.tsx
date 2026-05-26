@@ -21,10 +21,12 @@ export default function CallScreen() {
   const [messages, setMessages] = useState<TranscriptEntry[]>([]);
   const [callStatus, setCallStatus] = useState<CallStatus>('connecting');
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [startupError, setStartupError] = useState<string | null>(null);
   const listRef = useRef<FlatList>(null);
   const messagesRef = useRef<TranscriptEntry[]>([]);
   const callStartRef = useRef<Date>(new Date());
   const vapiCallIdRef = useRef<string | null>(null);
+  const everConnectedRef = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function CallScreen() {
     // Clear any stale listeners from a previous session before registering new ones.
     vapi.removeAllListeners();
 
-    vapi.on('call-start', () => setCallStatus('connected'));
+    vapi.on('call-start', () => { everConnectedRef.current = true; setCallStatus('connected'); });
     vapi.on('speech-start', () => setIsSpeaking(true));
     vapi.on('speech-end', () => setIsSpeaking(false));
     vapi.on('message', (msg: any) => {
@@ -82,8 +84,9 @@ export default function CallScreen() {
         maxDurationSeconds: 600,
       } as any);
       if ((callInfo as any)?.id) vapiCallIdRef.current = (callInfo as any).id;
-    } catch (e) {
+    } catch (e: any) {
       console.error('[Vapi] start failed:', e);
+      setStartupError(e?.message ?? 'Could not start the call. Check your network or microphone permission.');
       setCallStatus('connecting');
     }
   };
@@ -104,6 +107,17 @@ export default function CallScreen() {
   };
 
   const handleCallEnd = async () => {
+    // Guard: if the call never actually connected and there's no transcript,
+    // this is a failed startup, not a real session. Don't save, just return to train.
+    if (!everConnectedRef.current && messagesRef.current.length === 0) {
+      console.warn('[CallEnd] Call never connected — returning to train screen without saving');
+      if (!navigatedRef.current) {
+        navigatedRef.current = true;
+        router.replace('/(tabs)/train');
+      }
+      return;
+    }
+
     if (!persona) {
       console.warn('[CallEnd] No persona — navigating away anyway');
       await AsyncStorage.setItem('last_save_error', 'No persona loaded when call ended.');
@@ -219,11 +233,16 @@ export default function CallScreen() {
               {persona?.name ?? 'Connecting…'}
             </Text>
             <View style={styles.statusRow}>
-              {callStatus === 'connecting' && (
+              {callStatus === 'connecting' && !startupError && (
                 <>
                   <ActivityIndicator color={colors.accentLight} size="small" />
                   <Text style={styles.statusText}>Connecting…</Text>
                 </>
+              )}
+              {startupError && (
+                <Text style={[styles.statusText, { color: '#f87171' }]} numberOfLines={2}>
+                  Couldn't connect
+                </Text>
               )}
               {callStatus === 'connected' && (
                 <>
@@ -262,23 +281,42 @@ export default function CallScreen() {
         }
       />
 
-      {/* End call */}
+      {/* Startup error banner */}
+      {startupError && (
+        <View style={styles.startupErrorBanner}>
+          <Ionicons name="warning-outline" size={18} color="#f87171" />
+          <Text style={styles.startupErrorText}>{startupError}</Text>
+        </View>
+      )}
+
+      {/* End call / Go back */}
       <SafeAreaView style={styles.safeBottom}>
-        <TouchableOpacity
-          style={[styles.endButton, callStatus !== 'connected' && styles.endButtonDisabled]}
-          onPress={handleEndCall}
-          disabled={callStatus !== 'connected'}
-          activeOpacity={0.8}
-        >
-          {callStatus === 'ending' ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Ionicons name="call" size={26} color="#fff" />
-          )}
-          <Text style={styles.endButtonText}>
-            {callStatus === 'ending' ? 'Saving…' : 'End Call'}
-          </Text>
-        </TouchableOpacity>
+        {startupError ? (
+          <TouchableOpacity
+            style={styles.endButton}
+            onPress={() => router.replace('/(tabs)/train')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+            <Text style={styles.endButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.endButton, callStatus !== 'connected' && styles.endButtonDisabled]}
+            onPress={handleEndCall}
+            disabled={callStatus !== 'connected'}
+            activeOpacity={0.8}
+          >
+            {callStatus === 'ending' ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name="call" size={26} color="#fff" />
+            )}
+            <Text style={styles.endButtonText}>
+              {callStatus === 'ending' ? 'Saving…' : 'End Call'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </SafeAreaView>
     </View>
   );
@@ -351,6 +389,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
+
+  startupErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(248,113,113,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.3)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  startupErrorText: { flex: 1, color: '#fca5a5', fontSize: 13, lineHeight: 19 },
 
   endButton: {
     flexDirection: 'row',
