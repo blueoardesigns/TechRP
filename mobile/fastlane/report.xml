@@ -5,27 +5,27 @@
     
     
       
-      <testcase classname="fastlane.lanes" name="0: increment_build_number" time="0.298812">
+      <testcase classname="fastlane.lanes" name="0: increment_build_number" time="0.290973">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="1: match" time="2.170509">
+      <testcase classname="fastlane.lanes" name="1: match" time="3.867944">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="2: xcodebuild -workspace ../ios/TechRPMobile.xcworkspace -scheme TechRPMobile -destination generic/platform\=iOS -archivePath /tmp/TechRPMobile_20260526_111449.xcarchive archive" time="223.608914">
+      <testcase classname="fastlane.lanes" name="2: xcodebuild -workspace ../ios/TechRPMobile.xcworkspace -scheme TechRPMobile -destination generic/platform\=iOS -archivePath /tmp/TechRPMobile_20260526_143650.xcarchive archive" time="131.574134">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="3: xcodebuild -exportArchive -archivePath /tmp/TechRPMobile_20260526_111449.xcarchive -exportPath /tmp/TechRPMobile_export_20260526_111449 -exportOptionsPlist /var/folders/4m/zqt8j0k532db29xc2whn9t6r0000gn/T/ExportOptions20260526-98945-g6mgu7.plist" time="13.194463">
+      <testcase classname="fastlane.lanes" name="3: xcodebuild -exportArchive -archivePath /tmp/TechRPMobile_20260526_143650.xcarchive -exportPath /tmp/TechRPMobile_export_20260526_143650 -exportOptionsPlist /var/folders/4m/zqt8j0k532db29xc2whn9t6r0000gn/T/ExportOptions20260526-35258-82169k.plist" time="16.676339">
         
       </testcase>
     
       
-      <testcase classname="fastlane.lanes" name="4: xcrun altool --upload-app --type ios --file /tmp/TechRPMobile_export_20260526_111449/TechRPMobile.ipa --username tim.f.bauer@gmail.com --password iqab-javn-ommp-eskg" time="97.882199">
+      <testcase classname="fastlane.lanes" name="4: xcrun altool --upload-app --type ios --file /tmp/TechRPMobile_export_20260526_143650/TechRPMobile.ipa --username tim.f.bauer@gmail.com --password iqab-javn-ommp-eskg" time="99.302988">
         
       </testcase>
     
