@@ -19,6 +19,14 @@ export default function TrainLayout() {
           presentation: 'fullScreenModal',
         }}
       />
+      <Stack.Screen
+        name="assessment"
+        options={{
+          title: 'Grading Your Call',
+          gestureEnabled: false,
+          headerBackVisible: false,
+        }}
+      />
     </Stack>
   );
 }

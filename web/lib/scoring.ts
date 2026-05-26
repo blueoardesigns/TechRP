@@ -17,6 +17,7 @@ export interface ActionToTake {
   ai_said: string;
   suggested_response: string;
   technique?: string;
+  offset_seconds?: number;
 }
 
 export interface Assessment {

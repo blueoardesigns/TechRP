@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +9,10 @@ import { supabase } from '../../../lib/supabase';
 import { TrainingSession } from '../../../lib/types';
 import ScoreBadge from '../../../components/ScoreBadge';
 import TranscriptMessage from '../../../components/TranscriptMessage';
+import { getDisplayScore } from '../../../lib/scoring';
 import { colors, spacing, radius } from '../../../lib/theme';
 import { getScenarioConfig } from '../../../lib/scenarios';
+import RecordingPlayer, { type RecordingPlayerHandle } from '../../../components/RecordingPlayer';
 
 export default function SessionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,12 +20,13 @@ export default function SessionDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [showTranscript, setShowTranscript] = useState(false);
   const router = useRouter();
+  const playerRef = useRef<RecordingPlayerHandle>(null);
 
   useEffect(() => {
     if (!id) return;
     supabase
       .from('training_sessions')
-      .select('*')
+      .select('*, recording_url, vapi_call_id')
       .eq('id', id)
       .single()
       .then(({ data }) => {
@@ -93,14 +96,25 @@ export default function SessionDetailScreen() {
       ) : (
         <View style={styles.heroCard}>
           <View style={styles.scoreRow}>
-            <ScoreBadge score={assessment.score ?? 0} size="lg" />
-            {assessment.letter_grade && <Text style={styles.grade}>{assessment.letter_grade}</Text>}
+            <ScoreBadge score={getDisplayScore(assessment).score} size="lg" />
+            {(assessment.letter_grade || getDisplayScore(assessment).letter) && (
+              <Text style={styles.grade}>{getDisplayScore(assessment).letter}</Text>
+            )}
           </View>
           {assessment.summary && (
             <Text style={styles.summary}>{assessment.summary}</Text>
           )}
         </View>
       )}
+
+      {/* Recording */}
+      <Text style={styles.sectionTitle}>Recording</Text>
+      <RecordingPlayer
+        ref={playerRef}
+        recordingUrl={(session as any)?.recording_url ?? null}
+        vapiCallId={(session as any)?.vapi_call_id ?? null}
+        sessionId={session.id}
+      />
 
       {/* Strengths */}
       {assessment?.strengths?.length > 0 && (
@@ -127,6 +141,40 @@ export default function SessionDetailScreen() {
                 <Ionicons name="arrow-forward" size={13} color={colors.accent} />
               </View>
               <Text style={styles.bulletText}>{s}</Text>
+            </View>
+          ))}
+        </>
+      )}
+
+      {/* Practice Moments / Actions to take */}
+      {assessment?.actions_to_take?.length > 0 && (
+        <>
+          <Text style={styles.sectionTitle}>Practice Moments</Text>
+          {assessment.actions_to_take.map((a: any, i: number) => (
+            <View key={i} style={styles.actionCard}>
+              <View style={styles.actionHeader}>
+                <Text style={styles.actionLabel}>They said:</Text>
+                {typeof a.offset_seconds === 'number' && (
+                  <TouchableOpacity
+                    style={styles.playMomentButton}
+                    onPress={() => playerRef.current?.seekTo(a.offset_seconds)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="play" size={10} color={colors.accentLight} />
+                    <Text style={styles.playMomentText}>
+                      {Math.floor(a.offset_seconds / 60)}:{(a.offset_seconds % 60).toString().padStart(2, '0')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.actionQuote}>"{a.ai_said}"</Text>
+              <Text style={styles.actionLabel}>Better response:</Text>
+              <Text style={styles.actionResponse}>{a.suggested_response}</Text>
+              {a.technique && (
+                <View style={styles.techniquePill}>
+                  <Text style={styles.techniqueText}>{a.technique}</Text>
+                </View>
+              )}
             </View>
           ))}
         </>
@@ -224,6 +272,69 @@ const styles = StyleSheet.create({
   strengthIcon: { backgroundColor: 'rgba(34,197,94,0.15)' },
   improvIcon:   { backgroundColor: 'rgba(2,132,199,0.12)' },
   bulletText: { flex: 1, color: colors.text, fontSize: 14, lineHeight: 22 },
+
+  actionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.accent,
+    borderTopWidth: 0.5,
+    borderRightWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderTopColor: colors.border,
+    borderRightColor: colors.border,
+    borderBottomColor: colors.border,
+    gap: 4,
+  },
+  actionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  actionLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.xs,
+  },
+  actionQuote: { color: colors.text, fontSize: 14, fontStyle: 'italic', lineHeight: 21 },
+  actionResponse: { color: colors.text, fontSize: 14, lineHeight: 21 },
+  techniquePill: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(2,132,199,0.15)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    marginTop: spacing.sm,
+  },
+  techniqueText: {
+    color: colors.accentLight,
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  playMomentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(2,132,199,0.12)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(56,189,248,0.2)',
+  },
+  playMomentText: {
+    color: colors.accentLight,
+    fontSize: 10,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
 
   transcriptToggle: { marginTop: spacing.lg },
   transcriptHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },

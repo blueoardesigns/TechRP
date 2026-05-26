@@ -7,6 +7,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { TrainingSession } from '../../../lib/types';
 import { getScenarioConfig } from '../../../lib/scenarios';
 import ScoreBadge from '../../../components/ScoreBadge';
+import { getDisplayScore } from '../../../lib/scoring';
 import { colors, spacing, radius } from '../../../lib/theme';
 import { Touchable } from '../../../components/Touchable';
 
@@ -77,7 +78,7 @@ export default function SessionsListScreen() {
           }
           return raw;
         })();
-        const score = parsedAssessment?.score ?? 0;
+        const { score } = getDisplayScore(parsedAssessment);
         const date = new Date(item.created_at).toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric',
         });

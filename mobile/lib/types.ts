@@ -13,6 +13,7 @@ export interface Persona {
 export interface TranscriptEntry {
   role: 'user' | 'assistant';
   content: string;
+  timestamp?: string;
 }
 
 export interface Assessment {
@@ -25,6 +26,7 @@ export interface Assessment {
     ai_said: string;
     suggested_response: string;
     technique?: string;
+    offset_seconds?: number;
   }>;
 }
 
@@ -37,6 +39,9 @@ export interface TrainingSession {
   transcript: TranscriptEntry[];
   assessment: Assessment;
   vapi_call_id?: string;
+  recording_url?: string | null;
+  started_at?: string;
+  ended_at?: string;
   created_at: string;
 }
 

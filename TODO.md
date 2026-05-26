@@ -59,6 +59,7 @@ Last updated: 2026-04-14
 - [ ] Expo dev build for Vapi integration (requires custom native module)
 - [ ] Field recording upload (audio file → transcript → assessment)
 - [ ] Mobile session history
+- [x] **Timestamped recording links in session notes** — Practice Moments now show play buttons that seek the recording to the relevant moment. Implemented 2026-05-26.
 
 ---
 

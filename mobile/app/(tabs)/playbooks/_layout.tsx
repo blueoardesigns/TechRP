@@ -11,6 +11,7 @@ export default function PlaybooksLayout() {
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Playbooks & Training Materials' }} />
+      <Stack.Screen name="[id]" options={{ title: 'Playbook' }} />
     </Stack>
   );
 }

@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase-server';
 import { createServiceRoleClient as createServiceSupabase } from '@/lib/supabase';
 import { ShareDialog } from './share-dialog';
 import { RecordingPlayer } from './recording-player';
+import { ActionsWithPlayback } from './actions-with-playback';
 import { CoachNotes } from './coach-notes';
 import { notFound } from 'next/navigation';
 import { getDisplayScore, type Assessment } from '@/lib/scoring';
@@ -222,25 +223,13 @@ export default async function SessionDetailPage({ params, searchParams }: { para
 
               {/* Actions to take */}
               {assessment.actions_to_take && assessment.actions_to_take.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mb-3">Actions to Take</p>
-                  <ol className="space-y-4">
-                    {assessment.actions_to_take.map((a: any, i: number) => (
-                      <li key={i} className="text-sm text-slate-300">
-                        <p className="text-[10px] text-slate-500 mb-1">
-                          {i + 1}. When <span className="font-semibold text-white">{personaName || 'they'}</span> said:
-                        </p>
-                        <p className="italic text-slate-400 border-l-2 border-slate-700 pl-3 mb-2">&ldquo;{a.ai_said}&rdquo;</p>
-                        <p className="text-slate-300">
-                          <span className="text-sky-400 font-semibold">You could have said:</span> &ldquo;{a.suggested_response}&rdquo;
-                        </p>
-                        {a.technique && (
-                          <p className="text-[10px] uppercase tracking-wide text-sky-400/70 mt-1">{a.technique}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
+                <ActionsWithPlayback
+                  actions={assessment.actions_to_take}
+                  personaName={personaName}
+                  sessionId={params.id}
+                  vapiCallId={(session as any).vapi_call_id ?? null}
+                  recordingUrl={(session as any).recording_url ?? null}
+                />
               )}
             </SectionCard>
           )}

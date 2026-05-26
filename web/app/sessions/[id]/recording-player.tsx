@@ -1,15 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useImperativeHandle, forwardRef } from 'react';
 
-export function RecordingPlayer({ sessionId, vapiCallId, initialUrl }: {
+export interface RecordingPlayerHandle {
+  seekTo: (seconds: number) => void;
+}
+
+export const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
   sessionId: string;
   vapiCallId: string | null;
   initialUrl: string | null;
-}) {
+}>(function RecordingPlayer({ sessionId, vapiCallId, initialUrl }, ref) {
   const [url, setUrl] = useState<string | null>(initialUrl);
   const [loading, setLoading] = useState(!initialUrl && !!vapiCallId);
   const [error, setError] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    seekTo(seconds: number) {
+      const audio = audioRef.current;
+      if (!audio || !url) return;
+      audio.currentTime = seconds;
+      audio.play().catch(() => {});
+    },
+  }), [url]);
 
   useEffect(() => {
     if (initialUrl || !vapiCallId) return;
@@ -22,7 +36,6 @@ export function RecordingPlayer({ sessionId, vapiCallId, initialUrl }: {
       .then(d => {
         if (d.recordingUrl) {
           setUrl(d.recordingUrl);
-          // Persist to DB so next load is instant
           fetch(`/api/sessions/${sessionId}/recording`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
@@ -44,6 +57,7 @@ export function RecordingPlayer({ sessionId, vapiCallId, initialUrl }: {
     return (
       <div className="space-y-3">
         <audio
+          ref={audioRef}
           controls
           className="w-full rounded-lg [color-scheme:dark]"
           style={{ colorScheme: 'dark' }}
@@ -68,4 +82,4 @@ export function RecordingPlayer({ sessionId, vapiCallId, initialUrl }: {
       {error ? 'Recording unavailable (may have expired).' : 'No recording available.'}
     </p>
   );
-}
+});

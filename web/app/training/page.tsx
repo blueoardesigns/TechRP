@@ -148,9 +148,9 @@ function PageHeader({ onBack, title }: { onBack: () => void; title: string }) {
 // ─── Difficulty modifiers ─────────────────────────────────────────────────────
 
 const DIFFICULTY_MODIFIERS: Record<'easy' | 'medium' | 'hard', string> = {
-  easy: '[DIFFICULTY: EASY] Be cooperative and relatively easy to work with. Raise at most one minor objection before warming up to the conversation.\n\n',
-  medium: '',
-  hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
+  easy: '[DIFFICULTY: EASY] Start the call guarded and mildly reluctant — you are busy, skeptical, or simply not expecting the call. Do NOT immediately engage or show willingness. After the rep demonstrates genuine value, empathy, or rapport (usually 1–2 minutes), gradually warm up. Raise one minor objection before agreeing. You should feel like a real person who was interrupted, not someone waiting for a sales pitch.\n\n',
+  medium: '[DIFFICULTY: MEDIUM] Start the call reluctant and uninterested — you have other priorities and did not ask for this conversation. Brush off the first attempt to engage with a stall like "I\'m actually pretty busy" or "We already have someone for that." Require the rep to earn your attention through value or curiosity before you engage. Raise 1–2 solid objections. Only agree if the rep genuinely addresses your concerns.\n\n',
+  hard: '[DIFFICULTY: HARD] Start the call hostile or dismissive — you actively do not want to talk. Hit the rep with an immediate stall or objection like "Not interested" or "We\'re all set, thanks." If they persist, raise 2–3 strong objections and push back firmly. You will only continue the conversation if the rep says something genuinely surprising, valuable, or catches your curiosity. Do not commit easily — even if warmed up, require a compelling close.\n\n',
 };
 
 type PaymentType = 'potential_claim' | 'self_pay' | 'random';
@@ -394,7 +394,7 @@ export default function TrainingPage() {
         getInterruptInstructions(selectedPersona.personalityType);
 
       const sharedOverrides = {
-        voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
+        voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5', speed: 1.07 },
         firstMessage: selectedPersona.firstMessage,
         maxDurationSeconds: 600,
         stopSpeakingPlan: {
@@ -816,10 +816,34 @@ export default function TrainingPage() {
                   {difficulty}
                 </span>
               </div>
-              {/* Save status */}
-              {saveStatus === 'saving' && <span className="text-xs text-yellow-400">Saving…</span>}
-              {saveStatus === 'assessing' && <span className="text-xs text-blue-400">Analyzing…</span>}
-              {saveStatus === 'error' && <span className="text-xs text-red-400">Save failed</span>}
+              {/* Save status progress */}
+              {(saveStatus === 'saving' || saveStatus === 'assessing' || saveStatus === 'error') && (
+                <div className="flex items-center gap-3">
+                  {['Save', 'Analyze', 'Done'].map((label, i) => {
+                    const stepIdx = saveStatus === 'saving' ? 0 : saveStatus === 'assessing' ? 1 : 2;
+                    const isActive = i === stepIdx && saveStatus !== 'error';
+                    const isDone = i < stepIdx;
+                    return (
+                      <div key={label} className="flex items-center gap-1.5">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          isDone ? 'bg-emerald-500 text-white' :
+                          isActive ? 'bg-blue-500 text-white animate-pulse' :
+                          saveStatus === 'error' && i === stepIdx ? 'bg-red-500 text-white' :
+                          'bg-gray-700 text-gray-500'
+                        }`}>
+                          {isDone ? '✓' : i + 1}
+                        </div>
+                        <span className={`text-xs ${
+                          isDone ? 'text-emerald-400' :
+                          isActive ? 'text-blue-400' :
+                          saveStatus === 'error' && i === stepIdx ? 'text-red-400' :
+                          'text-gray-600'
+                        }`}>{saveStatus === 'error' && i === stepIdx ? 'Failed' : label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -867,7 +891,24 @@ export default function TrainingPage() {
                 End Call
               </button>
             ) : (
-              <p className="text-sm text-gray-500">Call ended — saving your session…</p>
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-gray-500">
+                  {saveStatus === 'saving' ? 'Saving session…' :
+                   saveStatus === 'assessing' ? 'AI is grading your call…' :
+                   'Processing…'}
+                </p>
+                {saveStatus === 'assessing' && (
+                  <button
+                    onClick={() => {
+                      setSaveStatus('saved');
+                      setPhase('post-call');
+                    }}
+                    className="text-xs text-gray-500 hover:text-gray-300 transition-colors underline"
+                  >
+                    Skip grading
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>

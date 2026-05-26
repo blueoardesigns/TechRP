@@ -3,9 +3,9 @@ import { ScenarioConfig } from './types';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export const DIFFICULTY_MODIFIERS: Record<Difficulty, string> = {
-  easy: '[DIFFICULTY: EASY] Be cooperative and relatively easy to work with. Raise at most one minor objection before warming up to the conversation.\n\n',
-  medium: '',
-  hard: '[DIFFICULTY: HARD] Be highly skeptical and resistant. Raise 2–3 strong objections. Push back firmly before considering any agreement. Do not commit easily.\n\n',
+  easy: '[DIFFICULTY: EASY] Start the call guarded and mildly reluctant — you are busy, skeptical, or simply not expecting the call. Do NOT immediately engage or show willingness. After the rep demonstrates genuine value, empathy, or rapport (usually 1–2 minutes), gradually warm up. Raise one minor objection before agreeing. You should feel like a real person who was interrupted, not someone waiting for a sales pitch.\n\n',
+  medium: '[DIFFICULTY: MEDIUM] Start the call reluctant and uninterested — you have other priorities and did not ask for this conversation. Brush off the first attempt to engage with a stall like "I\'m actually pretty busy" or "We already have someone for that." Require the rep to earn your attention through value or curiosity before you engage. Raise 1–2 solid objections. Only agree if the rep genuinely addresses your concerns.\n\n',
+  hard: '[DIFFICULTY: HARD] Start the call hostile or dismissive — you actively do not want to talk. Hit the rep with an immediate stall or objection like "Not interested" or "We\'re all set, thanks." If they persist, raise 2–3 strong objections and push back firmly. You will only continue the conversation if the rep says something genuinely surprising, valuable, or catches your curiosity. Do not commit easily — even if warmed up, require a compelling close.\n\n',
 };
 
 export const VAPI_ASSISTANT_ID = 'a2a54457-a2b0-4046-82b5-c7506ab9a401';

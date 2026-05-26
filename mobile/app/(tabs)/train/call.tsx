@@ -23,6 +23,7 @@ export default function CallScreen() {
   const listRef = useRef<FlatList>(null);
   const messagesRef = useRef<TranscriptEntry[]>([]);
   const callStartRef = useRef<Date>(new Date());
+  const vapiCallIdRef = useRef<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export default function CallScreen() {
         const entry: TranscriptEntry = {
           role: msg.role === 'user' ? 'user' : 'assistant',
           content: msg.transcript,
+          timestamp: new Date().toISOString(),
         };
         messagesRef.current = [...messagesRef.current, entry];
         setMessages([...messagesRef.current]);
@@ -66,17 +68,19 @@ export default function CallScreen() {
     vapi.on('error', (e: any) => console.error('[Vapi] error:', JSON.stringify(e)));
 
     callStartRef.current = new Date();
+    vapiCallIdRef.current = null;
     try {
-      await vapi.start(VAPI_ASSISTANT_ID, {
+      const callInfo = await vapi.start(VAPI_ASSISTANT_ID, {
         model: {
           provider: 'groq',
           model: GROQ_MODEL,
           messages: [{ role: 'system', content: DIFFICULTY_MODIFIERS[difficulty] + p.system_prompt }],
         },
-        voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5' },
+        voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5', speed: 1.07 },
         firstMessage: p.first_message,
         maxDurationSeconds: 600,
       } as any);
+      if ((callInfo as any)?.id) vapiCallIdRef.current = (callInfo as any).id;
     } catch (e) {
       console.error('[Vapi] start failed:', e);
       setCallStatus('connecting');
@@ -92,32 +96,7 @@ export default function CallScreen() {
     if (!persona) return;
     const transcript = messagesRef.current;
 
-    const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-    let assessment = null;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30_000);
-      const res = await fetch(`${baseUrl}/api/assess`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: controller.signal,
-        body: JSON.stringify({
-          messages: transcript,
-          persona: {
-            name: persona.name,
-            personalityType: persona.personality_type,
-            scenarioType: persona.scenario_type,
-            speakerLabel: persona.speaker_label,
-          },
-        }),
-      });
-      clearTimeout(timeout);
-      const json = await res.json();
-      assessment = json.assessment;
-    } catch (e) {
-      console.error('Assessment failed (may have timed out):', e);
-    }
-
+    // Save session immediately (no assessment yet) so it's never lost
     let sessionId = '';
     try {
       const { data: authData } = await supabase.auth.getUser();
@@ -138,7 +117,8 @@ export default function CallScreen() {
         persona_name: persona.name,
         persona_scenario_type: persona.scenario_type,
         transcript,
-        assessment,
+        assessment: null,
+        vapi_call_id: vapiCallIdRef.current,
         started_at: callStartRef.current.toISOString(),
         ended_at: new Date().toISOString(),
       };
