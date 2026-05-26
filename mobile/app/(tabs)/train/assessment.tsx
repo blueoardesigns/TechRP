@@ -32,7 +32,11 @@ export default function AssessmentScreen() {
   }, [step]);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      setStatusMessage('Session could not be saved — network may be down. Try again.');
+      setStep('error');
+      return;
+    }
 
     let cancelled = false;
 

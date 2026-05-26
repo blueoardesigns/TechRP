@@ -92,24 +92,51 @@ export default function CallScreen() {
     getVapi().stop();
   };
 
+  const navigatedRef = useRef(false);
+  const navigateToAssessment = (sessionId: string) => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    router.replace({
+      pathname: '/(tabs)/train/assessment',
+      params: { sessionId },
+    });
+  };
+
   const handleCallEnd = async () => {
-    if (!persona) return;
+    if (!persona) {
+      console.warn('[CallEnd] No persona — navigating away anyway');
+      navigateToAssessment('');
+      return;
+    }
     const transcript = messagesRef.current;
 
+    // Hard ceiling: ALWAYS navigate within 6s. Save still happens in background.
+    const failsafe = setTimeout(() => {
+      console.warn('[CallEnd] Save failsafe fired — navigating without sessionId');
+      navigateToAssessment('');
+    }, 6000);
+
     // Save session immediately (no assessment yet) so it's never lost
-    let sessionId = '';
     try {
-      const { data: authData } = await supabase.auth.getUser();
+      const { data: authData } = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('auth timeout')), 3000)),
+      ]);
       const userId = authData?.user?.id ?? null;
+
       let organizationId: string | null = null;
       if (userId) {
-        const { data: profileData } = await supabase
-          .from('users')
-          .select('organization_id')
-          .eq('auth_user_id', userId)
-          .single();
-        organizationId = (profileData as any)?.organization_id ?? null;
+        try {
+          const { data: profileData } = await Promise.race([
+            supabase.from('users').select('organization_id').eq('auth_user_id', userId).single(),
+            new Promise<any>((_, reject) => setTimeout(() => reject(new Error('profile timeout')), 2000)),
+          ]);
+          organizationId = (profileData as any)?.organization_id ?? null;
+        } catch (e) {
+          console.warn('[CallEnd] Profile fetch timed out, continuing without org:', e);
+        }
       }
+
       const insertPayload: any = {
         user_id: userId,
         organization_id: organizationId,
@@ -122,21 +149,20 @@ export default function CallScreen() {
         started_at: callStartRef.current.toISOString(),
         ended_at: new Date().toISOString(),
       };
-      const { data: sessionData, error: insertError } = await supabase
-        .from('training_sessions')
-        .insert(insertPayload)
-        .select('id')
-        .single();
-      if (insertError) console.error('Session insert error:', insertError);
-      sessionId = (sessionData as { id: string } | null)?.id ?? '';
-    } catch (e) {
-      console.error('Error saving session:', e);
-    }
 
-    router.replace({
-      pathname: '/(tabs)/train/assessment',
-      params: { sessionId },
-    });
+      const insertResult: any = await Promise.race([
+        supabase.from('training_sessions').insert(insertPayload).select('id').single(),
+        new Promise<any>((_, reject) => setTimeout(() => reject(new Error('insert timeout')), 4000)),
+      ]);
+      if (insertResult?.error) console.error('[CallEnd] Insert error:', insertResult.error);
+      const sessionId = (insertResult?.data as { id: string } | null)?.id ?? '';
+      clearTimeout(failsafe);
+      navigateToAssessment(sessionId);
+    } catch (e) {
+      console.error('[CallEnd] Save flow exception:', e);
+      clearTimeout(failsafe);
+      navigateToAssessment('');
+    }
   };
 
   const speakerLabel = persona?.speaker_label ?? 'Contact';
