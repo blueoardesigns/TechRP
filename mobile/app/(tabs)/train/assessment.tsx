@@ -208,17 +208,19 @@ export default function AssessmentScreen() {
       const userId = authData?.user?.id;
       if (!userId) throw new Error('Not signed in');
       let organizationId: string | null = null;
+      let profileUserId: string | null = null;
       try {
         const { data: profileData } = await supabase
           .from('users')
-          .select('organization_id')
+          .select('id, organization_id')
           .eq('auth_user_id', userId)
           .single();
         organizationId = (profileData as any)?.organization_id ?? null;
+        profileUserId = (profileData as any)?.id ?? null;
       } catch { /* non-critical */ }
       const insertResult: any = await supabase
         .from('training_sessions')
-        .insert({ ...payload, user_id: userId, organization_id: organizationId })
+        .insert({ ...payload, user_id: profileUserId ?? userId, organization_id: organizationId })
         .select('id')
         .single();
       if (insertResult.error) throw new Error(insertResult.error.message);

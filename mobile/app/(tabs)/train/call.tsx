@@ -160,17 +160,19 @@ export default function CallScreen() {
       if (!userId) throw new Error('No authenticated user');
 
       let organizationId: string | null = null;
+      let profileUserId: string | null = null;
       try {
         const { data: profileData } = await Promise.race([
-          supabase.from('users').select('organization_id').eq('auth_user_id', userId).single(),
+          supabase.from('users').select('id, organization_id').eq('auth_user_id', userId).single(),
           new Promise<any>((_, reject) => setTimeout(() => reject(new Error('profile timeout (3s)')), 3000)),
         ]);
         organizationId = (profileData as any)?.organization_id ?? null;
+        profileUserId = (profileData as any)?.id ?? null;
       } catch (e) {
         console.warn('[CallEnd] Profile fetch failed, continuing without org:', e);
       }
 
-      const insertPayload: any = { ...pendingPayload, user_id: userId, organization_id: organizationId };
+      const insertPayload: any = { ...pendingPayload, user_id: profileUserId ?? userId, organization_id: organizationId };
 
       const insertResult: any = await Promise.race([
         supabase.from('training_sessions').insert(insertPayload).select('id').single(),
