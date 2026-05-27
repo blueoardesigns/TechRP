@@ -41,11 +41,12 @@ export default function AssessmentScreen() {
       // Load diagnostic info from AsyncStorage
       (async () => {
         try {
-          const [errMsg, pending] = await Promise.all([
+          const [saveErr, gradeErr, pending] = await Promise.all([
             AsyncStorage.getItem('last_save_error'),
+            AsyncStorage.getItem('last_grading_error'),
             AsyncStorage.getItem('pending_session'),
           ]);
-          setErrorDetail(errMsg);
+          setErrorDetail(saveErr ?? gradeErr ?? null);
           setHasPending(!!pending);
           setStatusMessage(pending
             ? 'We couldn\'t save your session to the server, but your transcript is safe on your device. Tap Retry to save it.'
@@ -102,9 +103,20 @@ export default function AssessmentScreen() {
       setStep('grading');
       setStatusMessage('Sending transcript to AI for grading…');
 
-      const transcript = data.transcript;
-      if (!transcript || (Array.isArray(transcript) && transcript.length === 0)) {
-        setStatusMessage('No transcript to grade.');
+      // Normalize transcript: Supabase jsonb may come back as an array OR a JSON string.
+      // Handle both before length-checking so an empty-string-encoded array doesn't
+      // slip through and POST `messages: []` to /api/assess (which returns 400).
+      const rawTranscript = data.transcript;
+      let transcript: any[] | null = null;
+      if (Array.isArray(rawTranscript)) {
+        transcript = rawTranscript;
+      } else if (typeof rawTranscript === 'string') {
+        try { transcript = JSON.parse(rawTranscript); } catch { transcript = null; }
+        if (!Array.isArray(transcript)) transcript = null;
+      }
+      if (!transcript || transcript.length === 0) {
+        setStatusMessage('Call ended with no transcript captured. There\'s nothing to grade.');
+        setErrorDetail('The call connected but no spoken audio was captured before it ended. Try training again.');
         setStep('error');
         return;
       }
@@ -135,7 +147,7 @@ export default function AssessmentScreen() {
           headers: { 'Content-Type': 'application/json' },
           signal: controller.signal,
           body: JSON.stringify({
-            messages: Array.isArray(transcript) ? transcript : JSON.parse(transcript),
+            messages: transcript,
             persona: {
               name: data.persona_name ?? '',
               personalityType: personaDetails?.personality_type ?? '',
@@ -151,7 +163,16 @@ export default function AssessmentScreen() {
         if (!res.ok) {
           const errText = await res.text().catch(() => 'Unknown error');
           console.error('[Assessment] API error:', res.status, errText);
+          // Try to surface the server's actual error message
+          let serverMsg = errText;
+          try {
+            const parsed = JSON.parse(errText);
+            if (parsed?.error) serverMsg = String(parsed.error);
+          } catch { /* keep raw text */ }
+          const detail = `HTTP ${res.status} from /api/assess\nMessages sent: ${transcript.length}\nServer says: ${serverMsg.slice(0, 500)}`;
+          await AsyncStorage.setItem('last_grading_error', detail).catch(() => {});
           setStatusMessage(`Grading failed (${res.status}). Your session was saved.`);
+          setErrorDetail(detail);
           setStep('error');
           return;
         }
@@ -161,6 +182,7 @@ export default function AssessmentScreen() {
         const newAssessment = json.assessment;
 
         if (newAssessment) {
+          await AsyncStorage.removeItem('last_grading_error').catch(() => {});
           await supabase
             .from('training_sessions')
             .update({ assessment: newAssessment })
@@ -168,7 +190,10 @@ export default function AssessmentScreen() {
           setAssessment(newAssessment as Assessment);
           setStep('done');
         } else {
+          const detail = `Server returned 200 but no assessment field.\nBody: ${JSON.stringify(json).slice(0, 500)}`;
+          await AsyncStorage.setItem('last_grading_error', detail).catch(() => {});
           setStatusMessage('AI returned an empty assessment. Your session was saved.');
+          setErrorDetail(detail);
           setStep('error');
         }
       } catch (e: any) {
@@ -177,7 +202,10 @@ export default function AssessmentScreen() {
           setStep('skipped');
         } else {
           console.error('[Assessment] Fetch exception:', e);
+          const detail = `Network/fetch error: ${e?.message ?? String(e)}`;
+          await AsyncStorage.setItem('last_grading_error', detail).catch(() => {});
           setStatusMessage('Could not reach grading server. Your session was saved.');
+          setErrorDetail(detail);
           setStep('error');
         }
       }

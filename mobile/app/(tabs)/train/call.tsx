@@ -70,7 +70,14 @@ export default function CallScreen() {
       }
     });
     vapi.on('call-end', () => handleCallEnd());
-    vapi.on('error', (e: any) => console.error('[Vapi] error:', JSON.stringify(e)));
+    vapi.on('error', (e: any) => {
+      const errStr = (() => {
+        try { return JSON.stringify(e); } catch { return String(e); }
+      })();
+      console.error('[Vapi] error:', errStr);
+      // Cache so the assessment error screen can surface it later
+      AsyncStorage.setItem('last_grading_error', `Vapi error during call: ${errStr.slice(0, 500)}`).catch(() => {});
+    });
 
     callStartRef.current = new Date();
     vapiCallIdRef.current = null;
@@ -109,10 +116,16 @@ export default function CallScreen() {
   };
 
   const handleCallEnd = async () => {
-    // Guard: if the call never actually connected and there's no transcript,
-    // this is a failed startup, not a real session. Don't save, just return to train.
-    if (!everConnectedRef.current && messagesRef.current.length === 0) {
-      console.warn('[CallEnd] Call never connected — returning to train screen without saving');
+    // Guard: if there's no transcript, there's nothing to grade. This covers both
+    // "call never connected" AND "call connected but ended before any final
+    // transcript was captured" (which previously saved an empty session and then
+    // hit /api/assess with messages: [] → 400).
+    if (messagesRef.current.length === 0) {
+      const reason = everConnectedRef.current
+        ? 'Call connected but ended before any speech was captured.'
+        : 'Call never connected.';
+      console.warn('[CallEnd] Empty transcript — returning to train screen without saving. Reason:', reason);
+      await AsyncStorage.setItem('last_grading_error', `${reason} Try training again — check microphone permission and network.`).catch(() => {});
       if (!navigatedRef.current) {
         navigatedRef.current = true;
         router.replace('/(tabs)/train');
