@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unstable_cache } from 'next/cache';
 import { createServerSupabase, createServiceSupabase } from '@/lib/supabase-server';
+
+export const dynamic = 'force-dynamic';
 import Anthropic from '@anthropic-ai/sdk';
 import { getDisplayScore } from '@/lib/scoring';
 

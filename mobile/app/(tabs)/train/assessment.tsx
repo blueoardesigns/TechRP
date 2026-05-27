@@ -333,7 +333,7 @@ export default function AssessmentScreen() {
           {sessionId && (
             <TouchableOpacity
               style={styles.sessionsButton}
-              onPress={() => router.replace({ pathname: '/(tabs)/sessions/[id]', params: { id: sessionId } })}
+              onPress={() => router.push({ pathname: '/(tabs)/sessions/[id]', params: { id: sessionId } })}
               activeOpacity={0.85}
             >
               <Text style={styles.sessionsButtonText}>View Saved Session</Text>

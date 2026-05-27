@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_PREFIXES = [
   '/api/auth/',
   '/api/stripe/webhook',
+  '/api/assess',     // mobile POSTs here without cookies; route validates input itself
   '/api/playbooks',  // route handler validates Bearer token from mobile
   '/_next/',
   '/favicon',
