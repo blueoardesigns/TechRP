@@ -158,6 +158,7 @@ export async function POST(request: NextRequest) {
               brief_description: p.briefDescription,
               first_message: p.firstMessage,
               system_prompt: p.systemPrompt,
+              gender: p.gender ?? 'female',
             })
             .eq('id', id);
           if (error) {

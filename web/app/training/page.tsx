@@ -176,6 +176,25 @@ function getPaymentModifier(type: PaymentType, scenarioType: ScenarioType): stri
   return PAYMENT_MODIFIERS[resolved][channel];
 }
 
+// Applied to all BD scenario personas — they've heard the pitch before
+const RESTORATION_BD_CONTEXT = `[INDUSTRY CONTEXT] You have dealt with restoration companies before — through prior vendor relationships, fielding cold calls like this one, or managing water damage claims. You know the pitch. Impressions you've likely formed:
+- Restoration companies tend to be expensive, and some will over-scope a job to inflate the insurance claim
+- "Emergency response" is rarely as fast as promised
+- Some techs put out more equipment than the job needs just to run up the bill
+- Most restoration pitches sound identical — fast, reliable, and "great with insurance"
+You start this call somewhat skeptical and guarded. Not rude — but not rolling out the welcome mat. If the rep earns your trust by being specific, listening to your actual situation, and not just reciting a pitch, you'll open up. Hard difficulty means you're quicker to reject and require more before warming up.\n\n`;
+
+// Applied to all personas — rapport must be earned before sharing details
+const RAPPORT_BEHAVIOR = `[OPENNESS & RAPPORT] Do not volunteer personal details, vendor frustrations, or business specifics early — that information must be earned. When the rep asks genuinely curious questions and shows they've actually listened, you warm up. Once real rapport is established you may share: a specific problem with your current vendor you haven't told many people, an upcoming project that's a real pain point, a personal detail about your day or situation, or what it would actually take to change course. Rapport unlocks depth — don't give it away for free.\n\n`;
+
+function getBusyModifier(personalityType: string, group: ScenarioGroup): string {
+  const pt = personalityType.toLowerCase();
+  if (group === 'bizdev' && /busy|high.?d|corporate|senior|vp|director|executive|rushed|distract|gatekeep/.test(pt)) {
+    return `[BUSY] You are in the middle of a packed day. Make it clear early that you only have a few minutes — "I'm really slammed right now" or "You've got maybe two minutes." If the rep doesn't get to the point quickly, push to end the call: "Just shoot me an email." Stay on only if they say something that genuinely stops you.\n\n`;
+  }
+  return '';
+}
+
 const TIMING_INSTRUCTIONS = `
 
 TIMING: This is a training call with a strict 10-minute limit. Around the 7 to 7.5 minute mark, naturally steer the conversation toward a close or a clear next step — even if the conversation isn't fully complete. If the call is going well at that point, push for commitment: agree to sign, schedule a follow-up appointment, or lock in a concrete next action before ending. Never let the call drift past 10 minutes without a resolution.`;
@@ -388,6 +407,9 @@ export default function TrainingPage() {
       const scenarioConfig = SCENARIOS.find(s => s.type === selectedPersona.scenarioType)!;
       const systemPrompt =
         DIFFICULTY_MODIFIERS[difficultyRef.current] +
+        (scenarioConfig.group === 'bizdev' ? RESTORATION_BD_CONTEXT : '') +
+        getBusyModifier(selectedPersona.personalityType, scenarioConfig.group) +
+        RAPPORT_BEHAVIOR +
         (scenarioConfig.group === 'technician'
           ? getPaymentModifier(paymentTypeRef.current, selectedPersona.scenarioType)
           : '') +
