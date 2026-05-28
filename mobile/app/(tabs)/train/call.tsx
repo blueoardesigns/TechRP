@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, SafeAreaView,
+  View, Text, TouchableOpacity, FlatList, StyleSheet, ActivityIndicator, SafeAreaView, Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -128,7 +128,10 @@ export default function CallScreen() {
       await AsyncStorage.setItem('last_grading_error', `${reason} Try training again — check microphone permission and network.`).catch(() => {});
       if (!navigatedRef.current) {
         navigatedRef.current = true;
-        router.replace('/(tabs)/train');
+        const alertMsg = everConnectedRef.current
+          ? 'The call ended before any speech was captured. Check your microphone and try again.'
+          : 'The call couldn\'t connect. Check your network and microphone permission, then try again.';
+        Alert.alert('Call ended', alertMsg, [{ text: 'OK', onPress: () => router.replace('/(tabs)/train') }]);
       }
       return;
     }
