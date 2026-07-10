@@ -1,6 +1,6 @@
 import { SectionList, View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
@@ -9,6 +9,7 @@ import { Persona, ScenarioConfig } from '../../../lib/types';
 import { colors, spacing, radius } from '../../../lib/theme';
 import { Touchable } from '../../../components/Touchable';
 import StreakCard from '../../../components/StreakCard';
+import { fetchMastery, MasteryMap, MEDAL_EMOJI } from '../../../lib/mastery';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -25,7 +26,24 @@ export default function ScenarioPickerScreen() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [mastery, setMastery] = useState<MasteryMap | null>(null);
   const sections = getSectionedScenarios();
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!profile) return;
+      let cancelled = false;
+      fetchMastery(profile.id).then(m => {
+        if (!cancelled && m) setMastery(m);
+      });
+      return () => { cancelled = true; };
+    }, [profile]),
+  );
+
+  const totalScenarios = sections.reduce((n, s) => n + s.data.length, 0);
+  const medaledCount = mastery
+    ? mastery.counts.gold + mastery.counts.silver + mastery.counts.bronze
+    : 0;
 
   const handleSelectScenario = async (scenario: ScenarioConfig) => {
     setLoading(true);
@@ -96,6 +114,7 @@ export default function ScenarioPickerScreen() {
         const sectionIndex = sections.indexOf(section);
         const accentBg = SECTION_ACCENTS[sectionIndex % SECTION_ACCENTS.length];
         const isLoading = loading && selectedType === item.type;
+        const medalTier = mastery?.byScenario[item.type]?.tier ?? null;
         return (
           <Touchable
             style={styles.row}
@@ -110,6 +129,7 @@ export default function ScenarioPickerScreen() {
               <Text style={styles.label}>{item.label}</Text>
               <Text style={styles.description} numberOfLines={1}>{item.description}</Text>
             </View>
+            {medalTier && <Text style={styles.medal}>{MEDAL_EMOJI[medalTier]}</Text>}
             {isLoading
               ? <ActivityIndicator color={colors.accentLight} size="small" />
               : <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
@@ -124,6 +144,12 @@ export default function ScenarioPickerScreen() {
           <View style={styles.streakWrap}>
             <StreakCard />
           </View>
+          {mastery && medaledCount > 0 && (
+            <Text style={styles.masterySummary}>
+              🥇 {mastery.counts.gold} · 🥈 {mastery.counts.silver} · 🥉 {mastery.counts.bronze}
+              {'  —  '}{medaledCount} of {totalScenarios} scenarios medaled
+            </Text>
+          )}
         </View>
       }
     />
@@ -136,6 +162,8 @@ const styles = StyleSheet.create({
 
   header: { marginBottom: spacing.lg },
   streakWrap: { marginTop: spacing.md },
+  masterySummary: { color: colors.textMuted, fontSize: 12, fontWeight: '600' },
+  medal: { fontSize: 18, marginRight: spacing.sm },
   screenTitle: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.3, marginBottom: 4 },
   screenSubtitle: { fontSize: 14, color: colors.textMuted },
 

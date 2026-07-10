@@ -2,6 +2,9 @@ import React from 'react';
 import { AccessibilityInfo } from 'react-native';
 import { render, waitFor } from '@testing-library/react-native';
 
+// ScoreReveal → lib/mastery → lib/supabase; stub the client so Jest doesn't
+// need native AsyncStorage or env vars
+jest.mock('../lib/supabase', () => ({ supabase: {} }));
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn().mockResolvedValue(undefined),
   notificationAsync: jest.fn().mockResolvedValue(undefined),
@@ -64,6 +67,45 @@ describe('ScoreReveal', () => {
     await waitFor(() => getByText('75'));
     expect(queryByText(/vs your average/)).toBeNull();
     expect(queryByText(/personal best/i)).toBeNull();
+  });
+
+  it('shows a gold medal unlock line', async () => {
+    const { getByText } = render(
+      <ScoreReveal
+        score={90} letter="A" stats={null} streakDays={null}
+        medal={{ type: 'unlock', tier: 'gold', scenarioLabel: 'Price Objections' }}
+      />,
+    );
+    await waitFor(() => getByText('🥇 Gold medal — Price Objections mastered!'));
+  });
+
+  it('shows a bronze medal unlock line', async () => {
+    const { getByText } = render(
+      <ScoreReveal
+        score={72} letter="C" stats={null} streakDays={null}
+        medal={{ type: 'unlock', tier: 'bronze', scenarioLabel: 'Upsell' }}
+      />,
+    );
+    await waitFor(() => getByText('🥉 Bronze medal — Upsell!'));
+  });
+
+  it('shows a progress line toward the next tier', async () => {
+    const { getByText } = render(
+      <ScoreReveal
+        score={86} letter="B" stats={null} streakDays={null}
+        medal={{ type: 'progress', tier: 'silver', scenarioLabel: 'Upsell', have: 1, need: 2 }}
+      />,
+    );
+    await waitFor(() => getByText('🥈 1/2 toward silver — Upsell'));
+  });
+
+  it('omits medal line when medal is null', async () => {
+    const { getByText, queryByText } = render(
+      <ScoreReveal score={75} letter="C" stats={null} streakDays={null} medal={null} />,
+    );
+    await waitFor(() => getByText('75'));
+    expect(queryByText(/medal/i)).toBeNull();
+    expect(queryByText(/toward/)).toBeNull();
   });
 
   it('shows streak started on day 1 and extended after', async () => {

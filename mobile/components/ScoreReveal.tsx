@@ -4,6 +4,17 @@ import * as Haptics from 'expo-haptics';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { colors, radius, spacing } from '../lib/theme';
 import { LetterGrade } from '../lib/scoring';
+import { MedalTier, MEDAL_EMOJI } from '../lib/mastery';
+
+export interface MedalMoment {
+  type: 'unlock' | 'progress';
+  /** Unlock: the tier just earned. Progress: the tier being worked toward. */
+  tier: MedalTier;
+  scenarioLabel: string;
+  /** Progress only */
+  have?: number;
+  need?: number;
+}
 
 export interface SessionStats {
   /** Best score across prior graded sessions (excludes this one) */
@@ -21,6 +32,19 @@ interface Props {
   stats: SessionStats | null;
   /** Current streak length including this session; null = unavailable (line omitted) */
   streakDays: number | null;
+  /** Medal unlocked or progressed by this session; null = nothing to show */
+  medal?: MedalMoment | null;
+}
+
+function medalLine(medal: MedalMoment): string {
+  const emoji = MEDAL_EMOJI[medal.tier];
+  const tierName = medal.tier.charAt(0).toUpperCase() + medal.tier.slice(1);
+  if (medal.type === 'unlock') {
+    return medal.tier === 'gold'
+      ? `${emoji} Gold medal — ${medal.scenarioLabel} mastered!`
+      : `${emoji} ${tierName} medal — ${medal.scenarioLabel}!`;
+  }
+  return `${emoji} ${medal.have}/${medal.need} toward ${medal.tier} — ${medal.scenarioLabel}`;
 }
 
 function scoreColor(score: number): string {
@@ -41,7 +65,7 @@ function comparisonLine(score: number, stats: SessionStats): string {
 const COUNT_UP_MS = 1200;
 const HAPTIC_STEP = 15;
 
-export default function ScoreReveal({ score, letter, stats, streakDays }: Props) {
+export default function ScoreReveal({ score, letter, stats, streakDays, medal = null }: Props) {
   const [displayScore, setDisplayScore] = useState(0);
   const [stamped, setStamped] = useState(false);
   const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
@@ -55,7 +79,8 @@ export default function ScoreReveal({ score, letter, stats, streakDays }: Props)
   const lastHapticStep = useRef(0);
 
   const isPersonalBest = !!stats && stats.count > 0 && score > stats.previousBest;
-  const celebrate = letter === 'A' || isPersonalBest;
+  const goldUnlock = medal?.type === 'unlock' && medal.tier === 'gold';
+  const celebrate = letter === 'A' || isPersonalBest || goldUnlock;
   const color = scoreColor(score);
 
   useEffect(() => {
@@ -134,6 +159,11 @@ export default function ScoreReveal({ score, letter, stats, streakDays }: Props)
             {streakDays === 1 ? '🔥 Day 1 — streak started!' : `🔥 Day ${streakDays} — streak extended!`}
           </Text>
         )}
+        {medal && (
+          <Text style={medal.type === 'unlock' ? styles.medalUnlockText : styles.medalProgressText}>
+            {medalLine(medal)}
+          </Text>
+        )}
       </Animated.View>
 
       {fireConfetti && (
@@ -171,4 +201,6 @@ const styles = StyleSheet.create({
   detail: { gap: 4 },
   comparisonText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
   streakText: { color: '#FF9500', fontSize: 14, fontWeight: '700' },
+  medalUnlockText: { color: '#FFD60A', fontSize: 14, fontWeight: '700' },
+  medalProgressText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
 });

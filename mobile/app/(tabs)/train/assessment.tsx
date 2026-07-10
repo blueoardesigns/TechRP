@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,9 +6,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../lib/supabase';
 import { useAuth } from '../../../context/AuthContext';
 import { Assessment } from '../../../lib/types';
-import ScoreReveal, { SessionStats } from '../../../components/ScoreReveal';
+import ScoreReveal, { SessionStats, MedalMoment } from '../../../components/ScoreReveal';
 import { getDisplayScore } from '../../../lib/scoring';
 import { fetchStreak } from '../../../lib/streaks';
+import { computeMastery, rowsToScoredSessions, ScoredSession, MedalTier } from '../../../lib/mastery';
+import { getScenarioConfig } from '../../../lib/scenarios';
 import { colors, spacing, radius } from '../../../lib/theme';
 
 type GradingStep = 'loading' | 'grading' | 'done' | 'skipped' | 'error';
@@ -25,6 +27,8 @@ export default function AssessmentScreen() {
   const [elapsedSecs, setElapsedSecs] = useState(0);
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [streakDays, setStreakDays] = useState<number | null>(null);
+  const [priorScored, setPriorScored] = useState<ScoredSession[] | null>(null);
+  const [scenarioType, setScenarioType] = useState<string | null>(null);
   const { profile } = useAuth();
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
@@ -54,11 +58,13 @@ export default function AssessmentScreen() {
 
         const { data } = await supabase
           .from('training_sessions')
-          .select('id, assessment')
+          .select('id, assessment, persona_scenario_type')
           .or(`user_id.eq.${authUserId},user_id.eq.${profile.id}`)
           .neq('id', sessionId);
 
         if (cancelled) return;
+
+        setPriorScored(rowsToScoredSessions(data ?? []));
 
         const scores = (data ?? [])
           .map(row => {
@@ -137,6 +143,8 @@ export default function AssessmentScreen() {
         setStep('error');
         return;
       }
+
+      setScenarioType(data.persona_scenario_type ?? null);
 
       // Check if assessment already exists
       const raw = data.assessment;
@@ -277,6 +285,37 @@ export default function AssessmentScreen() {
       abortRef.current?.abort();
     };
   }, [sessionId]);
+
+  // Medal moment: compare per-scenario mastery before vs after this session
+  const medal = useMemo<MedalMoment | null>(() => {
+    if (!assessment || !scenarioType || priorScored === null) return null;
+    const { score } = getDisplayScore(assessment);
+    if (score <= 0) return null;
+
+    const rank = (t: MedalTier | null) => (t === 'gold' ? 3 : t === 'silver' ? 2 : t === 'bronze' ? 1 : 0);
+    const before = computeMastery(priorScored).byScenario[scenarioType]
+      ?? { tier: null, nextTier: 'bronze' as MedalTier, progress: { have: 0, need: 1 } };
+    const after = computeMastery([...priorScored, { scenarioType, score }]).byScenario[scenarioType];
+    const label = getScenarioConfig(scenarioType)?.label ?? scenarioType;
+
+    if (rank(after.tier) > rank(before.tier)) {
+      return { type: 'unlock', tier: after.tier!, scenarioLabel: label };
+    }
+    if (
+      after.progress && before.progress &&
+      after.nextTier === before.nextTier &&
+      after.progress.have > before.progress.have
+    ) {
+      return {
+        type: 'progress',
+        tier: after.nextTier!,
+        scenarioLabel: label,
+        have: after.progress.have,
+        need: after.progress.need,
+      };
+    }
+    return null;
+  }, [assessment, scenarioType, priorScored]);
 
   const handleSkip = () => {
     abortRef.current?.abort();
@@ -457,6 +496,7 @@ export default function AssessmentScreen() {
           letter={getDisplayScore(assessment).letter}
           stats={stats}
           streakDays={streakDays}
+          medal={medal}
         />
         <Text style={styles.summary}>{assessment.summary}</Text>
       </View>
