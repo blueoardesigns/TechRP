@@ -4,9 +4,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../../lib/supabase';
+import { useAuth } from '../../../context/AuthContext';
 import { Assessment } from '../../../lib/types';
-import ScoreBadge from '../../../components/ScoreBadge';
+import ScoreReveal, { SessionStats } from '../../../components/ScoreReveal';
 import { getDisplayScore } from '../../../lib/scoring';
+import { fetchStreak } from '../../../lib/streaks';
 import { colors, spacing, radius } from '../../../lib/theme';
 
 type GradingStep = 'loading' | 'grading' | 'done' | 'skipped' | 'error';
@@ -21,6 +23,9 @@ export default function AssessmentScreen() {
   const [hasPending, setHasPending] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [elapsedSecs, setElapsedSecs] = useState(0);
+  const [stats, setStats] = useState<SessionStats | null>(null);
+  const [streakDays, setStreakDays] = useState<number | null>(null);
+  const { profile } = useAuth();
   const router = useRouter();
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -35,6 +40,52 @@ export default function AssessmentScreen() {
     }
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [step]);
+
+  // Prior-session stats + streak for the reveal — best-effort, never blocks grading
+  useEffect(() => {
+    if (!sessionId || !profile) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const authUserId = authUser?.id;
+        if (!authUserId) return;
+
+        const { data } = await supabase
+          .from('training_sessions')
+          .select('id, assessment')
+          .or(`user_id.eq.${authUserId},user_id.eq.${profile.id}`)
+          .neq('id', sessionId);
+
+        if (cancelled) return;
+
+        const scores = (data ?? [])
+          .map(row => {
+            const raw = row.assessment;
+            const parsed = raw
+              ? (typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw)
+              : null;
+            return parsed ? getDisplayScore(parsed).score : 0;
+          })
+          .filter(s => s > 0);
+
+        setStats({
+          previousBest: scores.length ? Math.max(...scores) : 0,
+          average: scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0,
+          count: scores.length,
+        });
+      } catch (e) {
+        console.error('[Assessment] stats fetch failed:', e);
+      }
+    })();
+
+    fetchStreak(profile.id).then(info => {
+      if (!cancelled && info) setStreakDays(info.current);
+    });
+
+    return () => { cancelled = true; };
+  }, [sessionId, profile]);
 
   useEffect(() => {
     if (!sessionId) {
@@ -142,9 +193,18 @@ export default function AssessmentScreen() {
 
         setStatusMessage('AI is analyzing your call…');
 
+        // Send the Supabase access token so the server can authenticate this
+        // request (the route now rejects unauthenticated callers) and resolve
+        // coach-isolated playbooks for this user.
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+
         const res = await fetch(`${baseUrl}/api/assess`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
           signal: controller.signal,
           body: JSON.stringify({
             messages: transcript,
@@ -392,10 +452,12 @@ export default function AssessmentScreen() {
     <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
       {/* Score hero */}
       <View style={styles.heroCard}>
-        <View style={styles.scoreRow}>
-          <ScoreBadge score={getDisplayScore(assessment).score} size="lg" />
-          <Text style={styles.grade}>{getDisplayScore(assessment).letter}</Text>
-        </View>
+        <ScoreReveal
+          score={getDisplayScore(assessment).score}
+          letter={getDisplayScore(assessment).letter}
+          stats={stats}
+          streakDays={streakDays}
+        />
         <Text style={styles.summary}>{assessment.summary}</Text>
       </View>
 
@@ -553,13 +615,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginTop: spacing.sm,
   },
-  scoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  grade: { fontSize: 42, fontWeight: '900', color: colors.text },
   summary: { color: colors.textMuted, fontSize: 15, lineHeight: 23 },
 
   bulletRow: { flexDirection: 'row', marginBottom: spacing.sm, gap: spacing.sm, alignItems: 'flex-start' },

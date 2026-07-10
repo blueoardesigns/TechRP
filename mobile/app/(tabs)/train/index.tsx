@@ -8,6 +8,7 @@ import { getSectionedScenarios } from '../../../lib/scenarios';
 import { Persona, ScenarioConfig } from '../../../lib/types';
 import { colors, spacing, radius } from '../../../lib/theme';
 import { Touchable } from '../../../components/Touchable';
+import StreakCard from '../../../components/StreakCard';
 
 const DEFAULT_ORG_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -86,7 +87,7 @@ export default function ScenarioPickerScreen() {
       sections={sections}
       keyExtractor={(item) => item.type}
       stickySectionHeadersEnabled={false}
-      renderSectionHeader={({ section, index }: { section: any; index: number }) => (
+      renderSectionHeader={({ section }: { section: any }) => (
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionHeader}>{section.title}</Text>
         </View>
@@ -120,6 +121,9 @@ export default function ScenarioPickerScreen() {
         <View style={styles.header}>
           <Text style={styles.screenTitle}>Choose a Scenario</Text>
           <Text style={styles.screenSubtitle}>Pick a situation to practice</Text>
+          <View style={styles.streakWrap}>
+            <StreakCard />
+          </View>
         </View>
       }
     />
@@ -131,6 +135,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.xxl },
 
   header: { marginBottom: spacing.lg },
+  streakWrap: { marginTop: spacing.md },
   screenTitle: { fontSize: 28, fontWeight: '700', color: colors.text, letterSpacing: -0.3, marginBottom: 4 },
   screenSubtitle: { fontSize: 14, color: colors.textMuted },
 

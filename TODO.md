@@ -60,6 +60,9 @@ Last updated: 2026-04-14
 - [ ] Field recording upload (audio file → transcript → assessment)
 - [ ] Mobile session history
 - [x] **Timestamped recording links in session notes** — Practice Moments now show play buttons that seek the recording to the relevant moment. Implemented 2026-05-26.
+- [x] **Gamification Phase A: score reveal + practice streaks** — animated count-up/grade stamp/confetti/haptics on assessment, streak card on Train tab. Spec: `docs/superpowers/specs/2026-07-10-gamification-phase-a-design.md`. Implemented 2026-07-10.
+- [ ] **Gamification Phase B: scenario mastery medals** — bronze/silver/gold per scenario type from best score + rep count; medal/progress ring on scenario picker rows (approved 2026-07-10)
+- [ ] **Gamification Phase C: XP, levels & rank titles** — score-weighted XP per session, trade-flavored ranks (Rookie → Rainmaker), level ring on profile avatar, +XP on assessment screen (approved 2026-07-10)
 
 ---
 
