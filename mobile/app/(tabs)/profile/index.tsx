@@ -3,6 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIn
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../lib/supabase';
 import { fetchXP, XPProfile } from '../../../lib/xp';
+import { fetchMastery, MasteryMap } from '../../../lib/mastery';
+import { getSectionedScenarios } from '../../../lib/scenarios';
+import StreakCard from '../../../components/StreakCard';
 import { colors, spacing, radius } from '../../../lib/theme';
 
 interface BillingInfo {
@@ -26,12 +29,16 @@ export default function ProfileScreen() {
   const [billing, setBilling] = useState<BillingInfo | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
   const [xp, setXP] = useState<XPProfile | null>(null);
+  const [mastery, setMastery] = useState<MasteryMap | null>(null);
 
   useEffect(() => {
     if (!profile) return;
     let cancelled = false;
     fetchXP(profile.id).then(p => {
       if (!cancelled && p) setXP(p);
+    });
+    fetchMastery(profile.id).then(m => {
+      if (!cancelled && m) setMastery(m);
     });
     return () => { cancelled = true; };
   }, [profile]);
@@ -117,29 +124,41 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* XP progress */}
+      {/* Progress: XP, streak, medals */}
+      <Text style={styles.sectionLabel}>Progress</Text>
       {xp && (
-        <>
-          <Text style={styles.sectionLabel}>Progress</Text>
-          <View style={styles.card}>
-            <View style={styles.xpCard}>
-              <View style={styles.xpHeaderRow}>
-                <Text style={styles.xpTotal}>{xp.totalXP.toLocaleString()} XP</Text>
-                <Text style={styles.xpToNext}>
-                  {(xp.levelProgress.need - xp.levelProgress.have).toLocaleString()} XP to Level {xp.level + 1}
-                </Text>
-              </View>
-              <View style={styles.xpTrack}>
-                <View
-                  style={[
-                    styles.xpFill,
-                    { width: `${Math.min(100, (xp.levelProgress.have / xp.levelProgress.need) * 100)}%` },
-                  ]}
-                />
-              </View>
+        <View style={[styles.card, styles.progressCluster]}>
+          <View style={styles.xpCard}>
+            <View style={styles.xpHeaderRow}>
+              <Text style={styles.xpTotal}>{xp.totalXP.toLocaleString()} XP</Text>
+              <Text style={styles.xpToNext}>
+                {(xp.levelProgress.need - xp.levelProgress.have).toLocaleString()} XP to Level {xp.level + 1}
+              </Text>
+            </View>
+            <View style={styles.xpTrack}>
+              <View
+                style={[
+                  styles.xpFill,
+                  { width: `${Math.min(100, (xp.levelProgress.have / xp.levelProgress.need) * 100)}%` },
+                ]}
+              />
             </View>
           </View>
-        </>
+        </View>
+      )}
+      <StreakCard />
+      {mastery && (mastery.counts.gold + mastery.counts.silver + mastery.counts.bronze) > 0 && (
+        <View style={[styles.card, styles.medalsCard]}>
+          <View style={styles.medalsRow}>
+            <Text style={styles.medalCount}>🥇 {mastery.counts.gold}</Text>
+            <Text style={styles.medalCount}>🥈 {mastery.counts.silver}</Text>
+            <Text style={styles.medalCount}>🥉 {mastery.counts.bronze}</Text>
+          </View>
+          <Text style={styles.medalsSubtext}>
+            {mastery.counts.gold + mastery.counts.silver + mastery.counts.bronze} of{' '}
+            {getSectionedScenarios().reduce((n, s) => n + s.data.length, 0)} scenarios medaled
+          </Text>
+        </View>
       )}
 
       {/* Info card */}
@@ -284,6 +303,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#BF5AF2',
   },
+
+  // Progress cluster: XP + streak + medals sit close; last card closes the section
+  progressCluster: { marginBottom: spacing.md },
+  medalsCard: { padding: spacing.lg, gap: spacing.sm },
+  medalsRow: { flexDirection: 'row', gap: spacing.xl },
+  medalCount: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  medalsSubtext: { color: colors.textMuted, fontSize: 12 },
 
   sectionLabel: {
     color: colors.accentLight,
