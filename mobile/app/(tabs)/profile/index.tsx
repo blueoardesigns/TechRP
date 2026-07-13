@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../lib/supabase';
+import { fetchXP, XPProfile } from '../../../lib/xp';
 import { colors, spacing, radius } from '../../../lib/theme';
 
 interface BillingInfo {
@@ -24,6 +25,16 @@ export default function ProfileScreen() {
   const { profile, signOut } = useAuth();
   const [billing, setBilling] = useState<BillingInfo | null>(null);
   const [billingLoading, setBillingLoading] = useState(true);
+  const [xp, setXP] = useState<XPProfile | null>(null);
+
+  useEffect(() => {
+    if (!profile) return;
+    let cancelled = false;
+    fetchXP(profile.id).then(p => {
+      if (!cancelled && p) setXP(p);
+    });
+    return () => { cancelled = true; };
+  }, [profile]);
 
   useEffect(() => {
     if (!profile) return;
@@ -92,12 +103,44 @@ export default function ProfileScreen() {
         </View>
         <Text style={styles.name}>{profile?.full_name ?? 'Unknown User'}</Text>
         <Text style={styles.email}>{profile?.email ?? ''}</Text>
-        {profile?.app_role ? (
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{ROLE_LABELS[profile.app_role] ?? profile.app_role}</Text>
-          </View>
-        ) : null}
+        <View style={styles.badgeRow}>
+          {profile?.app_role ? (
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleText}>{ROLE_LABELS[profile.app_role] ?? profile.app_role}</Text>
+            </View>
+          ) : null}
+          {xp && (
+            <View style={styles.rankBadge}>
+              <Text style={styles.rankText}>Level {xp.level} · {xp.rank}</Text>
+            </View>
+          )}
+        </View>
       </View>
+
+      {/* XP progress */}
+      {xp && (
+        <>
+          <Text style={styles.sectionLabel}>Progress</Text>
+          <View style={styles.card}>
+            <View style={styles.xpCard}>
+              <View style={styles.xpHeaderRow}>
+                <Text style={styles.xpTotal}>{xp.totalXP.toLocaleString()} XP</Text>
+                <Text style={styles.xpToNext}>
+                  {(xp.levelProgress.need - xp.levelProgress.have).toLocaleString()} XP to Level {xp.level + 1}
+                </Text>
+              </View>
+              <View style={styles.xpTrack}>
+                <View
+                  style={[
+                    styles.xpFill,
+                    { width: `${Math.min(100, (xp.levelProgress.have / xp.levelProgress.need) * 100)}%` },
+                  ]}
+                />
+              </View>
+            </View>
+          </View>
+        </>
+      )}
 
       {/* Info card */}
       <View style={styles.card}>
@@ -214,6 +257,33 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   roleText: { color: colors.accentLight, fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
+  badgeRow: { flexDirection: 'row', gap: spacing.sm },
+  rankBadge: {
+    backgroundColor: 'rgba(191,90,242,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(191,90,242,0.25)',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  rankText: { color: '#BF5AF2', fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.8 },
+
+  // XP progress card
+  xpCard: { padding: spacing.lg, gap: spacing.sm },
+  xpHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  xpTotal: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  xpToNext: { color: colors.textMuted, fontSize: 12 },
+  xpTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceHigh,
+    overflow: 'hidden',
+  },
+  xpFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: '#BF5AF2',
+  },
 
   sectionLabel: {
     color: colors.accentLight,

@@ -108,6 +108,42 @@ describe('ScoreReveal', () => {
     expect(queryByText(/toward/)).toBeNull();
   });
 
+  it('shows the XP gained line', async () => {
+    const { getByText } = render(
+      <ScoreReveal score={85} letter="B" stats={null} streakDays={null} xpGained={115} />,
+    );
+    await waitFor(() => getByText('+115 XP'));
+  });
+
+  it('shows a level-up line', async () => {
+    const { getByText } = render(
+      <ScoreReveal
+        score={85} letter="B" stats={null} streakDays={null}
+        levelUp={{ level: 8, rank: 'Journeyman', rankChanged: false }}
+      />,
+    );
+    await waitFor(() => getByText('⬆️ Level 8 — Journeyman!'));
+  });
+
+  it('uses rank-up wording when the rank band changes', async () => {
+    const { getByText } = render(
+      <ScoreReveal
+        score={85} letter="B" stats={null} streakDays={null}
+        levelUp={{ level: 10, rank: 'Pro', rankChanged: true }}
+      />,
+    );
+    await waitFor(() => getByText('⬆️ Rank up! Level 10 — Pro'));
+  });
+
+  it('omits XP and level lines when data is unavailable', async () => {
+    const { getByText, queryByText } = render(
+      <ScoreReveal score={75} letter="C" stats={null} streakDays={null} xpGained={null} levelUp={null} />,
+    );
+    await waitFor(() => getByText('75'));
+    expect(queryByText(/XP/)).toBeNull();
+    expect(queryByText(/Level/)).toBeNull();
+  });
+
   it('shows streak started on day 1 and extended after', async () => {
     const first = render(
       <ScoreReveal score={75} letter="C" stats={null} streakDays={1} />,

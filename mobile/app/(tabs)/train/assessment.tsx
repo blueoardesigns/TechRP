@@ -10,6 +10,7 @@ import ScoreReveal, { SessionStats, MedalMoment } from '../../../components/Scor
 import { getDisplayScore } from '../../../lib/scoring';
 import { fetchStreak } from '../../../lib/streaks';
 import { computeMastery, rowsToScoredSessions, ScoredSession, MedalTier } from '../../../lib/mastery';
+import { computeXP, rowsToXPScores, xpForSession } from '../../../lib/xp';
 import { getScenarioConfig } from '../../../lib/scenarios';
 import { colors, spacing, radius } from '../../../lib/theme';
 
@@ -28,6 +29,7 @@ export default function AssessmentScreen() {
   const [stats, setStats] = useState<SessionStats | null>(null);
   const [streakDays, setStreakDays] = useState<number | null>(null);
   const [priorScored, setPriorScored] = useState<ScoredSession[] | null>(null);
+  const [priorXPScores, setPriorXPScores] = useState<(number | null)[] | null>(null);
   const [scenarioType, setScenarioType] = useState<string | null>(null);
   const { profile } = useAuth();
   const router = useRouter();
@@ -65,6 +67,7 @@ export default function AssessmentScreen() {
         if (cancelled) return;
 
         setPriorScored(rowsToScoredSessions(data ?? []));
+        setPriorXPScores(rowsToXPScores(data ?? []));
 
         const scores = (data ?? [])
           .map(row => {
@@ -317,6 +320,21 @@ export default function AssessmentScreen() {
     return null;
   }, [assessment, scenarioType, priorScored]);
 
+  // XP for this session + level-up detection (before vs after, like medals)
+  const xpMoment = useMemo(() => {
+    if (!assessment || priorXPScores === null) return { xpGained: null, levelUp: null };
+    const { score } = getDisplayScore(assessment);
+    const sessionScore = score > 0 ? score : null;
+    const before = computeXP(priorXPScores);
+    const after = computeXP([...priorXPScores, sessionScore]);
+    return {
+      xpGained: xpForSession(sessionScore),
+      levelUp: after.level > before.level
+        ? { level: after.level, rank: after.rank, rankChanged: after.rank !== before.rank }
+        : null,
+    };
+  }, [assessment, priorXPScores]);
+
   const handleSkip = () => {
     abortRef.current?.abort();
     setStep('skipped');
@@ -497,6 +515,8 @@ export default function AssessmentScreen() {
           stats={stats}
           streakDays={streakDays}
           medal={medal}
+          xpGained={xpMoment.xpGained}
+          levelUp={xpMoment.levelUp}
         />
         <Text style={styles.summary}>{assessment.summary}</Text>
       </View>

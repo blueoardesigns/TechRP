@@ -34,6 +34,10 @@ interface Props {
   streakDays: number | null;
   /** Medal unlocked or progressed by this session; null = nothing to show */
   medal?: MedalMoment | null;
+  /** XP earned by this session; null = unavailable (line omitted) */
+  xpGained?: number | null;
+  /** Level reached by this session, if it caused a level-up */
+  levelUp?: { level: number; rank: string; rankChanged: boolean } | null;
 }
 
 function medalLine(medal: MedalMoment): string {
@@ -65,7 +69,7 @@ function comparisonLine(score: number, stats: SessionStats): string {
 const COUNT_UP_MS = 1200;
 const HAPTIC_STEP = 15;
 
-export default function ScoreReveal({ score, letter, stats, streakDays, medal = null }: Props) {
+export default function ScoreReveal({ score, letter, stats, streakDays, medal = null, xpGained = null, levelUp = null }: Props) {
   const [displayScore, setDisplayScore] = useState(0);
   const [stamped, setStamped] = useState(false);
   const [reduceMotion, setReduceMotion] = useState<boolean | null>(null);
@@ -80,7 +84,7 @@ export default function ScoreReveal({ score, letter, stats, streakDays, medal = 
 
   const isPersonalBest = !!stats && stats.count > 0 && score > stats.previousBest;
   const goldUnlock = medal?.type === 'unlock' && medal.tier === 'gold';
-  const celebrate = letter === 'A' || isPersonalBest || goldUnlock;
+  const celebrate = letter === 'A' || isPersonalBest || goldUnlock || !!levelUp?.rankChanged;
   const color = scoreColor(score);
 
   useEffect(() => {
@@ -164,6 +168,16 @@ export default function ScoreReveal({ score, letter, stats, streakDays, medal = 
             {medalLine(medal)}
           </Text>
         )}
+        {xpGained != null && xpGained > 0 && (
+          <Text style={styles.xpText}>+{xpGained} XP</Text>
+        )}
+        {levelUp && (
+          <Text style={styles.levelUpText}>
+            {levelUp.rankChanged
+              ? `⬆️ Rank up! Level ${levelUp.level} — ${levelUp.rank}`
+              : `⬆️ Level ${levelUp.level} — ${levelUp.rank}!`}
+          </Text>
+        )}
       </Animated.View>
 
       {fireConfetti && (
@@ -203,4 +217,6 @@ const styles = StyleSheet.create({
   streakText: { color: '#FF9500', fontSize: 14, fontWeight: '700' },
   medalUnlockText: { color: '#FFD60A', fontSize: 14, fontWeight: '700' },
   medalProgressText: { color: colors.textMuted, fontSize: 14, fontWeight: '600' },
+  xpText: { color: colors.accentLight, fontSize: 14, fontWeight: '700' },
+  levelUpText: { color: '#BF5AF2', fontSize: 14, fontWeight: '700' },
 });
