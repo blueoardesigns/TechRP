@@ -13,9 +13,21 @@
  */
 
 import { NextResponse } from 'next/server';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../../shared/types/database';
 import { createServerSupabase, createServiceSupabase } from './supabase-server';
 
 export type AppRole = 'individual' | 'company_admin' | 'coach' | 'superuser';
+
+/**
+ * Service-role Supabase client typed against the project `Database`.
+ *
+ * The five core tables (users, organizations, personas, training_sessions,
+ * playbooks) are fully modelled, so queries against them are type-checked.
+ * Tables not yet in `Database` still require a local `(db as any)` cast — see
+ * the coverage note in shared/types/database.ts.
+ */
+export type TypedDb = SupabaseClient<Database>;
 
 export interface AuthedUser {
   /** Supabase auth.users.id */
@@ -31,7 +43,7 @@ export interface AuthedUser {
 }
 
 export type RequireUserResult =
-  | { ok: true; user: AuthedUser; service: ReturnType<typeof createServiceSupabase> }
+  | { ok: true; user: AuthedUser; service: TypedDb }
   | { ok: false; response: NextResponse };
 
 export interface RequireUserOptions {
@@ -39,17 +51,35 @@ export interface RequireUserOptions {
   roles?: AppRole[];
   /** If true, allow suspended/pending users through. Default false. */
   allowNonApproved?: boolean;
+  /**
+   * Supabase access token from an `Authorization: Bearer` header, for routes
+   * the mobile app calls. Mobile has no cookies for `createServerSupabase()`
+   * to read, so those routes pass the token explicitly. When null/absent the
+   * cookie session is used, so existing web-only callers are unaffected.
+   */
+  bearerToken?: string | null;
 }
 
 export async function requireUser(opts: RequireUserOptions = {}): Promise<RequireUserResult> {
-  const supabaseAuth = createServerSupabase();
-  const { data: { user: authUser }, error: authErr } = await supabaseAuth.auth.getUser();
-  if (authErr || !authUser) {
+  let authUser: { id: string; email?: string } | null = null;
+  if (opts.bearerToken) {
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data } = await anonClient.auth.getUser(opts.bearerToken);
+    authUser = data.user;
+  } else {
+    const supabaseAuth = createServerSupabase();
+    const { data } = await supabaseAuth.auth.getUser();
+    authUser = data.user;
+  }
+  if (!authUser) {
     return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) };
   }
 
-  const service = createServiceSupabase();
-  const { data: profile, error: profErr } = await (service as any)
+  const service = createServiceSupabase() as TypedDb;
+  const { data: profile, error: profErr } = await service
     .from('users')
     .select('id, email, app_role, status, organization_id, coach_instance_id, user_type')
     .eq('auth_user_id', authUser.id)

@@ -4,8 +4,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 const PUBLIC_PREFIXES = [
   '/api/auth/',
   '/api/stripe/webhook',
-  '/api/assess',     // mobile POSTs here without cookies; route validates input itself
+  '/api/assess',     // route handler validates Bearer token from mobile (no cookies)
   '/api/playbooks',  // route handler validates Bearer token from mobile
+  '/api/recording',  // route handler validates Bearer token from mobile, then session ownership
   '/_next/',
   '/favicon',
   // Coach-connection accept/decline confirmation flow. The approval token

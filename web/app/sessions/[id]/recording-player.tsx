@@ -11,8 +11,11 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
   vapiCallId: string | null;
   initialUrl: string | null;
 }>(function RecordingPlayer({ sessionId, vapiCallId, initialUrl }, ref) {
-  const [url, setUrl] = useState<string | null>(initialUrl);
-  const [loading, setLoading] = useState(!initialUrl && !!vapiCallId);
+  // Vapi recording URLs are now short-lived signed links (Jul 2026 auth
+  // change), so a cached initialUrl from the DB can't be trusted — always
+  // fetch a fresh one when we have a vapiCallId to fetch it with.
+  const [url, setUrl] = useState<string | null>(vapiCallId ? null : initialUrl);
+  const [loading, setLoading] = useState(!!vapiCallId);
   const [error, setError] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -26,28 +29,23 @@ export const RecordingPlayer = forwardRef<RecordingPlayerHandle, {
   }), [url]);
 
   useEffect(() => {
-    if (initialUrl || !vapiCallId) return;
+    if (!vapiCallId) return;
     fetch('/api/recording', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ callId: vapiCallId }),
+      body: JSON.stringify({ sessionId }),
     })
       .then(r => r.json())
       .then(d => {
         if (d.recordingUrl) {
           setUrl(d.recordingUrl);
-          fetch(`/api/sessions/${sessionId}/recording`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ recording_url: d.recordingUrl }),
-          }).catch(() => {});
         } else {
           setError(true);
         }
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [sessionId, vapiCallId, initialUrl]);
+  }, [sessionId, vapiCallId]);
 
   if (loading) {
     return <p className="text-sm text-slate-500 animate-pulse">Fetching recording…</p>;

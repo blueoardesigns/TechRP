@@ -536,17 +536,11 @@ export default function TrainingPage() {
       }
 
       if (vapiCallIdRef.current) {
+        // Vapi recording URLs are short-lived signed links, so only the call id
+        // is worth persisting — playback resolves a fresh URL on demand.
         try {
-          const rec = await fetch('/api/recording', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ callId: vapiCallIdRef.current }),
-          });
-          const recData = rec.ok ? await rec.json() : null;
-          await updateSessionRecording(session.id, recData?.recordingUrl || null, vapiCallIdRef.current);
-        } catch {
-          try { await updateSessionRecording(session.id, null, vapiCallIdRef.current!); } catch {}
-        }
+          await updateSessionRecording(session.id, vapiCallIdRef.current);
+        } catch {}
       }
 
       setSaveStatus('saved');

@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '../lib/theme';
+import { supabase } from '../lib/supabase';
 
 export interface RecordingPlayerHandle {
   seekTo: (seconds: number) => void;
@@ -16,8 +17,11 @@ interface Props {
 
 const RecordingPlayer = forwardRef<RecordingPlayerHandle, Props>(
   function RecordingPlayer({ recordingUrl, vapiCallId, sessionId }, ref) {
-    const [url, setUrl] = useState<string | null>(recordingUrl);
-    const [loading, setLoading] = useState(!recordingUrl && !!vapiCallId);
+    // Vapi recording URLs are now short-lived signed links (Jul 2026 auth
+    // change), so a cached recordingUrl can't be trusted — always fetch a
+    // fresh one when we have a vapiCallId to fetch it with.
+    const [url, setUrl] = useState<string | null>(vapiCallId ? null : recordingUrl);
+    const [loading, setLoading] = useState(!!vapiCallId);
     const [error, setError] = useState(false);
     const [playing, setPlaying] = useState(false);
     const [position, setPosition] = useState(0);
@@ -61,12 +65,18 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, Props>(
     }), [url]);
 
     useEffect(() => {
-      if (recordingUrl || !vapiCallId) return;
+      if (!vapiCallId) return;
       const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-      fetch(`${baseUrl}/api/recording`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ callId: vapiCallId }),
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        const accessToken = session?.access_token;
+        return fetch(`${baseUrl}/api/recording`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({ sessionId }),
+        });
       })
         .then(r => r.json())
         .then(d => {
@@ -78,7 +88,7 @@ const RecordingPlayer = forwardRef<RecordingPlayerHandle, Props>(
         })
         .catch(() => setError(true))
         .finally(() => setLoading(false));
-    }, [recordingUrl, vapiCallId]);
+    }, [sessionId, vapiCallId]);
 
     useEffect(() => {
       return () => {

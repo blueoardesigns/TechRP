@@ -47,13 +47,12 @@ export async function updateSessionAssessment(sessionId: string, assessment: str
 
 export async function updateSessionRecording(
   sessionId: string,
-  recordingUrl: string | null,
   vapiCallId: string
 ) {
   const res = await fetch('/api/sessions', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: sessionId, recording_url: recordingUrl, vapi_call_id: vapiCallId }),
+    body: JSON.stringify({ id: sessionId, vapi_call_id: vapiCallId }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error ?? 'Failed to update recording');
