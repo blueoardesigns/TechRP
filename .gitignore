@@ -65,3 +65,7 @@ TODO.md
 
 # Caliber AI context sync
 .caliber/
+
+# iOS build artifacts (large binaries — do not commit)
+*.ipa
+*.app.dSYM.zip
