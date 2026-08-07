@@ -59,6 +59,7 @@ Last updated: 2026-04-14
 - [ ] Expo dev build for Vapi integration (requires custom native module)
 - [ ] Field recording upload (audio file → transcript → assessment)
 - [ ] Mobile session history
+- [x] **Call recordings moved to own R2 storage** — Vapi retired public recording URLs (Jul 2026) and its pay-as-you-go tier only keeps calls 14 days. Recordings now write to Cloudflare R2 (`techrp`) via Vapi custom storage; `/api/recording` presigns objects with a read-only R2 token, gated on session ownership. Format set to `mp3` via assistantOverrides (5.09 MB/min → 0.49 MB/min, ~10x smaller). 12-month object lifecycle rule applied in Cloudflare. Implemented 2026-08-07.
 - [x] **Timestamped recording links in session notes** — Practice Moments now show play buttons that seek the recording to the relevant moment. Implemented 2026-05-26.
 - [x] **Gamification Phase A: score reveal + practice streaks** — animated count-up/grade stamp/confetti/haptics on assessment, streak card on Train tab. Spec: `docs/superpowers/specs/2026-07-10-gamification-phase-a-design.md`. Implemented 2026-07-10.
 - [x] **Gamification Phase B: scenario mastery medals** — bronze/silver/gold per scenario type, medals on scenario picker rows + mastery summary, unlock/progress lines on assessment reveal. Spec: `docs/superpowers/specs/2026-07-10-gamification-phase-b-mastery-design.md`. Implemented 2026-07-10.
