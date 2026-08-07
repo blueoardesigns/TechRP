@@ -7,7 +7,7 @@ export async function GET() {
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServiceSupabase();
-  const { data: admin } = await (supabase as any)
+  const { data: admin } = await supabase
     .from('users')
     .select('id, organization_id, app_role')
     .eq('auth_user_id', authUser.id)
@@ -24,8 +24,8 @@ export async function GET() {
   const orgId = (admin as any).organization_id;
 
   const [orgRes, membersRes] = await Promise.all([
-    (supabase as any).from('organizations').select('invite_token, seat_limit').eq('id', orgId).single(),
-    (supabase as any)
+    supabase.from('organizations').select('invite_token, seat_limit').eq('id', orgId).single(),
+    supabase
       .from('users')
       .select('id, full_name, email, status, created_at, scenario_access')
       .eq('organization_id', orgId)
@@ -38,7 +38,7 @@ export async function GET() {
 
   // Fetch all sessions for org members
   const { data: sessions } = memberIds.length
-    ? await (supabase as any)
+    ? await supabase
         .from('training_sessions')
         .select('id, user_id, started_at, assessment')
         .in('user_id', memberIds)

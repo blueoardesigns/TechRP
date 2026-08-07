@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServiceSupabase();
-  const { data: admin } = await (supabase as any)
+  const { data: admin } = await supabase
     .from('users')
     .select('id, organization_id, app_role')
     .eq('auth_user_id', authUser.id)
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const range = url.searchParams.get('range') ?? 'all';
 
   // Get all individual members of this org
-  const { data: members } = await (supabase as any)
+  const { data: members } = await supabase
     .from('users')
     .select('id, full_name, email')
     .eq('organization_id', orgId)
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   const memberIds = Object.keys(memberMap);
   if (!memberIds.length) return NextResponse.json({ sessions: [], members: [] });
 
-  let query = (supabase as any)
+  let query = supabase
     .from('training_sessions')
     .select('id, user_id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
     .in('user_id', memberIds)

@@ -17,7 +17,7 @@ export async function POST(
 
   // Load session and verify the caller owns it (or is a same-org admin/coach,
   // or is a superuser).
-  const { data: session } = await (supabase as any)
+  const { data: session } = await supabase
     .from('training_sessions')
     .select('id, user_id, organization_id, share_token')
     .eq('id', params.id)
@@ -34,7 +34,7 @@ export async function POST(
   if (enabled) {
     const token = randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + SHARE_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    await (supabase as any)
+    await supabase
       .from('training_sessions')
       .update({
         share_token: token,
@@ -49,7 +49,7 @@ export async function POST(
     });
   }
 
-  await (supabase as any)
+  await supabase
     .from('training_sessions')
     .update({ share_token: null, share_expires_at: null })
     .eq('id', params.id);

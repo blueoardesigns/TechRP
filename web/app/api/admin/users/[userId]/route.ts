@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { userId
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
   }
 
-  const { error } = await (supabase as any).from('users').update(update).eq('id', userId);
+  const { error } = await supabase.from('users').update(update).eq('id', userId);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }
@@ -30,10 +30,10 @@ export async function DELETE(_request: NextRequest, { params }: { params: { user
   const { userId } = params;
 
   // Get auth_user_id first for Supabase auth deletion
-  const { data: profile } = await (supabase as any)
+  const { data: profile } = await supabase
     .from('users').select('auth_user_id').eq('id', userId).maybeSingle();
 
-  const { error: dbError } = await (supabase as any).from('users').delete().eq('id', userId);
+  const { error: dbError } = await supabase.from('users').delete().eq('id', userId);
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   if ((profile as any)?.auth_user_id) {

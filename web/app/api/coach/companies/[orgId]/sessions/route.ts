@@ -26,7 +26,7 @@ export async function GET(
   const supabase = createServiceRoleClient();
 
   // Verify org belongs to this coach
-  const { data: org } = await (supabase as any)
+  const { data: org } = await supabase
     .from('organizations')
     .select('id, name')
     .eq('id', params.orgId)
@@ -45,7 +45,7 @@ export async function GET(
   (users ?? []).forEach((u: any) => { userMap[u.id] = u; });
 
   // Get sessions
-  const { data: sessions } = await (supabase as any)
+  const { data: sessions } = await supabase
     .from('training_sessions')
     .select('id, user_id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
     .eq('organization_id', params.orgId)

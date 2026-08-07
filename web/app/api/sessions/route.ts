@@ -17,7 +17,7 @@ export async function GET() {
   if (!auth.ok) return auth.response;
   const { user, service } = auth;
 
-  let query = (service as any).from('training_sessions').select('*').order('started_at', { ascending: false }).limit(200);
+  let query = service.from('training_sessions').select('*').order('started_at', { ascending: false }).limit(200);
 
   if (user.appRole === 'superuser') {
     // no filter
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     organization_id: user.organizationId ?? FALLBACK_ORG,
   };
 
-  const { data, error } = await (service as any)
+  const { data, error } = await service
     .from('training_sessions')
     .insert(insertRow)
     .select()
@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Increment sessions_used and auto-suspend if limit reached
+  // increment_sessions_used is a Postgres function not yet modelled in the
+  // Database type, so this call is cast.
   const { error: rpcError } = await (service as any).rpc('increment_sessions_used', {
     target_user_id: user.profileId,
   });
@@ -74,7 +76,7 @@ export async function POST(req: NextRequest) {
     console.error('Failed to increment sessions_used for user', user.profileId, rpcError);
   }
 
-  const { data: userRow } = await (service as any)
+  const { data: userRow } = await service
     .from('users')
     .select('sessions_used, session_limit, user_type')
     .eq('id', user.profileId)
@@ -83,9 +85,10 @@ export async function POST(req: NextRequest) {
   if (
     userRow &&
     userRow.session_limit !== null &&
+    userRow.sessions_used !== null &&
     userRow.sessions_used >= userRow.session_limit
   ) {
-    await (service as any).from('users').update({ status: 'suspended' }).eq('id', user.profileId);
+    await service.from('users').update({ status: 'suspended' }).eq('id', user.profileId);
   }
 
   // Candidate-specific completion check
@@ -124,7 +127,7 @@ export async function PATCH(req: NextRequest) {
   delete body.organization_id;
 
   // Verify ownership / org access
-  const { data: existing, error: fetchErr } = await (service as any)
+  const { data: existing, error: fetchErr } = await service
     .from('training_sessions')
     .select('user_id, organization_id')
     .eq('id', id)
@@ -135,7 +138,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { data, error } = await (service as any)
+  const { data, error } = await service
     .from('training_sessions')
     .update(body)
     .eq('id', id)

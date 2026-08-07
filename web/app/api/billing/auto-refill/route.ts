@@ -24,9 +24,9 @@ export async function PATCH(req: NextRequest) {
     if (!user.organizationId) {
       return NextResponse.json({ error: 'No organization' }, { status: 400 })
     }
-    await (db as any).from('organizations').update({ auto_refill_enabled: enabled }).eq('id', user.organizationId)
+    await db.from('organizations').update({ auto_refill_enabled: enabled }).eq('id', user.organizationId)
   } else {
-    await (db as any).from('users').update({ auto_refill_enabled: enabled }).eq('id', user.profileId)
+    await db.from('users').update({ auto_refill_enabled: enabled }).eq('id', user.profileId)
   }
 
   return NextResponse.json({ success: true })

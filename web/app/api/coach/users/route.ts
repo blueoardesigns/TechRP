@@ -8,7 +8,7 @@ export async function GET() {
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServiceRoleClient();
-  const { data: coach } = await (supabase as any)
+  const { data: coach } = await supabase
     .from('users')
     .select('coach_instance_id, app_role')
     .eq('auth_user_id', authUser.id)
@@ -18,7 +18,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { data: users } = await (supabase as any)
+  const { data: users } = await supabase
     .from('users')
     .select('id, full_name, email, app_role, status, created_at, organization_id')
     .eq('coach_instance_id', (coach as any).coach_instance_id)
@@ -27,7 +27,7 @@ export async function GET() {
   // Get session counts
   const userIds = (users ?? []).map((u: any) => u.id);
   const { data: sessions } = userIds.length
-    ? await (supabase as any).from('training_sessions').select('user_id').in('user_id', userIds)
+    ? await supabase.from('training_sessions').select('user_id').in('user_id', userIds)
     : { data: [] };
 
   const sessionMap: Record<string, number> = {};

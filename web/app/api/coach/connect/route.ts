@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: data.error_description ?? 'Connect failed' }, { status: 400 })
   }
 
-  await (db as any).from('users')
+  await db.from('users')
     .update({ stripe_connect_account_id: data.stripe_user_id })
     .eq('id', stateCoachId)
 

@@ -37,14 +37,14 @@ export async function POST(request: NextRequest) {
   }
 
   // Check if profile already exists
-  const { data: existing } = await (supabase as any)
+  const { data: existing } = await supabase
     .from('users')
     .select('id')
     .eq('auth_user_id', authUserId)
     .single();
 
   if (!existing) {
-    const { error: profileError } = await (supabase as any).from('users').insert({
+    const { error: profileError } = await supabase.from('users').insert({
       auth_user_id: authUserId,
       email: 'tim@blueoardesigns.com',
       name: 'Tim Bauer',

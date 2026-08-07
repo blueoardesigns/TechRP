@@ -12,7 +12,7 @@ async function authorizePersonaMutation(
   personaId: string,
   caller: { profileId: string; appRole: string | null; coachInstanceId: string | null }
 ): Promise<{ persona: { coach_instance_id: string | null } } | NextResponse> {
-  const { data: persona, error } = await (service as any)
+  const { data: persona, error } = await service
     .from('personas')
     .select('coach_instance_id')
     .eq('id', personaId)
@@ -57,9 +57,16 @@ export async function PUT(
     speaker_label,
     first_message,
     system_prompt,
-  } = body;
+  } = body as {
+    name?: string;
+    personality_type?: string;
+    brief_description?: string;
+    speaker_label?: string;
+    first_message?: string;
+    system_prompt?: string;
+  };
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from('personas')
     .update({
       name,
@@ -95,7 +102,7 @@ export async function DELETE(
   const authz = await authorizePersonaMutation(supabase, id, user);
   if (authz instanceof NextResponse) return authz;
 
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('personas')
     .update({ is_active: false, updated_at: new Date().toISOString() })
     .eq('id', id);

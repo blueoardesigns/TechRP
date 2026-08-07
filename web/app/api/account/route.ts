@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest) {
   if (fullName) { updates.full_name = fullName; updates.name = fullName; }
   if (email) updates.email = email;
 
-  const { data: updatedProfile, error: profileError } = await (supabase as any)
+  const { data: updatedProfile, error: profileError } = await supabase
     .from('users')
     .update(updates)
     .eq('auth_user_id', authUser.id)

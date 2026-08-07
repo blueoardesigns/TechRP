@@ -40,17 +40,17 @@ export async function POST(request: NextRequest) {
 
     if (coachInstanceId) {
       // Copy global playbooks into coach instance (skip already copied)
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await supabase
         .from('playbooks').select('scenario_type').eq('coach_instance_id', coachInstanceId);
       const existingTypes = new Set((existing ?? []).map((p: any) => p.scenario_type));
-      const { data: globalPlaybooks } = await (supabase as any)
+      const { data: globalPlaybooks } = await supabase
         .from('playbooks').select('name, content, scenario_type, organization_id').is('coach_instance_id', null);
       for (const pb of (globalPlaybooks ?? [])) {
         if (existingTypes.has(pb.scenario_type)) {
           playbookResults.push({ name: pb.name, status: 'skipped (already exists)' });
           continue;
         }
-        const { error } = await (supabase as any).from('playbooks').insert({
+        const { error } = await supabase.from('playbooks').insert({
           name: pb.name, content: pb.content, scenario_type: pb.scenario_type,
           organization_id: pb.organization_id ?? '00000000-0000-0000-0000-000000000001',
           coach_instance_id: coachInstanceId, is_default: false, file_url: null,
@@ -60,14 +60,14 @@ export async function POST(request: NextRequest) {
       }
     } else {
       for (const pb of DEFAULT_PLAYBOOKS) {
-        const { data: existing } = await (supabase as any)
+        const { data: existing } = await supabase
           .from('playbooks').select('id').eq('scenario_type', pb.scenarioType)
           .is('coach_instance_id', null).limit(1);
         if (existing && existing.length > 0) {
           playbookResults.push({ name: pb.name, status: 'skipped (already exists)' });
           continue;
         }
-        const { error } = await (supabase as any).from('playbooks').insert({
+        const { error } = await supabase.from('playbooks').insert({
           organization_id: '00000000-0000-0000-0000-000000000001',
           name: pb.name, content: pb.content, scenario_type: pb.scenarioType,
           file_url: null, uploaded_by: '00000000-0000-0000-0000-000000000001',
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     const personaResults = { created: 0, updated: 0, skipped: 0, errors: 0 };
 
     // Check how many personas already exist
-    const { count } = await (supabase as any)
+    const { count } = await supabase
       .from('personas')
       .select('*', { count: 'exact', head: true })
       .eq('is_default', true);
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       personaResults.skipped = ALL_PERSONAS.length;
     } else {
       // Get existing personas by name+scenario_type to detect new vs existing
-      let existingQuery = (supabase as any)
+      let existingQuery = supabase
         .from('personas')
         .select('id, name, scenario_type');
       if (coachInstanceId) {
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       const BATCH = 25;
       for (let i = 0; i < toInsert.length; i += BATCH) {
         const batch = toInsert.slice(i, i + BATCH);
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from('personas')
           .insert(batch);
 
@@ -151,7 +151,8 @@ export async function POST(request: NextRequest) {
         const batch = toUpdate.slice(i, i + BATCH);
         for (const p of batch) {
           const id = existingMap.get(`${p.scenarioType}::${p.name}`);
-          const { error } = await (supabase as any)
+          if (!id) continue;
+          const { error } = await supabase
             .from('personas')
             .update({
               personality_type: p.personalityType,

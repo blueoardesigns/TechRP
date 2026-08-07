@@ -23,11 +23,11 @@ export async function POST(req: NextRequest) {
     if (!user.organizationId) {
       return NextResponse.json({ error: 'No organization' }, { status: 400 })
     }
-    const { data } = await (db as any).from('organizations')
+    const { data } = await db.from('organizations')
       .select('stripe_customer_id').eq('id', user.organizationId).single()
     customerId = data?.stripe_customer_id ?? null
   } else {
-    const { data } = await (db as any).from('users')
+    const { data } = await db.from('users')
       .select('stripe_customer_id').eq('id', user.profileId).single()
     customerId = data?.stripe_customer_id ?? null
   }

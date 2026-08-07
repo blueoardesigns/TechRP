@@ -8,7 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { userId: st
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServiceRoleClient();
-  const { data: coach } = await (supabase as any)
+  const { data: coach } = await supabase
     .from('users')
     .select('coach_instance_id, app_role')
     .eq('auth_user_id', authUser.id)
@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { userId: st
   }
 
   // Confirm the target user belongs to this coach's instance
-  const { data: target } = await (supabase as any)
+  const { data: target } = await supabase
     .from('users')
     .select('id, coach_instance_id')
     .eq('id', params.userId)
@@ -33,6 +33,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { userId: st
   if (status !== 'rejected') {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
-  await (supabase as any).from('users').update({ status }).eq('id', params.userId);
+  await supabase.from('users').update({ status }).eq('id', params.userId);
   return NextResponse.json({ success: true });
 }

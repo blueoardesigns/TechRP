@@ -4,7 +4,7 @@ import { requireUser, canAccessOwned } from '@/lib/api-auth';
 const FALLBACK_ORG = '00000000-0000-0000-0000-000000000001';
 
 async function loadPlaybook(service: ReturnType<typeof import('@/lib/supabase-server').createServiceSupabase>, id: string) {
-  const { data, error } = await (service as any)
+  const { data, error } = await service
     .from('playbooks')
     .select('id, organization_id, uploaded_by, name, content, scenario_type, created_at, updated_at')
     .eq('id', id)
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 });
   }
 
-  const { data, error } = await (service as any)
+  const { data, error } = await service
     .from('playbooks').update(updates).eq('id', params.id).select().single();
   if (error || !data) return NextResponse.json({ error: error?.message ?? 'Failed to save' }, { status: 500 });
   return NextResponse.json({ playbook: data });
@@ -100,7 +100,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (!existing) return NextResponse.json({ error: 'Playbook not found' }, { status: 404 });
   if (!canWrite(user, existing)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  const { error } = await (service as any).from('playbooks').delete().eq('id', params.id);
+  const { error } = await service.from('playbooks').delete().eq('id', params.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

@@ -7,7 +7,7 @@ export async function GET() {
   const { service: supabase } = auth;
 
   // Fetch all users
-  const { data: users, error } = await (supabase as any)
+  const { data: users, error } = await supabase
     .from('users')
     .select('id, auth_user_id, email, full_name, name, app_role, status, organization_id, coach_instance_id, created_at')
     .order('created_at', { ascending: false });
@@ -15,13 +15,14 @@ export async function GET() {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   // Fetch all training sessions for stats
-  const { data: sessions } = await (supabase as any)
+  const { data: sessions } = await supabase
     .from('training_sessions')
     .select('id, user_id, started_at, ended_at, assessment');
 
   // Build per-user stats
   const statsMap: Record<string, { sessionCount: number; totalMinutes: number; scores: number[] }> = {};
   for (const s of (sessions ?? [])) {
+    if (!s.user_id) continue;
     if (!statsMap[s.user_id]) statsMap[s.user_id] = { sessionCount: 0, totalMinutes: 0, scores: [] };
     statsMap[s.user_id].sessionCount++;
     if (s.ended_at && s.started_at) {
@@ -35,7 +36,7 @@ export async function GET() {
   }
 
   // Fetch org names
-  const { data: orgs } = await (supabase as any).from('organizations').select('id, name');
+  const { data: orgs } = await supabase.from('organizations').select('id, name');
   const orgMap: Record<string, string> = {};
   for (const o of (orgs ?? [])) orgMap[o.id] = o.name;
 
