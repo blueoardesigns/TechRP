@@ -268,9 +268,17 @@ export default function TrainingPage() {
     // Krisp (noise cancellation) throws an unhandled rejection when the mic is
     // unavailable. It's non-fatal — catch and suppress so the overlay doesn't appear.
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      if (event.reason?.name === 'KrispInitError' || String(event.reason).includes('Krisp')) {
-        event.preventDefault();
-      }
+      const reason = String(event.reason);
+      // Krisp (noise cancellation) rejects when the mic is unavailable, and the
+      // audio-level observer rejects during teardown because the AudioContext is
+      // already closing. Both are post-call cleanup noise on a call that already
+      // succeeded — suppress so they don't surface as overlays or Sentry errors.
+      const benign =
+        event.reason?.name === 'KrispInitError' ||
+        reason.includes('Krisp') ||
+        reason.includes('local audio level observer') ||
+        reason.includes("worklet's module");
+      if (benign) event.preventDefault();
     };
     window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
