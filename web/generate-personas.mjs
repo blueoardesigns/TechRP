@@ -185,7 +185,7 @@ async function callClaude(prompt) {
       'content-type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 8000,
       messages: [{ role: 'user', content: prompt }],
     }),

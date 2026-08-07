@@ -38,7 +38,7 @@ async function _computeInsights(
   const supabase = createServiceSupabase();
 
   // Superusers see all sessions platform-wide
-  let query = (supabase as any)
+  let query = supabase
     .from('training_sessions')
     .select('id, started_at, ended_at, assessment, persona_name, persona_scenario_type')
     .not('assessment', 'is', null)
@@ -108,7 +108,7 @@ async function _computeInsights(
   // Compute average score
   const scores = assessments
     .map((a: any) => (a.score !== null ? getDisplayScore({ score: a.score }).score : null))
-    .filter((s: any) => s !== null);
+    .filter((s): s is number => s !== null);
   const avgScore = scores.length > 0
     ? Math.round((scores.reduce((a: number, b: number) => a + b, 0) / scores.length) * 10) / 10
     : null;
@@ -159,8 +159,8 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 800,
+      model: 'claude-sonnet-5',
+      max_tokens: 4000,
       messages: [{ role: 'user', content: insightPrompt }],
     });
 
@@ -173,14 +173,14 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
   }
 
   // Aggregate org/coach metrics
-  let orgSessionsQuery = (supabase as any)
+  let orgSessionsQuery = supabase
     .from('training_sessions')
     .select('id, started_at, user_id, persona_scenario_type')
     .order('started_at', { ascending: false })
     .limit(500);
 
   if (appRole === 'company_admin' && organizationId) {
-    const { data: orgUsers } = await (supabase as any)
+    const { data: orgUsers } = await supabase
       .from('users')
       .select('id')
       .eq('organization_id', organizationId);
@@ -189,7 +189,7 @@ Based on ALL of this data, identify the consistent patterns. Respond in valid JS
       orgSessionsQuery = orgSessionsQuery.in('user_id', orgUserIds);
     }
   } else if (appRole === 'coach' && coachInstanceId) {
-    const { data: coachUsers } = await (supabase as any)
+    const { data: coachUsers } = await supabase
       .from('users')
       .select('id')
       .eq('coach_instance_id', coachInstanceId);
@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const supabase = createServiceSupabase();
-    const { data: profile } = await (supabase as any)
+    const { data: profile } = await supabase
       .from('users')
       .select('id, app_role, organization_id, coach_instance_id')
       .eq('auth_user_id', authUser.id)

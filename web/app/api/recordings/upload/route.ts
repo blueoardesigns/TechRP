@@ -70,8 +70,8 @@ Respond in the following JSON format (valid JSON only, no markdown):
 }`;
 
   const msg = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
+    model: 'claude-sonnet-5',
+    max_tokens: 4000,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const supabase = createServiceSupabase();
-    const { data: profile } = await (supabase as any)
+    const { data: profile } = await supabase
       .from('users')
       .select('id, organization_id')
       .eq('auth_user_id', authUser.id)
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     const endedAt = new Date(startedAt.getTime() + durationMs);
 
     // Step 4: Save to DB
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('training_sessions')
       .insert({
         user_id: USER_ID,
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
       console.error('DB insert error:', error);
       // If source column doesn't exist yet, retry without it
       if (error.code === '42703') {
-        const { data: data2, error: error2 } = await (supabase as any)
+        const { data: data2, error: error2 } = await supabase
           .from('training_sessions')
           .insert({
             user_id: USER_ID,

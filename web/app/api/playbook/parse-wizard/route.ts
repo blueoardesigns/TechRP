@@ -38,8 +38,8 @@ ${extractedText.slice(0, 10000)}`;
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      model: 'claude-sonnet-5',
+      max_tokens: 6000,
       messages: [{ role: 'user', content: prompt }],
     });
 

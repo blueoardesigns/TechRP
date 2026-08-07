@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
     const prompt = `You are a sales training expert helping create a playbook for field technicians who sell drying equipment drop-off services to homeowners. Generate a polished, well-structured playbook in Markdown.\n\nUse the following inputs:\n\nPlaybook name: ${body.name}\nDescription: ${body.description}\n\nOpening & Introduction:\n- Ideal opening line: ${body.openingLine}\n- First 30 seconds: ${body.first30Seconds}\n\nCommon Objections:\n${objectionsText || 'None provided'}\n\nKey Talking Points:\nMust mention:\n${mustMentionText || 'None provided'}\n\nNever say:\n${neverSayText || 'None provided'}\n\nClosing:\n- Ask for commitment: ${body.closingAsk}\n- Ideal outcome: ${body.idealOutcome}\n\nRequirements:\n- Use clear headings and bullet points.\n- Include an opening section, objection handling section, key talking points, and closing guidance.\n- Keep it concise but actionable.\n\nReturn ONLY the Markdown content.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1800,
+      model: 'claude-sonnet-5',
+      max_tokens: 6000,
       messages: [
         {
           role: 'user',

@@ -66,7 +66,7 @@ TechRP is a voice AI roleplay training platform for field technicians selling dr
 
 ## Tech Stack
 - **Voice AI:** Vapi.ai (Assistant ID: `a2a54457-a2b0-4046-82b5-c7506ab9a401`) using Groq 8b in call
-- **LLM:** Claude API (`claude-sonnet-4-20250514`)
+- **LLM:** Claude API (`claude-sonnet-5`)
 - **Database:** Supabase (PostgreSQL, multi-tenant)
 
 Do not make any changes until you have 95% confidence in what you need to build. Ask me follow up questions until you reach that confidence.

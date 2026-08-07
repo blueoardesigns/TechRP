@@ -31,8 +31,8 @@ If the original content is in HTML, return valid HTML. If plain text or markdown
     const userMessage = `Instruction: ${prompt}\n\nContent to rewrite:\n${content}`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      model: 'claude-sonnet-5',
+      max_tokens: 8000,
       system: systemMessage,
       messages: [{ role: 'user', content: userMessage }],
     });

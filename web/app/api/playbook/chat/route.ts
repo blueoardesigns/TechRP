@@ -61,8 +61,8 @@ export async function POST(request: NextRequest) {
   let responseText: string;
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      model: 'claude-sonnet-5',
+      max_tokens: 4000,
       system: systemWithDoc,
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     });

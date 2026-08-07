@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (!authUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServiceRoleClient();
-  const { data: coach } = await (supabase as any)
+  const { data: coach } = await supabase
     .from('users')
     .select('coach_instance_id, app_role')
     .eq('auth_user_id', authUser.id)
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const validTypes = SCENARIOS.map(s => s.type);
 
   const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-sonnet-5',
     max_tokens: 256,
     messages: [{
       role: 'user',

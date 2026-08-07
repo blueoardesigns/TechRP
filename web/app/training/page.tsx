@@ -57,7 +57,7 @@ function getOrCreateVapi(): Vapi | null {
   return _vapiSingleton;
 }
 const GROQ_MODEL = 'llama-3.1-8b-instant';
-const HAIKU_MODEL = 'claude-3-haiku-20240307';
+const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 
 // ElevenLabs voice pools — deterministic per persona so the same person always
 // gets the same voice across sessions.
@@ -241,6 +241,7 @@ export default function TrainingPage() {
   const [scenarioPersonas, setScenarioPersonas] = useState<DBPersona[]>([]);
   const [personasLoading, setPersonasLoading] = useState(false);
   const [personasError, setPersonasError] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const difficultyRef = useRef<'easy' | 'medium' | 'hard'>('medium');
@@ -393,8 +394,52 @@ export default function TrainingPage() {
     setSelectedPersona(mapDBPersona(pool[Math.floor(Math.random() * pool.length)]));
   };
 
+  /**
+   * Prompt for mic access before the call starts.
+   *
+   * Vapi's Krisp noise filter initializes the mic as part of start(); if the
+   * browser is still showing its permission prompt at that moment, Krisp fails
+   * ("Cannot read properties of null") and Daily escalates it to a fatal
+   * ejection, so the first call a user ever makes dies. Asking first means
+   * permission is already settled by the time start() runs.
+   */
+  const ensureMicPermission = async (): Promise<string | null> => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      return 'This browser does not support microphone access. Try Chrome, Edge, or Safari.';
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // We only needed the permission grant — release the device immediately so
+      // Vapi opens it itself.
+      stream.getTracks().forEach(t => t.stop());
+      return null;
+    } catch (err) {
+      const name = (err as DOMException)?.name;
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        return 'Microphone access is blocked. Allow it in your browser’s address-bar icon, then start the call again.';
+      }
+      if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        return 'No microphone was found. Connect one and try again.';
+      }
+      if (name === 'NotReadableError') {
+        return 'Your microphone is in use by another app. Close it and try again.';
+      }
+      return 'Could not access your microphone. Check your browser’s mic settings and try again.';
+    }
+  };
+
   const handleStartCall = async () => {
     if (!vapiRef.current || !selectedPersona) return;
+    setStartError(null);
+
+    // Ask before switching phases so the permission prompt appears while the
+    // user is still on the preview screen rather than a half-started call.
+    const micError = await ensureMicPermission();
+    if (micError) {
+      setStartError(micError);
+      return;
+    }
+
     try {
       setPhase('calling');
       setCallStatus('connecting');
@@ -469,7 +514,7 @@ export default function TrainingPage() {
       }
     } catch (error) {
       console.error('Error starting call:', error);
-      alert('Failed to start call. Please check the console.');
+      setStartError('Could not start the call. Please try again — if it keeps failing, reload the page.');
       setCallStatus('idle');
       setPhase('persona-preview');
     }
@@ -766,6 +811,11 @@ export default function TrainingPage() {
 
           {/* Actions */}
           <div className="space-y-3">
+            {startError && (
+              <div className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                {startError}
+              </div>
+            )}
             <button
               onClick={handleStartCall}
               disabled={!vapi}
