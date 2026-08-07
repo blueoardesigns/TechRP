@@ -10,6 +10,19 @@ Sentry.init({
   // Add optional integrations for additional features
   integrations: [Sentry.replayIntegration()],
 
+  // Post-call teardown noise from the Vapi/Daily voice stack. These reject
+  // after a call has already completed successfully: Daily restarts its
+  // audio-level observer while the AudioContext is closing, and Krisp (noise
+  // cancellation) rejects when the mic is already released. The page-level
+  // `unhandledrejection` guard stops the console spam, but Sentry captures via
+  // its own global handler, so it has to be filtered here as well.
+  ignoreErrors: [
+    'Error when starting local audio level observer',
+    "Unable to load a worklet's module",
+    'KrispInitError',
+    'Error enabling Krisp filter',
+  ],
+
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
   // Enable logs to be sent to Sentry
