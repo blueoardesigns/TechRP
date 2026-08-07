@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabaseAnon } from '@/lib/supabase';
+import { createBrowserSupabase } from '@/lib/supabase-browser';
 
 interface Notification {
   id: string;
@@ -14,7 +14,7 @@ interface Notification {
   data?: Record<string, unknown> | null;
 }
 
-const supabase = supabaseAnon;
+const supabase = createBrowserSupabase();
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);

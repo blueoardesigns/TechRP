@@ -2,7 +2,9 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { createBrowserSupabase } from '@/lib/supabase-browser';
+
+const supabase = createBrowserSupabase();
 import { useAuth } from '@/components/auth-provider';
 import { AppShell } from '@/components/app-shell';
 

@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { createBrowserSupabase } from '@/lib/supabase-browser';
+import * as Sentry from '@sentry/nextjs';
 
 export type UserRole = 'individual' | 'company_admin' | 'coach' | 'superuser';
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
@@ -61,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const authUser = session?.user ?? null;
 
     if (!authUser) {
+      Sentry.setUser(null);
       setUser(null);
       setLoading(false);
       return;
@@ -73,6 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (!profile) {
+      Sentry.setUser(null);
       setUser(null);
       setLoading(false);
       return;
@@ -95,6 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       trialEndsAt: (profile as any).trial_ends_at ?? null,
       autoRefillEnabled: (profile as any).auto_refill_enabled ?? false,
     };
+
+    // Identify by opaque profile id only — no email or name. Pairs with
+    // sendDefaultPii: false so errors stay attributable to a user without
+    // sending transcripts, request bodies, or cookies to Sentry.
+    Sentry.setUser({ id: appUser.id });
 
     // Superusers are never blocked
     if (appUser.role === 'superuser') {
@@ -144,7 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === 'SIGNED_IN') loadUser();
       if (event === 'SIGNED_OUT') {
-        setUser(null);
+        Sentry.setUser(null);
+      setUser(null);
         router.replace('/login');
       }
     });

@@ -471,6 +471,10 @@ export default function TrainingPage() {
         getInterruptInstructions(selectedPersona.personalityType);
 
       const sharedOverrides = {
+        // Vapi defaults to uncompressed wav;l16 (~2 MB/min). mp3 is roughly
+        // half the size at speech quality, and these recordings live in our own
+        // R2 bucket now, so the saving is ours.
+        artifactPlan: { recordingFormat: 'mp3' as const },
         voice: { provider: '11labs', voiceId, model: 'eleven_flash_v2_5', speed: 1.07 },
         firstMessage: selectedPersona.firstMessage,
         maxDurationSeconds: 600,

@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { AppShell } from '@/components/app-shell';
-import { supabase } from '@/lib/supabase';
+import { createBrowserSupabase } from '@/lib/supabase-browser';
+
+const supabase = createBrowserSupabase();
 
 export default function AccountPage() {
   const { user, refreshUser } = useAuth();
