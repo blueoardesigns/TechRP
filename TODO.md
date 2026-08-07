@@ -59,6 +59,7 @@ Last updated: 2026-04-14
 - [ ] Expo dev build for Vapi integration (requires custom native module)
 - [ ] Field recording upload (audio file → transcript → assessment)
 - [ ] Mobile session history
+- [ ] **Ship TestFlight build for recording playback** — mobile `RecordingPlayer` now posts `sessionId` (not `callId`) and sends a Supabase bearer token, matching the reworked `/api/recording`. Playback stays broken on device until a build ships: `cd mobile && LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 fastlane ios beta`.
 - [x] **Call recordings moved to own R2 storage** — Vapi retired public recording URLs (Jul 2026) and its pay-as-you-go tier only keeps calls 14 days. Recordings now write to Cloudflare R2 (`techrp`) via Vapi custom storage; `/api/recording` presigns objects with a read-only R2 token, gated on session ownership. Format set to `mp3` via assistantOverrides (5.09 MB/min → 0.49 MB/min, ~10x smaller). 12-month object lifecycle rule applied in Cloudflare. Implemented 2026-08-07.
 - [x] **Timestamped recording links in session notes** — Practice Moments now show play buttons that seek the recording to the relevant moment. Implemented 2026-05-26.
 - [x] **Gamification Phase A: score reveal + practice streaks** — animated count-up/grade stamp/confetti/haptics on assessment, streak card on Train tab. Spec: `docs/superpowers/specs/2026-07-10-gamification-phase-a-design.md`. Implemented 2026-07-10.
@@ -69,6 +70,10 @@ Last updated: 2026-04-14
 
 ## Infrastructure & Polish
 
+- [ ] **Verify atomic minute deduction in production** — `/api/calls/record-usage` now goes through the `record_call_usage` RPC (migration applied 2026-08-07). Run one call and confirm `organizations.minutes_pool` drops and a `minute_transactions` row is written.
+- [ ] **Upgrade `@anthropic-ai/sdk` from 0.27.3** — Sept 2024 release, two years behind the `claude-sonnet-5` model it now calls. Predates the `thinking` param (why max_tokens headroom was used instead of disabling thinking) and refusal handling. Needs its own testing pass across the 9 Anthropic call sites.
+- [ ] **Decide on Supabase Free tier** — Free pauses projects after ~7 days idle and has no daily backups, with live Stripe billing and 89 users. Pro is $25/mo. Unrelated to storage (recordings live in R2).
+- [ ] **Pin `@vapi-ai/web` at 2.6.1** — 2.5.2 caused a `KrispSDK is duplicated` loop that forced a page refresh before every call. Don't downgrade; re-test call start-up before any future bump.
 - [ ] build tutorial videos for new users
 - [ ] solicit feedback while the session is analyzing-- "WHile we're anazlying, any quick feedback for us?" Send this feedback to me with a link to the recording (get consdent from user to share recording when they send feedback with a checkbox)
 - [ ] embed a youtube video in a playbook
