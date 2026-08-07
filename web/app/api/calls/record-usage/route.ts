@@ -28,30 +28,22 @@ export async function POST(req: NextRequest) {
 
   if (!userRow) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-  // Deduct from org pool if company user (never goes below 0)
-  if (userRow.organization_id) {
-    const { data: org } = await (db as any).from('organizations')
-      .select('minutes_pool').eq('id', userRow.organization_id).single()
-    if (org) {
-      const newPool = Math.max(0, ((org.minutes_pool as number) ?? 0) - minutesUsed)
-      await (db as any).from('organizations')
-        .update({ minutes_pool: newPool })
-        .eq('id', userRow.organization_id)
-    }
-  }
-
-  // Increment user minutes_used
-  const newMinutesUsed = ((userRow.minutes_used as number) ?? 0) + minutesUsed
-  await (db as any).from('users').update({ minutes_used: newMinutesUsed }).eq('id', userId)
-
-  // Audit log
-  await (db as any).from('minute_transactions').insert({
-    user_id: userId,
-    org_id: userRow.organization_id ?? null,
-    type: 'call_usage',
-    delta: -minutesUsed,
-    session_id: sessionId,
+  // Atomically deduct from the org pool, increment the user counter, and write
+  // the audit row in a single transaction (see record_call_usage in
+  // web/supabase/atomic-minutes-migration.sql). This replaces a read-modify-write
+  // that lost updates when two calls ended concurrently. Returns the new
+  // users.minutes_used for the trial cutoff below.
+  const { data: newMinutesUsed, error: deductError } = await (db as any).rpc('record_call_usage', {
+    p_user_id: userId,
+    p_org_id: userRow.organization_id ?? null,
+    p_minutes: minutesUsed,
+    p_session_id: sessionId,
   })
+
+  if (deductError) {
+    console.error('record-usage: record_call_usage RPC failed:', deductError)
+    return NextResponse.json({ error: 'Failed to record usage' }, { status: 500 })
+  }
 
   // Trial 25-minute cutoff — only fire if still in trialing status
   if (userRow.trial_ends_at && newMinutesUsed >= TRIAL_MINUTES) {
