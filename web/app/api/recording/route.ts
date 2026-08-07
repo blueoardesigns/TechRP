@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { requireUser, canAccessOwned } from '@/lib/api-auth';
 
 interface RecordingRequest {
   sessionId: string;
+}
+
+/** Playback links are short-lived; long enough to start and scrub a long call. */
+const SIGNED_URL_TTL_SECONDS = 60 * 60;
+
+/**
+ * Turn a Vapi-reported recording URL into an R2 object key.
+ *
+ * Vapi stores the object at the bucket root, so the key is just the path. Some
+ * responses include the bucket as the first segment — strip it when present so
+ * both shapes resolve to the same key.
+ */
+function objectKeyFromUrl(rawUrl: string, bucket: string): string | null {
+  try {
+    const { pathname } = new URL(rawUrl);
+    const key = decodeURIComponent(pathname.replace(/^\/+/, ''));
+    if (!key) return null;
+    return key.startsWith(`${bucket}/`) ? key.slice(bucket.length + 1) : key;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -12,6 +35,12 @@ interface RecordingRequest {
  * session row only after the caller's access to that session is verified.
  * Accepting a caller-supplied call id would let any authenticated user mint a
  * recording URL for any call, including other organizations'.
+ *
+ * Recordings live in our own R2 bucket (Vapi custom storage). Vapi's
+ * /mono-recording endpoint redirects to an *unsigned* R2 URL, which the browser
+ * cannot read — R2 requires SigV4 on every object read and returns an
+ * InvalidArgument/Authorization XML error instead of audio. So we read the
+ * object location from the call artifact and presign it ourselves.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -27,17 +56,10 @@ export async function POST(request: NextRequest) {
     const sessionId = body && typeof body.sessionId === 'string' ? body.sessionId : null;
 
     if (!sessionId) {
-      return NextResponse.json(
-        { error: 'sessionId is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'sessionId is required' }, { status: 400 });
     }
-
     if (!process.env.VAPI_API_KEY) {
-      return NextResponse.json(
-        { error: 'VAPI_API_KEY is not configured' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'VAPI_API_KEY is not configured' }, { status: 500 });
     }
 
     const { data: session, error: loadErr } = await service
@@ -55,33 +77,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session has no recording' }, { status: 404 });
     }
 
-    // Vapi requires authenticated access to recordings as of Jul 2026: the old
-    // public recordingUrl field no longer resolves, so we hit the auth'd
-    // redirect endpoint and hand back the short-lived signed URL it 302s to.
-    const response = await fetch(`https://api.vapi.ai/call/${session.vapi_call_id}/mono-recording`, {
-      method: 'GET',
-      redirect: 'manual',
-      headers: {
-        'Authorization': `Bearer ${process.env.VAPI_API_KEY}`,
-      },
+    const callRes = await fetch(`https://api.vapi.ai/call/${session.vapi_call_id}`, {
+      headers: { Authorization: `Bearer ${process.env.VAPI_API_KEY}` },
     });
-
-    if (response.status !== 302 && response.status !== 301) {
-      console.error('Vapi recording redirect error:', response.status, response.statusText);
+    if (!callRes.ok) {
+      console.error('Vapi call lookup failed:', callRes.status, callRes.statusText);
       return NextResponse.json(
         { error: 'Failed to fetch recording from Vapi API' },
-        { status: response.status === 0 ? 502 : response.status }
+        { status: callRes.status },
       );
     }
 
-    const recordingUrl = response.headers.get('location');
+    const call = await callRes.json();
+    // Vapi populates these only once the recording has finished uploading.
+    const recordingUrl: string | null =
+      call?.artifact?.recording?.mono?.combinedUrl ?? call?.artifact?.recordingUrl ?? null;
+    if (!recordingUrl) {
+      return NextResponse.json({ error: 'Recording not available yet' }, { status: 404 });
+    }
 
-    return NextResponse.json({ recordingUrl });
+    const { R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET } = process.env;
+    if (!R2_ACCOUNT_ID || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY || !R2_BUCKET) {
+      console.error('R2 storage env vars are not configured');
+      return NextResponse.json({ error: 'Recording storage is not configured' }, { status: 500 });
+    }
+
+    const key = objectKeyFromUrl(recordingUrl, R2_BUCKET);
+    if (!key) {
+      return NextResponse.json({ error: 'Recording location is unreadable' }, { status: 502 });
+    }
+
+    const s3 = new S3Client({
+      region: 'auto',
+      endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      credentials: { accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY },
+    });
+
+    const signedUrl = await getSignedUrl(
+      s3,
+      new GetObjectCommand({ Bucket: R2_BUCKET, Key: key }),
+      { expiresIn: SIGNED_URL_TTL_SECONDS },
+    );
+
+    return NextResponse.json({ recordingUrl: signedUrl });
   } catch (error) {
     console.error('Error fetching recording:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch recording' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to fetch recording' }, { status: 500 });
   }
 }
